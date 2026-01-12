@@ -576,19 +576,11 @@
         // Load manifest
         async function loadManifest() {
             try {
-                const response = await fetch('../sample_images/manifest.json');
+                const response = await fetch('/sample_images/manifest.json');
                 samples = await response.json();
                 renderSampleList();
             } catch (error) {
                 console.error('Error loading manifest:', error);
-                // Fallback: try to load from same directory
-                try {
-                    const response = await fetch('sample_images/manifest.json');
-                    samples = await response.json();
-                    renderSampleList();
-                } catch (e) {
-                    console.error('Could not load manifest');
-                }
             }
         }
 
@@ -625,13 +617,8 @@
                 redrawAnnotations();
             };
 
-            // Try different paths
-            padImage.onerror = () => {
-                // Try alternative path
-                padImage.src = `sample_images/${currentSample.filename}`;
-            };
-
-            padImage.src = `../sample_images/${currentSample.filename}`;
+            // Load image from server
+            padImage.src = `/sample_images/${currentSample.filename}`;
 
             // Clear annotations for new sample
             annotations = [];
@@ -1033,20 +1020,43 @@
             });
         }
 
-        function downloadSession(data) {
-            const json = JSON.stringify(data, null, 2);
-            const blob = new Blob([json], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
+        async function downloadSession(data) {
+            try {
+                // Send to server
+                const response = await fetch('/api/save-annotation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
 
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `pad_annotation_${data.sample.drug_name}_${Date.now()}.json`;
-            a.click();
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
 
-            URL.revokeObjectURL(url);
+                const result = await response.json();
 
-            // Show confirmation
-            alert(`Exported ${data.annotations.length} annotations${data.audio ? ' with audio' : ''}.\n\nAnnotations are preserved - you can continue annotating or export again.`);
+                // Show confirmation
+                alert(`Saved ${data.annotations.length} annotations${result.audio_saved ? ' with audio' : ''} to server.\n\nTotal sessions: ${result.total_sessions}\n\nAnnotations are preserved - you can continue or start a new session.`);
+
+            } catch (error) {
+                console.error('Error saving to server:', error);
+
+                // Fallback: download as file
+                if (confirm(`Could not save to server: ${error.message}\n\nDownload as local file instead?`)) {
+                    const json = JSON.stringify(data, null, 2);
+                    const blob = new Blob([json], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `pad_annotation_${data.sample.drug_name}_${Date.now()}.json`;
+                    a.click();
+
+                    URL.revokeObjectURL(url);
+                }
+            }
         }
 
         // Start new session (clear everything)
