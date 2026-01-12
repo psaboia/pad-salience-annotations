@@ -4,6 +4,84 @@ We're building a system to capture expert annotations on PAD (Paper Analytical D
 
 ---
 
+## Interface Design Questions (Priority)
+
+These are specific design decisions we need feedback on:
+
+### Drawing Tools
+
+1. **What shape tools do you need for marking regions?**
+   - [ ] **Rectangle only** - Simple boxes, fastest to draw
+   - [ ] **Closed polygon only** - Freehand shapes that auto-close
+   - [ ] **Open polygon/line** - Freehand lines that don't close (for tracing edges)
+   - [ ] **Both rectangle and closed polygon** (current implementation)
+   - [ ] **All three options** (rectangle, closed polygon, open line)
+
+2. **For freehand drawing, should the shape automatically close?**
+   - [ ] **Yes, always close** - Connect last point to first point (current)
+   - [ ] **No, keep open** - Allow open paths/lines
+   - [ ] **Let me choose** - Option to close or keep open per annotation
+
+3. **Do you need to edit annotations after drawing?**
+   - [ ] No, draw once is enough
+   - [ ] Yes, move/resize after drawing
+   - [ ] Yes, add/remove points from polygons
+   - [ ] Yes, all editing options
+
+### Audio Recording
+
+4. **How should audio recording work?**
+   - [ ] **Continuous recording** - Starts when you begin, stops when you save (current)
+   - [ ] **Manual start/stop** - Press button to start, press again to stop
+   - [ ] **Per-annotation recording** - Separate recording for each region you draw
+   - [ ] **No recording** - I prefer to type explanations
+
+5. **Should recording start automatically when you select an image?**
+   - [ ] Yes, start automatically
+   - [ ] No, I want to click "Start Recording" manually (current)
+
+6. **If you make a mistake while recording, what would you prefer?**
+   - [ ] Re-record the entire session
+   - [ ] Mark the timestamp and continue (edit later)
+   - [ ] Ability to pause and resume
+
+### Saving Annotations
+
+7. **When should annotations be saved?**
+   - [ ] **Manual save** - Click "Export/Save" button when ready (current)
+   - [ ] **Auto-save** - Save automatically after each annotation
+   - [ ] **Auto-save on interval** - Save every X seconds
+   - [ ] **Save on image change** - Auto-save when moving to next image
+
+8. **If auto-save, should there be a visual indicator?**
+   - [ ] Yes, show "Saving..." / "Saved" status
+   - [ ] Yes, show last saved timestamp
+   - [ ] No indicator needed
+
+### Lane Detection
+
+9. **The system auto-detects which lane you're annotating. Is this helpful?**
+   - [ ] Very helpful, keep it
+   - [ ] Helpful but sometimes wrong - need manual override
+   - [ ] Prefer to select lanes manually
+   - [ ] Don't need lane information at all
+
+10. **The lane indicator follows your cursor. Where would you prefer it?**
+    - [ ] **Tooltip near cursor** (current)
+    - [ ] **Fixed position** on screen (e.g., top bar)
+    - [ ] **On the image** itself (overlay)
+    - [ ] Don't need visual indicator
+
+### Colors
+
+11. **Do you need multiple colors for different types of annotations?**
+    - [ ] Yes, to distinguish observation types
+    - [ ] Yes, for personal organization
+    - [ ] No, one color is enough
+    - [ ] System should assign colors automatically
+
+---
+
 ## For Specialists (Annotators)
 
 ### Workflow
