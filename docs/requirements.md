@@ -8,6 +8,12 @@ A system for capturing annotations from specialists over images of PAD (Paper An
 
 **PAD (Paper Analytical Device)** is a paper-based test card developed by the Notre Dame PAD Project for screening pharmaceutical quality.
 
+<p align="center">
+  <img src="../sample_images/amoxicillin_15214_processed.png" alt="PAD Card Example - Amoxicillin" width="300">
+  <br>
+  <em>Example PAD card showing 12 lanes (A-L) with color reactions for Amoxicillin</em>
+</p>
+
 ### Key characteristics:
 - Small, inexpensive (~$2 USD) paper-based test cards
 - Used to detect whether drug tablets contain correct active ingredients or adulterants
