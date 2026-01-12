@@ -588,7 +588,7 @@
             const list = document.getElementById('sampleList');
             list.innerHTML = samples.map((sample, index) => `
                 <div class="sample-item" onclick="selectSample(${index})" id="sample-${index}">
-                    <div class="drug-name">${sample.drug_name}</div>
+                    <div class="drug-name">${sample.drug_name_display || sample.drug_name}</div>
                     <div class="card-id">Card ID: ${sample.card_id}</div>
                 </div>
             `).join('');
