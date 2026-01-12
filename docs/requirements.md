@@ -294,6 +294,24 @@ The export layer converts raw data to specific formats for integration with open
 
 ---
 
+## Experiment System
+
+The data collection uses a structured experiment system where:
+- Administrators define experiments with pre-selected image sets
+- Specialists are assigned to experiments
+- Each specialist sees the same images in the same order
+- Progress is tracked per user per experiment
+- Data stored in SQLite database for integrity
+
+See [experiment-system.md](./experiment-system.md) for full design details including:
+- Database schema (specialists, experiments, images, annotations)
+- API endpoints
+- Workflow for admins and specialists
+- Progress tracking
+- Export formats
+
+---
+
 ## Future Considerations
 
 - **Internet connectivity requirements** - To be addressed later
@@ -305,13 +323,17 @@ The export layer converts raw data to specific formats for integration with open
 
 ## Open Questions
 
+### Resolved
+- [x] Technical platform - Web app (HTML/JS + Python FastAPI backend)
+- [x] Annotation tool type - Both rectangle and polygon (freehand closed)
+- [x] Audio/annotation synchronization - Timestamps (start_ms, end_ms) per annotation
+- [x] Raw data storage format - SQLite database (designed, pending implementation)
+- [x] Audio transcription method - OpenAI API (gpt-4o-transcribe) - to be integrated
+
+### Pending
 - [ ] Specific PAD configuration to start with
-- [ ] Technical platform (web app, desktop, etc.)
-- [ ] Annotation tool type (freehand drawing, polygons, bounding boxes, or combination)
-- [ ] Audio/annotation synchronization approach
-- [ ] Existing infrastructure or tech stack constraints
 - [ ] Review/validation workflow for annotations
-- [ ] Expected volume of images/annotations
-- [ ] Raw data storage format (JSON files, SQLite, PostgreSQL, etc.)
-- [ ] Audio transcription method (manual, automatic via Whisper, or both)
-- [ ] Specialist identification and session tracking requirements
+- [ ] Expected volume of images/annotations per experiment
+- [ ] Specialist authentication method (simple name selection vs login system)
+- [ ] Admin interface for experiment management
+- [ ] Backup and data recovery procedures
