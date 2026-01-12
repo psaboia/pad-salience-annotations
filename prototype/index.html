@@ -492,11 +492,11 @@
                 <div class="instructions">
                     <h3>How to use:</h3>
                     <ul>
-                        <li>Select a drug sample from the left</li>
-                        <li>Click "Start Recording" to capture audio</li>
-                        <li>Draw regions on the PAD card</li>
-                        <li>Lanes are detected automatically!</li>
-                        <li>Click "Export" to save</li>
+                        <li>1. Select a drug sample</li>
+                        <li>2. Click "Start Recording"</li>
+                        <li>3. Draw regions + explain</li>
+                        <li>4. Click "Export" to save</li>
+                        <li>5. "New Session" for next drug</li>
                     </ul>
                 </div>
             </div>
@@ -595,6 +595,19 @@
         }
 
         function selectSample(index) {
+            // Check if there's an active session with unsaved work
+            if (currentSample && (annotations.length > 0 || audioChunks.length > 0)) {
+                alert('You have unsaved annotations.\n\nPlease "Export Session Data" first, then use "Start New Session" to change drugs.');
+                return;
+            }
+
+            // If already have a sample selected (but no annotations), warn about focused session
+            if (currentSample && currentSample !== samples[index]) {
+                if (!confirm('Start a new session with a different drug?\n\nThis will clear any current work.')) {
+                    return;
+                }
+            }
+
             // Update selection UI
             document.querySelectorAll('.sample-item').forEach(el => el.classList.remove('active'));
             document.getElementById(`sample-${index}`).classList.add('active');
@@ -622,6 +635,7 @@
 
             // Clear annotations for new sample
             annotations = [];
+            audioChunks = [];
             updateAnnotationsList();
         }
 
