@@ -1,0 +1,12 @@
+[project]
+name = "pad-salience-annotations"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pad-analytics",
+]
+
+[tool.uv.sources]
+pad-analytics = { git = "https://github.com/PaperAnalyticalDeviceND/pad-analytics.git", rev = "aee1fd12c5845fb0b523592d79b8ea97d988d2aa" }

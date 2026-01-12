@@ -1,0 +1,184 @@
+[
+  {
+    "drug_name": "Albendazole",
+    "card_id": 16487,
+    "filename": "albendazole_16487_processed.png",
+    "path": "sample_images/albendazole_16487_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Amoxicillin",
+    "card_id": 15214,
+    "filename": "amoxicillin_15214_processed.png",
+    "path": "sample_images/amoxicillin_15214_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Ampicillin",
+    "card_id": 16236,
+    "filename": "ampicillin_16236_processed.png",
+    "path": "sample_images/ampicillin_16236_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Ascorbic Acid",
+    "card_id": 17183,
+    "filename": "ascorbic_acid_17183_processed.png",
+    "path": "sample_images/ascorbic_acid_17183_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Azithromycin",
+    "card_id": 24511,
+    "filename": "azithromycin_24511_processed.png",
+    "path": "sample_images/azithromycin_24511_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Benzyl Penicillin",
+    "card_id": 17333,
+    "filename": "benzyl_penicillin_17333_processed.png",
+    "path": "sample_images/benzyl_penicillin_17333_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Calcium Carbonate",
+    "card_id": 17204,
+    "filename": "calcium_carbonate_17204_processed.png",
+    "path": "sample_images/calcium_carbonate_17204_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Ceftriaxone",
+    "card_id": 18946,
+    "filename": "ceftriaxone_18946_processed.png",
+    "path": "sample_images/ceftriaxone_18946_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Chloroquine",
+    "card_id": 15524,
+    "filename": "chloroquine_15524_processed.png",
+    "path": "sample_images/chloroquine_15524_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Ciprofloxacin",
+    "card_id": 16649,
+    "filename": "ciprofloxacin_16649_processed.png",
+    "path": "sample_images/ciprofloxacin_16649_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Doxorubicin  Powder Or Tablets ",
+    "card_id": 48814,
+    "filename": "doxorubicin__powder_or_tablets__48814_processed.png",
+    "path": "sample_images/doxorubicin__powder_or_tablets__48814_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Doxycycline",
+    "card_id": 20239,
+    "filename": "doxycycline_20239_processed.png",
+    "path": "sample_images/doxycycline_20239_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Epinephrine",
+    "card_id": 21897,
+    "filename": "epinephrine_21897_processed.png",
+    "path": "sample_images/epinephrine_21897_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Ethambutol",
+    "card_id": 22639,
+    "filename": "ethambutol_22639_processed.png",
+    "path": "sample_images/ethambutol_22639_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Ferrous Sulfate",
+    "card_id": 23018,
+    "filename": "ferrous_sulfate_23018_processed.png",
+    "path": "sample_images/ferrous_sulfate_23018_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Hydroxychloroquine",
+    "card_id": 15588,
+    "filename": "hydroxychloroquine_15588_processed.png",
+    "path": "sample_images/hydroxychloroquine_15588_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Isoniazid",
+    "card_id": 17776,
+    "filename": "isoniazid_17776_processed.png",
+    "path": "sample_images/isoniazid_17776_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Lactose",
+    "card_id": 17107,
+    "filename": "lactose_17107_processed.png",
+    "path": "sample_images/lactose_17107_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Promethazine Hydrochloride",
+    "card_id": 16000,
+    "filename": "promethazine_hydrochloride_16000_processed.png",
+    "path": "sample_images/promethazine_hydrochloride_16000_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Pyrazinamide",
+    "card_id": 24048,
+    "filename": "pyrazinamide_24048_processed.png",
+    "path": "sample_images/pyrazinamide_24048_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Rifampicin",
+    "card_id": 23550,
+    "filename": "rifampicin_23550_processed.png",
+    "path": "sample_images/rifampicin_23550_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Ripe",
+    "card_id": 25193,
+    "filename": "ripe_25193_processed.png",
+    "path": "sample_images/ripe_25193_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Starch  Maize ",
+    "card_id": 17231,
+    "filename": "starch__maize__17231_processed.png",
+    "path": "sample_images/starch__maize__17231_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Sulfamethoxazole",
+    "card_id": 19721,
+    "filename": "sulfamethoxazole_19721_processed.png",
+    "path": "sample_images/sulfamethoxazole_19721_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Tetracycline",
+    "card_id": 18429,
+    "filename": "tetracycline_18429_processed.png",
+    "path": "sample_images/tetracycline_18429_processed.png",
+    "image_type": "processed"
+  },
+  {
+    "drug_name": "Unknown",
+    "card_id": 15358,
+    "filename": "unknown_15358_processed.png",
+    "path": "sample_images/unknown_15358_processed.png",
+    "image_type": "processed"
+  }
+]
