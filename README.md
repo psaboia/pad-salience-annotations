@@ -23,12 +23,18 @@ This project builds a structured annotation system where:
 - Export to JSONL format
 - 26 drug samples from FHI2020 project
 
+### Eye-Tracking (feature/eye-tracking branch)
+- AprilTag markers for Pupil Labs surface tracking
+- 4 tags (tag36h11 family) displayed around PAD image
+- Enables gaze data to be mapped to image coordinates
+
 ### Planned
 - SQLite database for data integrity
 - Experiment management system
 - Specialist progress tracking
 - Audio transcription integration (OpenAI API)
 - Export pipeline for HuggingFace/Ollama
+- Live gaze overlay from eye-tracker
 
 ## Quick Start
 
@@ -54,6 +60,7 @@ uv sync
 | [Requirements](docs/requirements.md) | Full system requirements and data architecture |
 | [Experiment System](docs/experiment-system.md) | Database schema and experiment workflow design |
 | [Prototype Specs](docs/prototype-specifications.md) | Current prototype implementation details |
+| [Eye-Tracking Integration](docs/eye-tracking-integration.md) | Pupil Labs setup and AprilTag configuration |
 | [Feedback Questionnaire](docs/feedback-questionnaire.md) | Questions for users and specialists |
 
 ## Project Structure
@@ -65,6 +72,8 @@ pad-salience-annotations/
 ├── sample_images/
 │   ├── manifest.json       # Image metadata
 │   └── *.png               # PAD card images
+├── assets/
+│   └── apriltags/          # AprilTag markers for eye-tracking
 ├── data/
 │   ├── annotations.jsonl   # Saved annotations
 │   └── audio/              # Audio recordings
@@ -72,6 +81,7 @@ pad-salience-annotations/
 │   ├── requirements.md
 │   ├── experiment-system.md
 │   ├── prototype-specifications.md
+│   ├── eye-tracking-integration.md
 │   └── feedback-questionnaire.md
 ├── server.py               # FastAPI backend
 ├── run_prototype.sh        # Server launcher

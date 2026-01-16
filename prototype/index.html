@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PAD Salience Annotation Tool - Prototype</title>
+    <title>PAD Annotation - Eye-tracking</title>
     <style>
         * {
             box-sizing: border-box;
@@ -15,142 +15,75 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #1a1a2e;
             color: #eee;
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        header h1 {
-            font-size: 1.8rem;
-            color: #00d4ff;
-            margin-bottom: 5px;
-        }
-
-        header p {
-            color: #888;
-            font-size: 0.9rem;
-        }
-
-        .main-content {
-            display: grid;
-            grid-template-columns: 280px 1fr 300px;
-            gap: 20px;
-        }
-
-        .panel {
-            background: #16213e;
-            border-radius: 12px;
-            padding: 20px;
-        }
-
-        .panel h2 {
-            font-size: 1rem;
-            color: #00d4ff;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #333;
-        }
-
-        /* Left Panel - Sample Selection */
-        .sample-list {
-            max-height: 500px;
-            overflow-y: auto;
-        }
-
-        .sample-item {
-            padding: 10px 12px;
-            margin-bottom: 8px;
-            background: #1a1a2e;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 2px solid transparent;
-        }
-
-        .sample-item:hover {
-            background: #252550;
-        }
-
-        .sample-item.active {
-            border-color: #00d4ff;
-            background: #252550;
-        }
-
-        .sample-item .drug-name {
-            font-weight: 600;
-            margin-bottom: 3px;
-        }
-
-        .sample-item .card-id {
-            font-size: 0.75rem;
-            color: #888;
-        }
-
-        /* Center Panel - Canvas */
-        .canvas-container {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .canvas-wrapper {
-            position: relative;
-            display: inline-block;
-            border: 3px solid #333;
-            border-radius: 8px;
+            height: 100vh;
             overflow: hidden;
         }
 
-        #padImage {
-            display: block;
-            max-width: 100%;
-            height: auto;
+        /* Main Layout - 2 columns: tracked area + sidebar */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 220px;
+            grid-template-rows: auto 1fr;
+            height: 100vh;
         }
 
-        #annotationCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            cursor: crosshair;
+        /* Compact Header */
+        .compact-header {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+            background: #16213e;
+            border-bottom: 1px solid #333;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .compact-header h1 {
+            font-size: 1.3rem;
+            color: #00d4ff;
+        }
+
+        .eyetracking-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: #2ed573;
+            color: #000;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .eyetracking-badge .dot {
+            width: 8px;
+            height: 8px;
+            background: #fff;
+            border-radius: 50%;
         }
 
         .toolbar {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        .tool-btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.2s;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        .tool-btn.primary {
-            background: #00d4ff;
-            color: #000;
-        }
-
-        .tool-btn.primary:hover {
-            background: #00b8e6;
+        .tool-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .tool-btn.secondary {
@@ -176,6 +109,15 @@
             background: #ff3344;
         }
 
+        .tool-btn.primary {
+            background: #00d4ff;
+            color: #000;
+        }
+
+        .tool-btn.primary:hover {
+            background: #00b8e6;
+        }
+
         .tool-btn.recording {
             background: #ff4757;
             animation: pulse 1s infinite;
@@ -186,7 +128,146 @@
             50% { opacity: 0.7; }
         }
 
-        /* Right Panel - Annotations & Audio */
+        .color-picker {
+            display: flex;
+            gap: 6px;
+            margin-left: 10px;
+            padding-left: 10px;
+            border-left: 1px solid #444;
+        }
+
+        .color-option {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .color-option:hover, .color-option.active {
+            border-color: #fff;
+            transform: scale(1.1);
+        }
+
+        /* Tracked Area - ONLY tags + PAD image */
+        .tracked-area {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: #1a1a2e;
+            overflow: hidden;
+        }
+
+        .apriltag-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .apriltag {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: white;
+            padding: 8px;
+            z-index: 100;
+        }
+
+        .apriltag img {
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        /* Position tags at corners of the tracked area */
+        .apriltag.top-left {
+            top: -70px;
+            left: -70px;
+        }
+
+        .apriltag.top-right {
+            top: -70px;
+            right: -70px;
+        }
+
+        .apriltag.bottom-left {
+            bottom: -70px;
+            left: -70px;
+        }
+
+        .apriltag.bottom-right {
+            bottom: -70px;
+            right: -70px;
+        }
+
+        .apriltag .tag-id {
+            position: absolute;
+            bottom: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #666;
+            white-space: nowrap;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            display: inline-block;
+            border: 3px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #padImage {
+            display: block;
+            max-width: 100%;
+            max-height: calc(100vh - 200px);
+            height: auto;
+        }
+
+        #annotationCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+        }
+
+        .no-image {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 800px;
+            height: 450px;
+            background: #252550;
+            border-radius: 8px;
+            color: #666;
+            font-size: 1.1rem;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Right Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            background: #16213e;
+            border-left: 1px solid #333;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .sidebar h3 {
+            font-size: 0.85rem;
+            color: #00d4ff;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #333;
+        }
+
         .audio-section {
             margin-bottom: 20px;
         }
@@ -195,7 +276,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 12px;
+            padding: 10px;
             background: #1a1a2e;
             border-radius: 8px;
             margin-bottom: 10px;
@@ -206,6 +287,7 @@
             height: 12px;
             border-radius: 50%;
             background: #666;
+            flex-shrink: 0;
         }
 
         .audio-indicator.recording {
@@ -215,30 +297,50 @@
 
         .audio-time {
             font-family: monospace;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
+        }
+
+        .audio-status-text {
+            font-size: 0.75rem;
+            color: #888;
+        }
+
+        .divider {
+            height: 1px;
+            background: #333;
+            margin: 15px 0;
+        }
+
+        .annotations-section {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
         }
 
         .annotations-list {
-            max-height: 300px;
+            flex: 1;
             overflow-y: auto;
+            min-height: 100px;
         }
 
         .annotation-item {
-            padding: 12px;
+            padding: 10px;
             background: #1a1a2e;
-            border-radius: 8px;
-            margin-bottom: 8px;
+            border-radius: 6px;
+            margin-bottom: 6px;
             border-left: 3px solid #00d4ff;
+            font-size: 0.8rem;
         }
 
         .annotation-item .time {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: #00d4ff;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
         }
 
         .annotation-item .type {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: #888;
         }
 
@@ -248,119 +350,54 @@
             border: none;
             color: #ff4757;
             cursor: pointer;
-            font-size: 1rem;
-        }
-
-        /* Lane selector */
-        .lane-selector {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 5px;
-            margin-top: 15px;
-        }
-
-        .lane-btn {
-            padding: 8px;
-            border: 2px solid #333;
-            background: #1a1a2e;
-            color: #eee;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-
-        .lane-btn:hover {
-            border-color: #00d4ff;
-        }
-
-        .lane-btn.selected {
-            background: #00d4ff;
-            color: #000;
-            border-color: #00d4ff;
-        }
-
-        /* Export section */
-        .export-section {
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 1px solid #333;
-        }
-
-        /* Color picker */
-        .color-picker {
-            display: flex;
-            gap: 8px;
-            margin-top: 10px;
-        }
-
-        .color-option {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            cursor: pointer;
-            border: 3px solid transparent;
-            transition: all 0.2s;
-        }
-
-        .color-option:hover, .color-option.active {
-            border-color: #fff;
-            transform: scale(1.1);
-        }
-
-        /* Instructions */
-        .instructions {
-            background: #252550;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 15px;
-            font-size: 0.85rem;
-            line-height: 1.6;
-        }
-
-        .instructions h3 {
-            color: #00d4ff;
-            margin-bottom: 10px;
             font-size: 0.9rem;
+            padding: 0;
+            line-height: 1;
         }
 
-        .instructions ul {
-            padding-left: 20px;
+        .done-section {
+            margin-top: auto;
+            padding-top: 15px;
         }
 
-        .instructions li {
-            margin-bottom: 5px;
-            color: #aaa;
-        }
-
-        /* Scrollbar styling */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #1a1a2e;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #333;
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #444;
-        }
-
-        .no-image {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 800px;
-            height: 450px;
-            background: #1a1a2e;
+        .done-btn {
+            width: 100%;
+            padding: 12px;
+            background: #2ed573;
+            color: #000;
+            border: none;
             border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .done-btn:hover {
+            background: #26c066;
+        }
+
+        .done-btn:disabled {
+            background: #333;
             color: #666;
-            font-size: 1.2rem;
+            cursor: not-allowed;
+        }
+
+        .new-session-btn {
+            width: 100%;
+            padding: 8px;
+            margin-top: 8px;
+            background: #333;
+            color: #eee;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .new-session-btn:hover {
+            background: #444;
         }
 
         /* Lane tooltip that follows cursor */
@@ -397,110 +434,129 @@
         .lane-tooltip.outside::after {
             border-top-color: rgba(100, 100, 100, 0.9);
         }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a2e;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #444;
+        }
+
+        .empty-state {
+            color: #666;
+            font-size: 0.8rem;
+            text-align: center;
+            padding: 20px 10px;
+        }
     </style>
 </head>
 <body>
     <!-- Lane tooltip that follows cursor -->
     <div class="lane-tooltip" id="laneTooltip">Lane A</div>
 
-    <div class="container">
-        <header>
-            <h1>PAD Salience Annotation Tool</h1>
-            <p>Prototype - Select regions and record expert explanations</p>
-        </header>
-
-        <div class="main-content">
-            <!-- Left Panel - Sample Selection -->
-            <div class="panel">
-                <h2>Drug Samples</h2>
-                <div class="sample-list" id="sampleList">
-                    <!-- Populated by JavaScript -->
+    <div class="main-layout">
+        <!-- Compact Header -->
+        <header class="compact-header">
+            <div class="header-left">
+                <h1>PAD Annotation</h1>
+                <span class="eyetracking-badge"><span class="dot"></span>Eye-tracking</span>
+            </div>
+            <div class="toolbar">
+                <button class="tool-btn secondary active" id="rectTool" onclick="setTool('rectangle')">
+                    <span>[ ]</span> Rect
+                </button>
+                <button class="tool-btn secondary" id="freeTool" onclick="setTool('polygon')">
+                    <span>⬡</span> Poly
+                </button>
+                <button class="tool-btn secondary" onclick="undoLast()">
+                    Undo
+                </button>
+                <button class="tool-btn danger" onclick="clearAnnotations()">
+                    Clear
+                </button>
+                <div class="color-picker">
+                    <div class="color-option active" style="background: #00d4ff;" onclick="setColor('#00d4ff')"></div>
+                    <div class="color-option" style="background: #ff4757;" onclick="setColor('#ff4757')"></div>
+                    <div class="color-option" style="background: #2ed573;" onclick="setColor('#2ed573')"></div>
+                    <div class="color-option" style="background: #ffa502;" onclick="setColor('#ffa502')"></div>
+                    <div class="color-option" style="background: #a55eea;" onclick="setColor('#a55eea')"></div>
                 </div>
             </div>
+        </header>
 
-            <!-- Center Panel - Canvas -->
-            <div class="panel canvas-container">
-                <div class="toolbar">
-                    <button class="tool-btn secondary active" id="rectTool" onclick="setTool('rectangle')">
-                        <span>[ ]</span> Rectangle
-                    </button>
-                    <button class="tool-btn secondary" id="freeTool" onclick="setTool('polygon')">
-                        <span>⬡</span> Polygon
-                    </button>
-                    <button class="tool-btn secondary" onclick="undoLast()">
-                        Undo
-                    </button>
-                    <button class="tool-btn danger" onclick="clearAnnotations()">
-                        Clear All
-                    </button>
+        <!-- Tracked Area - ONLY AprilTags + PAD Image -->
+        <div class="tracked-area">
+            <div class="apriltag-container" id="apriltagContainer">
+                <!-- AprilTags for Pupil Labs surface tracking -->
+                <div class="apriltag top-left">
+                    <img src="/assets/apriltags/tag36h11_0.png" alt="AprilTag 0">
+                    <span class="tag-id">tag 0</span>
+                </div>
+                <div class="apriltag top-right">
+                    <img src="/assets/apriltags/tag36h11_3.png" alt="AprilTag 3">
+                    <span class="tag-id">tag 3</span>
+                </div>
+                <div class="apriltag bottom-left">
+                    <img src="/assets/apriltags/tag36h11_7.png" alt="AprilTag 7">
+                    <span class="tag-id">tag 7</span>
+                </div>
+                <div class="apriltag bottom-right">
+                    <img src="/assets/apriltags/tag36h11_4.png" alt="AprilTag 4">
+                    <span class="tag-id">tag 4</span>
                 </div>
 
                 <div class="canvas-wrapper" id="canvasWrapper">
                     <div class="no-image" id="noImagePlaceholder">
-                        Select a sample from the left panel
+                        Loading PAD image...
                     </div>
                     <img id="padImage" style="display: none;" />
                     <canvas id="annotationCanvas" style="display: none;"></canvas>
                 </div>
-
-                <div style="margin-top: 15px;">
-                    <label style="color: #888; font-size: 0.85rem;">Drawing Color:</label>
-                    <div class="color-picker">
-                        <div class="color-option active" style="background: #00d4ff;" onclick="setColor('#00d4ff')"></div>
-                        <div class="color-option" style="background: #ff4757;" onclick="setColor('#ff4757')"></div>
-                        <div class="color-option" style="background: #2ed573;" onclick="setColor('#2ed573')"></div>
-                        <div class="color-option" style="background: #ffa502;" onclick="setColor('#ffa502')"></div>
-                        <div class="color-option" style="background: #a55eea;" onclick="setColor('#a55eea')"></div>
-                    </div>
-                </div>
-
-                <div style="margin-top: 15px; text-align: center;">
-                    <p style="color: #666; font-size: 0.8rem;">
-                        Lanes (A-L) are detected automatically as you draw
-                    </p>
-                </div>
-            </div>
-
-            <!-- Right Panel - Annotations & Audio -->
-            <div class="panel">
-                <h2>Audio Recording</h2>
-                <div class="audio-section">
-                    <div class="audio-status">
-                        <div class="audio-indicator" id="audioIndicator"></div>
-                        <span class="audio-time" id="audioTime">00:00</span>
-                        <span id="audioStatus">Ready</span>
-                    </div>
-                    <button class="tool-btn primary" id="recordBtn" onclick="toggleRecording()" style="width: 100%;">
-                        Start Recording
-                    </button>
-                </div>
-
-                <h2>Annotations (<span id="annotationCount">0</span>)</h2>
-                <div class="annotations-list" id="annotationsList">
-                    <p style="color: #666; font-size: 0.85rem;">Draw on the image to create annotations</p>
-                </div>
-
-                <div class="export-section">
-                    <button class="tool-btn primary" onclick="exportSession()" style="width: 100%;">
-                        Export Session Data
-                    </button>
-                    <button class="tool-btn secondary" onclick="startNewSession()" style="width: 100%; margin-top: 10px;">
-                        Start New Session
-                    </button>
-                </div>
-
-                <div class="instructions">
-                    <h3>How to use:</h3>
-                    <ul>
-                        <li>1. Select a drug sample</li>
-                        <li>2. Click "Start Recording"</li>
-                        <li>3. Draw regions + explain</li>
-                        <li>4. Click "Export" to save</li>
-                        <li>5. "New Session" for next drug</li>
-                    </ul>
-                </div>
             </div>
         </div>
+
+        <!-- Right Sidebar -->
+        <aside class="sidebar">
+            <div class="audio-section">
+                <h3>Recording</h3>
+                <div class="audio-status">
+                    <div class="audio-indicator" id="audioIndicator"></div>
+                    <span class="audio-time" id="audioTime">00:00</span>
+                </div>
+                <button class="tool-btn primary" id="recordBtn" onclick="toggleRecording()" style="width: 100%;">
+                    Start Rec
+                </button>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="annotations-section">
+                <h3>Annotations (<span id="annotationCount">0</span>)</h3>
+                <div class="annotations-list" id="annotationsList">
+                    <p class="empty-state">Draw on the image to create annotations</p>
+                </div>
+            </div>
+
+            <div class="done-section">
+                <button class="done-btn" id="doneBtn" onclick="exportSession()">
+                    DONE
+                </button>
+                <button class="new-session-btn" onclick="startNewSession()">
+                    New Session
+                </button>
+            </div>
+        </aside>
     </div>
 
     <script>
@@ -508,7 +564,6 @@
         let currentSample = null;
         let currentTool = 'rectangle';
         let currentColor = '#00d4ff';
-        // selectedLanes removed - now using auto-detection
         let annotations = [];
         let isDrawing = false;
         let startX, startY;
@@ -530,13 +585,9 @@
         let drawingStartTime = null;
 
         // Lane detection configuration (for processed images ~730px wide)
-        // Lanes A-L are arranged in vertical columns
-        // Calibrated based on actual PAD image layout
         const LANE_CONFIG = {
-            // X boundaries as percentage of image width
-            // Calibrated for standard processed PAD images (730px wide)
-            startPercent: 0.082,  // ~60px - where lanes start (after QR code)
-            endPercent: 0.986,    // ~720px - where lanes end
+            startPercent: 0.082,
+            endPercent: 0.986,
             lanes: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
         };
 
@@ -561,7 +612,6 @@
             const detectedLanes = [];
 
             for (const boundary of boundaries) {
-                // Check if annotation overlaps with this lane
                 if (x2 >= boundary.x1 && x1 <= boundary.x2) {
                     detectedLanes.push(boundary.lane);
                 }
@@ -570,48 +620,27 @@
             return detectedLanes;
         }
 
-        // Sample data - will be loaded from manifest
+        // Sample data
         let samples = [];
 
-        // Load manifest
+        // Load manifest and auto-select first sample
         async function loadManifest() {
             try {
                 const response = await fetch('/sample_images/manifest.json');
                 samples = await response.json();
-                renderSampleList();
+
+                // Auto-load first sample
+                if (samples.length > 0) {
+                    loadSample(0);
+                }
             } catch (error) {
                 console.error('Error loading manifest:', error);
+                document.getElementById('noImagePlaceholder').textContent =
+                    'Error loading samples. Please check server.';
             }
         }
 
-        function renderSampleList() {
-            const list = document.getElementById('sampleList');
-            list.innerHTML = samples.map((sample, index) => `
-                <div class="sample-item" onclick="selectSample(${index})" id="sample-${index}">
-                    <div class="drug-name">${sample.drug_name_display || sample.drug_name}</div>
-                    <div class="card-id">Card ID: ${sample.card_id}</div>
-                </div>
-            `).join('');
-        }
-
-        function selectSample(index) {
-            // Check if there's an active session with unsaved work
-            if (currentSample && (annotations.length > 0 || audioChunks.length > 0)) {
-                alert('You have unsaved annotations.\n\nPlease "Export Session Data" first, then use "Start New Session" to change drugs.');
-                return;
-            }
-
-            // If already have a sample selected (but no annotations), warn about focused session
-            if (currentSample && currentSample !== samples[index]) {
-                if (!confirm('Start a new session with a different drug?\n\nThis will clear any current work.')) {
-                    return;
-                }
-            }
-
-            // Update selection UI
-            document.querySelectorAll('.sample-item').forEach(el => el.classList.remove('active'));
-            document.getElementById(`sample-${index}`).classList.add('active');
-
+        function loadSample(index) {
             currentSample = samples[index];
 
             // Load image
@@ -626,7 +655,6 @@
                 canvas.style.width = padImage.width + 'px';
                 canvas.style.height = padImage.height + 'px';
 
-                // Clear and redraw annotations
                 redrawAnnotations();
             };
 
@@ -652,15 +680,11 @@
             });
         }
 
-        // Lane selection functions removed - now using auto-detection
-
         // Canvas drawing
         canvas.addEventListener('mousedown', (e) => {
             if (!currentSample) return;
 
             isDrawing = true;
-
-            // Capture start timestamp
             drawingStartTime = isRecording ? (Date.now() - recordingStartTime) : null;
 
             const rect = canvas.getBoundingClientRect();
@@ -676,12 +700,19 @@
         });
 
         canvas.addEventListener('mousemove', (e) => {
-            if (!isDrawing) return;
+            if (!currentSample) return;
 
             const rect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
 
+            // Detect lane at cursor position
+            const lanes = detectLanes(x, x);
+            showLaneTooltip(e.clientX, e.clientY, lanes);
+
+            if (!isDrawing) return;
+
+            const scaleY = canvas.height / rect.height;
             const currentX = (e.clientX - rect.left) * scaleX;
             const currentY = (e.clientY - rect.top) * scaleY;
 
@@ -701,7 +732,7 @@
                 for (let point of polygonPoints) {
                     ctx.lineTo(point.x, point.y);
                 }
-                ctx.closePath(); // Close the polygon
+                ctx.closePath();
                 ctx.stroke();
             }
         });
@@ -717,15 +748,13 @@
             const endX = (e.clientX - rect.left) * scaleX;
             const endY = (e.clientY - rect.top) * scaleY;
 
-            // Capture end timestamp
             const timestampEnd = isRecording ? (Date.now() - recordingStartTime) : null;
 
-            // Auto-detect lanes based on annotation position
+            // Auto-detect lanes
             let autoDetectedLanes;
             if (currentTool === 'rectangle') {
                 autoDetectedLanes = detectLanes(Math.min(startX, endX), Math.max(startX, endX));
             } else {
-                // For polygon, find X bounds from all points
                 const xCoords = polygonPoints.map(p => p.x);
                 autoDetectedLanes = detectLanes(Math.min(...xCoords), Math.max(...xCoords));
             }
@@ -745,7 +774,6 @@
                         width: Math.abs(endX - startX),
                         height: Math.abs(endY - startY)
                     },
-                    // Normalized coordinates (0-999)
                     bbox_normalized: {
                         x1: Math.round(Math.min(startX, endX) / canvas.width * 999),
                         y1: Math.round(Math.min(startY, endY) / canvas.height * 999),
@@ -762,7 +790,6 @@
                     timestamp_start_ms: drawingStartTime,
                     timestamp_end_ms: timestampEnd,
                     points: polygonPoints,
-                    // Normalized points
                     points_normalized: polygonPoints.map(p => ({
                         x: Math.round(p.x / canvas.width * 999),
                         y: Math.round(p.y / canvas.height * 999)
@@ -777,7 +804,6 @@
                 annotations.push(annotation);
             }
 
-            // Reset drawing start time
             drawingStartTime = null;
 
             redrawAnnotations();
@@ -791,23 +817,7 @@
                 polygonPoints = [];
                 redrawAnnotations();
             }
-            // Hide tooltip
             hideLaneTooltip();
-        });
-
-        // Real-time lane detection with cursor tooltip
-        canvas.addEventListener('mousemove', (e) => {
-            if (!currentSample) return;
-
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const x = (e.clientX - rect.left) * scaleX;
-
-            // Detect lane at cursor position
-            const lanes = detectLanes(x, x);
-
-            // Show tooltip near cursor
-            showLaneTooltip(e.clientX, e.clientY, lanes);
         });
 
         // Lane tooltip functions
@@ -846,7 +856,7 @@
                     for (let point of ann.points) {
                         ctx.lineTo(point.x, point.y);
                     }
-                    ctx.closePath(); // Close the polygon
+                    ctx.closePath();
                     ctx.stroke();
                 }
             }
@@ -857,7 +867,7 @@
             document.getElementById('annotationCount').textContent = annotations.length;
 
             if (annotations.length === 0) {
-                list.innerHTML = '<p style="color: #666; font-size: 0.85rem;">Draw on the image to create annotations</p>';
+                list.innerHTML = '<p class="empty-state">Draw on the image to create annotations</p>';
                 return;
             }
 
@@ -865,7 +875,7 @@
                 <div class="annotation-item">
                     <button class="delete-btn" onclick="deleteAnnotation(${index})">x</button>
                     <div class="time">${formatTimeRange(ann.timestamp_start_ms, ann.timestamp_end_ms)}</div>
-                    <div class="type">${ann.type} - Lanes: ${ann.lanes.length > 0 ? ann.lanes.join(', ') : 'none'}</div>
+                    <div class="type">${ann.type} - ${ann.lanes.length > 0 ? ann.lanes.join(', ') : 'no lanes'}</div>
                 </div>
             `).join('');
         }
@@ -885,6 +895,7 @@
         }
 
         function clearAnnotations() {
+            if (annotations.length === 0) return;
             if (confirm('Clear all annotations?')) {
                 annotations = [];
                 redrawAnnotations();
@@ -908,10 +919,9 @@
                     isRecording = true;
                     recordingStartTime = Date.now();
 
-                    document.getElementById('recordBtn').textContent = 'Stop Recording';
+                    document.getElementById('recordBtn').textContent = 'Stop';
                     document.getElementById('recordBtn').classList.add('recording');
                     document.getElementById('audioIndicator').classList.add('recording');
-                    document.getElementById('audioStatus').textContent = 'Recording...';
 
                     audioTimerInterval = setInterval(updateAudioTimer, 1000);
                 } catch (error) {
@@ -923,12 +933,10 @@
 
                 clearInterval(audioTimerInterval);
 
-                document.getElementById('recordBtn').textContent = 'Start Recording';
+                document.getElementById('recordBtn').textContent = 'Start Rec';
                 document.getElementById('recordBtn').classList.remove('recording');
                 document.getElementById('audioIndicator').classList.remove('recording');
-                document.getElementById('audioStatus').textContent = 'Stopped';
 
-                // Stop all tracks
                 mediaRecorder.stream.getTracks().forEach(track => track.stop());
             }
         }
@@ -950,7 +958,7 @@
 
         function formatTimeRange(startMs, endMs) {
             if (startMs === null || endMs === null) {
-                return 'No audio timestamp';
+                return 'No timestamp';
             }
             return `${formatTime(startMs)} → ${formatTime(endMs)}`;
         }
@@ -958,7 +966,7 @@
         // Export
         async function exportSession() {
             if (!currentSample) {
-                alert('Please select a sample first');
+                alert('No sample loaded');
                 return;
             }
 
@@ -980,7 +988,7 @@
                     width: canvas.width,
                     height: canvas.height
                 },
-                annotations: JSON.parse(JSON.stringify(annotations)), // Deep copy
+                annotations: JSON.parse(JSON.stringify(annotations)),
                 audio: null
             };
 
@@ -1004,7 +1012,6 @@
             }
         }
 
-        // Stop recording and wait for it to finish
         function stopRecordingForExport() {
             return new Promise((resolve) => {
                 if (!isRecording || !mediaRecorder) {
@@ -1018,12 +1025,10 @@
                     isRecording = false;
                     clearInterval(audioTimerInterval);
 
-                    document.getElementById('recordBtn').textContent = 'Start Recording';
+                    document.getElementById('recordBtn').textContent = 'Start Rec';
                     document.getElementById('recordBtn').classList.remove('recording');
                     document.getElementById('audioIndicator').classList.remove('recording');
-                    document.getElementById('audioStatus').textContent = 'Stopped (exported)';
 
-                    // Store duration for export
                     window.lastRecordingDuration = duration;
 
                     resolve();
@@ -1036,7 +1041,6 @@
 
         async function downloadSession(data) {
             try {
-                // Send to server
                 const response = await fetch('/api/save-annotation', {
                     method: 'POST',
                     headers: {
@@ -1051,13 +1055,11 @@
 
                 const result = await response.json();
 
-                // Show confirmation
-                alert(`Saved ${data.annotations.length} annotations${result.audio_saved ? ' with audio' : ''} to server.\n\nTotal sessions: ${result.total_sessions}\n\nAnnotations are preserved - you can continue or start a new session.`);
+                alert(`Saved ${data.annotations.length} annotations${result.audio_saved ? ' with audio' : ''} to server.\n\nTotal sessions: ${result.total_sessions}`);
 
             } catch (error) {
                 console.error('Error saving to server:', error);
 
-                // Fallback: download as file
                 if (confirm(`Could not save to server: ${error.message}\n\nDownload as local file instead?`)) {
                     const json = JSON.stringify(data, null, 2);
                     const blob = new Blob([json], { type: 'application/json' });
@@ -1073,7 +1075,7 @@
             }
         }
 
-        // Start new session (clear everything)
+        // Start new session
         function startNewSession() {
             if (annotations.length > 0 || audioChunks.length > 0) {
                 if (!confirm('This will clear all annotations and audio. Continue?')) {
@@ -1095,10 +1097,9 @@
             recordingStartTime = null;
 
             // Reset UI
-            document.getElementById('recordBtn').textContent = 'Start Recording';
+            document.getElementById('recordBtn').textContent = 'Start Rec';
             document.getElementById('recordBtn').classList.remove('recording');
             document.getElementById('audioIndicator').classList.remove('recording');
-            document.getElementById('audioStatus').textContent = 'Ready';
             document.getElementById('audioTime').textContent = '00:00';
 
             redrawAnnotations();

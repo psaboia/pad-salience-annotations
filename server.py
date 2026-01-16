@@ -120,6 +120,7 @@ async def get_stats():
 
 # Serve static files
 app.mount("/sample_images", StaticFiles(directory=BASE_DIR / "sample_images"), name="sample_images")
+app.mount("/assets", StaticFiles(directory=BASE_DIR / "assets"), name="assets")
 app.mount("/prototype", StaticFiles(directory=BASE_DIR / "prototype", html=True), name="prototype")
 
 
