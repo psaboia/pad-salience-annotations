@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PAD Annotation - Eye-tracking (Fullscreen)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Main Layout - 2 columns only: tracked area + sidebar */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 240px;
+            min-height: 100vh;
+        }
+
+        /* Tracked Area - ONLY tags + PAD image */
+        .tracked-area {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 55px 10px;
+            background: #1a1a2e;
+            overflow: visible;
+        }
+
+        .apriltag-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .apriltag {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: white;
+            padding: 4px;
+            z-index: 100;
+        }
+
+        .apriltag img {
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        .apriltag.top-left {
+            top: -48px;
+            left: -48px;
+        }
+
+        .apriltag.top-right {
+            top: -48px;
+            right: -48px;
+        }
+
+        .apriltag.bottom-left {
+            bottom: -48px;
+            left: -48px;
+        }
+
+        .apriltag.bottom-right {
+            bottom: -48px;
+            right: -48px;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            display: inline-block;
+            border: 3px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #padImage {
+            display: block;
+            max-width: 100%;
+            max-height: calc(100vh - 120px);
+            height: auto;
+        }
+
+        #annotationCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+        }
+
+        .no-image {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 800px;
+            height: 450px;
+            background: #252550;
+            border-radius: 8px;
+            color: #666;
+            font-size: 1.1rem;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Right Sidebar - contains everything */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            background: #16213e;
+            border-left: 1px solid #333;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            margin-bottom: 15px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #333;
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.1rem;
+            color: #00d4ff;
+            margin-bottom: 8px;
+        }
+
+        .eyetracking-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: #2ed573;
+            color: #000;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .eyetracking-badge .dot {
+            width: 6px;
+            height: 6px;
+            background: #fff;
+            border-radius: 50%;
+        }
+
+        .sidebar h3 {
+            font-size: 0.8rem;
+            color: #00d4ff;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #333;
+        }
+
+        /* Tools Section */
+        .tools-section {
+            margin-bottom: 15px;
+        }
+
+        .tool-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .tool-btn {
+            padding: 8px 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .tool-btn.secondary {
+            background: #333;
+            color: #eee;
+        }
+
+        .tool-btn.secondary:hover {
+            background: #444;
+        }
+
+        .tool-btn.secondary.active {
+            background: #00d4ff;
+            color: #000;
+        }
+
+        .tool-btn.danger {
+            background: #ff4757;
+            color: #fff;
+        }
+
+        .tool-btn.danger:hover {
+            background: #ff3344;
+        }
+
+        .tool-btn.primary {
+            background: #00d4ff;
+            color: #000;
+        }
+
+        .tool-btn.primary:hover {
+            background: #00b8e6;
+        }
+
+        .tool-btn.recording {
+            background: #ff4757;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .color-picker {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+        }
+
+        .color-option {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .color-option:hover, .color-option.active {
+            border-color: #fff;
+            transform: scale(1.1);
+        }
+
+        /* Audio Section */
+        .audio-section {
+            margin-bottom: 15px;
+        }
+
+        .audio-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #1a1a2e;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .audio-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #666;
+            flex-shrink: 0;
+        }
+
+        .audio-indicator.recording {
+            background: #ff4757;
+            animation: pulse 1s infinite;
+        }
+
+        .audio-time {
+            font-family: monospace;
+            font-size: 1.1rem;
+        }
+
+        .divider {
+            height: 1px;
+            background: #333;
+            margin: 12px 0;
+        }
+
+        /* Annotations Section */
+        .annotations-section {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .annotations-list {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 80px;
+        }
+
+        .annotation-item {
+            padding: 8px;
+            background: #1a1a2e;
+            border-radius: 6px;
+            margin-bottom: 5px;
+            border-left: 3px solid #00d4ff;
+            font-size: 0.75rem;
+        }
+
+        .annotation-item .time {
+            font-size: 0.65rem;
+            color: #00d4ff;
+            margin-bottom: 2px;
+        }
+
+        .annotation-item .type {
+            font-size: 0.7rem;
+            color: #888;
+        }
+
+        .annotation-item .delete-btn {
+            float: right;
+            background: none;
+            border: none;
+            color: #ff4757;
+            cursor: pointer;
+            font-size: 0.85rem;
+            padding: 0;
+            line-height: 1;
+        }
+
+        /* Done Section */
+        .done-section {
+            margin-top: auto;
+            padding-top: 12px;
+        }
+
+        .done-btn {
+            width: 100%;
+            padding: 12px;
+            background: #2ed573;
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .done-btn:hover {
+            background: #26c066;
+        }
+
+        .new-session-btn {
+            width: 100%;
+            padding: 8px;
+            margin-top: 8px;
+            background: #333;
+            color: #eee;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .new-session-btn:hover {
+            background: #444;
+        }
+
+        /* Lane tooltip */
+        .lane-tooltip {
+            position: fixed;
+            padding: 6px 12px;
+            background: rgba(0, 212, 255, 0.95);
+            color: #000;
+            font-weight: bold;
+            font-size: 1rem;
+            border-radius: 6px;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            transform: translate(-50%, -150%);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .lane-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: rgba(0, 212, 255, 0.95);
+        }
+
+        .lane-tooltip.outside {
+            background: rgba(100, 100, 100, 0.9);
+            color: #fff;
+        }
+
+        .lane-tooltip.outside::after {
+            border-top-color: rgba(100, 100, 100, 0.9);
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a2e;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #444;
+        }
+
+        .empty-state {
+            color: #666;
+            font-size: 0.75rem;
+            text-align: center;
+            padding: 15px 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="lane-tooltip" id="laneTooltip">Lane A</div>
+
+    <div class="main-layout">
+        <!-- Tracked Area - ONLY AprilTags + PAD Image -->
+        <div class="tracked-area">
+            <div class="apriltag-container" id="apriltagContainer">
+                <div class="apriltag top-left">
+                    <img src="/assets/apriltags/tag36h11_0.png" alt="AprilTag 0">
+                </div>
+                <div class="apriltag top-right">
+                    <img src="/assets/apriltags/tag36h11_3.png" alt="AprilTag 3">
+                </div>
+                <div class="apriltag bottom-left">
+                    <img src="/assets/apriltags/tag36h11_7.png" alt="AprilTag 7">
+                </div>
+                <div class="apriltag bottom-right">
+                    <img src="/assets/apriltags/tag36h11_4.png" alt="AprilTag 4">
+                </div>
+
+                <div class="canvas-wrapper" id="canvasWrapper">
+                    <div class="no-image" id="noImagePlaceholder">
+                        Loading PAD image...
+                    </div>
+                    <img id="padImage" style="display: none;" />
+                    <canvas id="annotationCanvas" style="display: none;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar - All controls -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>PAD Annotation</h1>
+                <span class="eyetracking-badge"><span class="dot"></span>Eye-tracking</span>
+            </div>
+
+            <div class="tools-section">
+                <h3>Tools</h3>
+                <div class="tool-buttons">
+                    <button class="tool-btn secondary active" id="rectTool" onclick="setTool('rectangle')">
+                        [ ] Rect
+                    </button>
+                    <button class="tool-btn secondary" id="freeTool" onclick="setTool('polygon')">
+                        ⬡ Poly
+                    </button>
+                    <button class="tool-btn secondary" onclick="undoLast()">
+                        Undo
+                    </button>
+                    <button class="tool-btn danger" onclick="clearAnnotations()">
+                        Clear
+                    </button>
+                </div>
+                <div class="color-picker">
+                    <div class="color-option active" style="background: #00d4ff;" onclick="setColor('#00d4ff')"></div>
+                    <div class="color-option" style="background: #ff4757;" onclick="setColor('#ff4757')"></div>
+                    <div class="color-option" style="background: #2ed573;" onclick="setColor('#2ed573')"></div>
+                    <div class="color-option" style="background: #ffa502;" onclick="setColor('#ffa502')"></div>
+                    <div class="color-option" style="background: #a55eea;" onclick="setColor('#a55eea')"></div>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="audio-section">
+                <h3>Recording</h3>
+                <div class="audio-status">
+                    <div class="audio-indicator" id="audioIndicator"></div>
+                    <span class="audio-time" id="audioTime">00:00</span>
+                </div>
+                <button class="tool-btn primary" id="recordBtn" onclick="toggleRecording()" style="width: 100%;">
+                    Start Recording
+                </button>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="annotations-section">
+                <h3>Annotations (<span id="annotationCount">0</span>)</h3>
+                <div class="annotations-list" id="annotationsList">
+                    <p class="empty-state">Draw on the image to create annotations</p>
+                </div>
+            </div>
+
+            <div class="done-section">
+                <button class="done-btn" id="doneBtn" onclick="exportSession()">
+                    DONE
+                </button>
+                <button class="new-session-btn" onclick="startNewSession()">
+                    New Session
+                </button>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // State
+        let currentSample = null;
+        let currentTool = 'rectangle';
+        let currentColor = '#00d4ff';
+        let annotations = [];
+        let isDrawing = false;
+        let startX, startY;
+        let polygonPoints = [];
+
+        // Audio state
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
+        let recordingStartTime = null;
+        let audioTimerInterval = null;
+
+        // Canvas elements
+        const canvas = document.getElementById('annotationCanvas');
+        const ctx = canvas.getContext('2d');
+        const padImage = document.getElementById('padImage');
+
+        // Drawing timestamp tracking
+        let drawingStartTime = null;
+
+        // Lane detection configuration
+        const LANE_CONFIG = {
+            startPercent: 0.082,
+            endPercent: 0.986,
+            lanes: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
+        };
+
+        function getLaneBoundaries() {
+            if (!canvas.width) return [];
+            const startX = canvas.width * LANE_CONFIG.startPercent;
+            const endX = canvas.width * LANE_CONFIG.endPercent;
+            const laneWidth = (endX - startX) / LANE_CONFIG.lanes.length;
+            return LANE_CONFIG.lanes.map((lane, index) => ({
+                lane: lane,
+                x1: startX + (index * laneWidth),
+                x2: startX + ((index + 1) * laneWidth)
+            }));
+        }
+
+        function detectLanes(x1, x2) {
+            const boundaries = getLaneBoundaries();
+            const detectedLanes = [];
+            for (const boundary of boundaries) {
+                if (x2 >= boundary.x1 && x1 <= boundary.x2) {
+                    detectedLanes.push(boundary.lane);
+                }
+            }
+            return detectedLanes;
+        }
+
+        let samples = [];
+
+        async function loadManifest() {
+            try {
+                const response = await fetch('/sample_images/manifest.json');
+                samples = await response.json();
+                if (samples.length > 0) {
+                    loadSample(0);
+                }
+            } catch (error) {
+                console.error('Error loading manifest:', error);
+                document.getElementById('noImagePlaceholder').textContent =
+                    'Error loading samples. Please check server.';
+            }
+        }
+
+        function loadSample(index) {
+            currentSample = samples[index];
+            document.getElementById('noImagePlaceholder').style.display = 'none';
+            padImage.style.display = 'block';
+            canvas.style.display = 'block';
+
+            padImage.onload = () => {
+                canvas.width = padImage.naturalWidth;
+                canvas.height = padImage.naturalHeight;
+                canvas.style.width = padImage.width + 'px';
+                canvas.style.height = padImage.height + 'px';
+                redrawAnnotations();
+            };
+
+            padImage.src = `/sample_images/${currentSample.filename}`;
+            annotations = [];
+            audioChunks = [];
+            updateAnnotationsList();
+        }
+
+        function setTool(tool) {
+            currentTool = tool;
+            document.getElementById('rectTool').classList.toggle('active', tool === 'rectangle');
+            document.getElementById('freeTool').classList.toggle('active', tool === 'polygon');
+        }
+
+        function setColor(color) {
+            currentColor = color;
+            document.querySelectorAll('.color-option').forEach(el => {
+                el.classList.toggle('active', el.style.background === color);
+            });
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (!currentSample) return;
+            isDrawing = true;
+            drawingStartTime = isRecording ? (Date.now() - recordingStartTime) : null;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            startX = (e.clientX - rect.left) * scaleX;
+            startY = (e.clientY - rect.top) * scaleY;
+            if (currentTool === 'polygon') {
+                polygonPoints = [{x: startX, y: startY}];
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!currentSample) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const x = (e.clientX - rect.left) * scaleX;
+            const lanes = detectLanes(x, x);
+            showLaneTooltip(e.clientX, e.clientY, lanes);
+
+            if (!isDrawing) return;
+            const scaleY = canvas.height / rect.height;
+            const currentX = (e.clientX - rect.left) * scaleX;
+            const currentY = (e.clientY - rect.top) * scaleY;
+            redrawAnnotations();
+            ctx.strokeStyle = currentColor;
+            ctx.lineWidth = 3;
+
+            if (currentTool === 'rectangle') {
+                ctx.setLineDash([5, 5]);
+                ctx.strokeRect(startX, startY, currentX - startX, currentY - startY);
+                ctx.setLineDash([]);
+            } else {
+                polygonPoints.push({x: currentX, y: currentY});
+                ctx.beginPath();
+                ctx.moveTo(polygonPoints[0].x, polygonPoints[0].y);
+                for (let point of polygonPoints) {
+                    ctx.lineTo(point.x, point.y);
+                }
+                ctx.closePath();
+                ctx.stroke();
+            }
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (!isDrawing) return;
+            isDrawing = false;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const endX = (e.clientX - rect.left) * scaleX;
+            const endY = (e.clientY - rect.top) * scaleY;
+            const timestampEnd = isRecording ? (Date.now() - recordingStartTime) : null;
+
+            let autoDetectedLanes;
+            if (currentTool === 'rectangle') {
+                autoDetectedLanes = detectLanes(Math.min(startX, endX), Math.max(startX, endX));
+            } else {
+                const xCoords = polygonPoints.map(p => p.x);
+                autoDetectedLanes = detectLanes(Math.min(...xCoords), Math.max(...xCoords));
+            }
+
+            let annotation;
+            if (currentTool === 'rectangle') {
+                annotation = {
+                    id: Date.now(),
+                    type: 'rectangle',
+                    color: currentColor,
+                    lanes: autoDetectedLanes,
+                    timestamp_start_ms: drawingStartTime,
+                    timestamp_end_ms: timestampEnd,
+                    bbox: {
+                        x: Math.min(startX, endX),
+                        y: Math.min(startY, endY),
+                        width: Math.abs(endX - startX),
+                        height: Math.abs(endY - startY)
+                    },
+                    bbox_normalized: {
+                        x1: Math.round(Math.min(startX, endX) / canvas.width * 999),
+                        y1: Math.round(Math.min(startY, endY) / canvas.height * 999),
+                        x2: Math.round(Math.max(startX, endX) / canvas.width * 999),
+                        y2: Math.round(Math.max(startY, endY) / canvas.height * 999)
+                    }
+                };
+            } else {
+                annotation = {
+                    id: Date.now(),
+                    type: 'polygon',
+                    color: currentColor,
+                    lanes: autoDetectedLanes,
+                    timestamp_start_ms: drawingStartTime,
+                    timestamp_end_ms: timestampEnd,
+                    points: polygonPoints,
+                    points_normalized: polygonPoints.map(p => ({
+                        x: Math.round(p.x / canvas.width * 999),
+                        y: Math.round(p.y / canvas.height * 999)
+                    }))
+                };
+            }
+
+            if (currentTool === 'rectangle' && annotation.bbox.width > 10 && annotation.bbox.height > 10) {
+                annotations.push(annotation);
+            } else if (currentTool === 'polygon' && polygonPoints.length > 5) {
+                annotations.push(annotation);
+            }
+
+            drawingStartTime = null;
+            redrawAnnotations();
+            updateAnnotationsList();
+            polygonPoints = [];
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            if (isDrawing) {
+                isDrawing = false;
+                polygonPoints = [];
+                redrawAnnotations();
+            }
+            hideLaneTooltip();
+        });
+
+        function showLaneTooltip(mouseX, mouseY, lanes) {
+            const tooltip = document.getElementById('laneTooltip');
+            if (lanes.length > 0) {
+                tooltip.textContent = `Lane ${lanes.join(', ')}`;
+                tooltip.classList.remove('outside');
+            } else {
+                tooltip.textContent = 'Outside';
+                tooltip.classList.add('outside');
+            }
+            tooltip.style.left = mouseX + 'px';
+            tooltip.style.top = mouseY + 'px';
+            tooltip.style.display = 'block';
+        }
+
+        function hideLaneTooltip() {
+            document.getElementById('laneTooltip').style.display = 'none';
+        }
+
+        function redrawAnnotations() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let ann of annotations) {
+                ctx.strokeStyle = ann.color;
+                ctx.lineWidth = 3;
+                if (ann.type === 'rectangle') {
+                    ctx.strokeRect(ann.bbox.x, ann.bbox.y, ann.bbox.width, ann.bbox.height);
+                } else {
+                    ctx.beginPath();
+                    ctx.moveTo(ann.points[0].x, ann.points[0].y);
+                    for (let point of ann.points) {
+                        ctx.lineTo(point.x, point.y);
+                    }
+                    ctx.closePath();
+                    ctx.stroke();
+                }
+            }
+        }
+
+        function updateAnnotationsList() {
+            const list = document.getElementById('annotationsList');
+            document.getElementById('annotationCount').textContent = annotations.length;
+            if (annotations.length === 0) {
+                list.innerHTML = '<p class="empty-state">Draw on the image to create annotations</p>';
+                return;
+            }
+            list.innerHTML = annotations.map((ann, index) => `
+                <div class="annotation-item">
+                    <button class="delete-btn" onclick="deleteAnnotation(${index})">x</button>
+                    <div class="time">${formatTimeRange(ann.timestamp_start_ms, ann.timestamp_end_ms)}</div>
+                    <div class="type">${ann.type} - ${ann.lanes.length > 0 ? ann.lanes.join(', ') : 'no lanes'}</div>
+                </div>
+            `).join('');
+        }
+
+        function deleteAnnotation(index) {
+            annotations.splice(index, 1);
+            redrawAnnotations();
+            updateAnnotationsList();
+        }
+
+        function undoLast() {
+            if (annotations.length > 0) {
+                annotations.pop();
+                redrawAnnotations();
+                updateAnnotationsList();
+            }
+        }
+
+        function clearAnnotations() {
+            if (annotations.length === 0) return;
+            if (confirm('Clear all annotations?')) {
+                annotations = [];
+                redrawAnnotations();
+                updateAnnotationsList();
+            }
+        }
+
+        async function toggleRecording() {
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+                    mediaRecorder.ondataavailable = (e) => {
+                        audioChunks.push(e.data);
+                    };
+                    mediaRecorder.start();
+                    isRecording = true;
+                    recordingStartTime = Date.now();
+                    document.getElementById('recordBtn').textContent = 'Stop Recording';
+                    document.getElementById('recordBtn').classList.add('recording');
+                    document.getElementById('audioIndicator').classList.add('recording');
+                    audioTimerInterval = setInterval(updateAudioTimer, 1000);
+                } catch (error) {
+                    alert('Could not access microphone: ' + error.message);
+                }
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                clearInterval(audioTimerInterval);
+                document.getElementById('recordBtn').textContent = 'Start Recording';
+                document.getElementById('recordBtn').classList.remove('recording');
+                document.getElementById('audioIndicator').classList.remove('recording');
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        function updateAudioTimer() {
+            if (!recordingStartTime) return;
+            const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+            const seconds = (elapsed % 60).toString().padStart(2, '0');
+            document.getElementById('audioTime').textContent = `${minutes}:${seconds}`;
+        }
+
+        function formatTime(ms) {
+            const seconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function formatTimeRange(startMs, endMs) {
+            if (startMs === null || endMs === null) {
+                return 'No timestamp';
+            }
+            return `${formatTime(startMs)} → ${formatTime(endMs)}`;
+        }
+
+        async function exportSession() {
+            if (!currentSample) {
+                alert('No sample loaded');
+                return;
+            }
+            if (annotations.length === 0) {
+                alert('No annotations to export. Draw some regions first.');
+                return;
+            }
+            if (isRecording) {
+                await stopRecordingForExport();
+            }
+            const sessionData = {
+                session_id: `session_${Date.now()}`,
+                timestamp: new Date().toISOString(),
+                sample: currentSample,
+                image_dimensions: {
+                    width: canvas.width,
+                    height: canvas.height
+                },
+                annotations: JSON.parse(JSON.stringify(annotations)),
+                audio: null
+            };
+            if (audioChunks.length > 0) {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const reader = new FileReader();
+                reader.readAsDataURL(audioBlob);
+                reader.onloadend = () => {
+                    sessionData.audio = {
+                        format: 'webm',
+                        data_base64: reader.result.split(',')[1],
+                        duration_ms: sessionData.recording_duration_ms || null
+                    };
+                    downloadSession(sessionData);
+                };
+            } else {
+                downloadSession(sessionData);
+            }
+        }
+
+        function stopRecordingForExport() {
+            return new Promise((resolve) => {
+                if (!isRecording || !mediaRecorder) {
+                    resolve();
+                    return;
+                }
+                const duration = Date.now() - recordingStartTime;
+                mediaRecorder.onstop = () => {
+                    isRecording = false;
+                    clearInterval(audioTimerInterval);
+                    document.getElementById('recordBtn').textContent = 'Start Recording';
+                    document.getElementById('recordBtn').classList.remove('recording');
+                    document.getElementById('audioIndicator').classList.remove('recording');
+                    window.lastRecordingDuration = duration;
+                    resolve();
+                };
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            });
+        }
+
+        async function downloadSession(data) {
+            try {
+                const response = await fetch('/api/save-annotation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+                const result = await response.json();
+                alert(`Saved ${data.annotations.length} annotations${result.audio_saved ? ' with audio' : ''} to server.\n\nTotal sessions: ${result.total_sessions}`);
+            } catch (error) {
+                console.error('Error saving to server:', error);
+                if (confirm(`Could not save to server: ${error.message}\n\nDownload as local file instead?`)) {
+                    const json = JSON.stringify(data, null, 2);
+                    const blob = new Blob([json], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `pad_annotation_${data.sample.drug_name}_${Date.now()}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }
+            }
+        }
+
+        function startNewSession() {
+            if (annotations.length > 0 || audioChunks.length > 0) {
+                if (!confirm('This will clear all annotations and audio. Continue?')) {
+                    return;
+                }
+            }
+            if (isRecording) {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                isRecording = false;
+                clearInterval(audioTimerInterval);
+            }
+            annotations = [];
+            audioChunks = [];
+            recordingStartTime = null;
+            document.getElementById('recordBtn').textContent = 'Start Recording';
+            document.getElementById('recordBtn').classList.remove('recording');
+            document.getElementById('audioIndicator').classList.remove('recording');
+            document.getElementById('audioTime').textContent = '00:00';
+            redrawAnnotations();
+            updateAnnotationsList();
+        }
+
+        loadManifest();
+    </script>
+</body>
+</html>
