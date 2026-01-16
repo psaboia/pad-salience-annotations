@@ -13,8 +13,8 @@ from PIL import Image, ImageDraw, ImageFont
 def generate_eyetracking_layout(
     pad_image_path: Optional[str] = None,
     output_path: str = "eyetracking_layout.png",
-    tag_size: int = 80,
-    tag_margin: int = 20,
+    tag_size: int = 50,
+    tag_margin: int = 10,
     background_color: str = "#1a1a2e",
 ):
     """
@@ -152,14 +152,14 @@ def main():
     parser.add_argument(
         "--tag-size",
         type=int,
-        default=80,
-        help="AprilTag size in pixels (default: 80)"
+        default=50,
+        help="AprilTag size in pixels (default: 50)"
     )
     parser.add_argument(
         "--tag-margin",
         type=int,
-        default=20,
-        help="Margin between tags and PAD image (default: 20)"
+        default=10,
+        help="Margin between tags and PAD image (default: 10)"
     )
     parser.add_argument(
         "--background",
