@@ -15,8 +15,8 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #1a1a2e;
             color: #eee;
-            height: 100vh;
-            overflow: hidden;
+            min-height: 100vh;
+            overflow-x: hidden;
         }
 
         /* Main Layout - 2 columns: tracked area + sidebar */
@@ -24,7 +24,7 @@
             display: grid;
             grid-template-columns: 1fr 220px;
             grid-template-rows: auto 1fr;
-            height: 100vh;
+            min-height: 100vh;
         }
 
         /* Compact Header */
