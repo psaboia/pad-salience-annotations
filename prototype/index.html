@@ -155,9 +155,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 60px 10px;
+            padding: 55px 10px;
             background: #1a1a2e;
-            overflow: auto;
+            overflow: visible;
         }
 
         .apriltag-container {
@@ -202,16 +202,6 @@
         .apriltag.bottom-right {
             bottom: -48px;
             right: -48px;
-        }
-
-        .apriltag .tag-id {
-            position: absolute;
-            bottom: -14px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 9px;
-            color: #666;
-            white-space: nowrap;
         }
 
         .canvas-wrapper {
@@ -501,19 +491,15 @@
                 <!-- AprilTags for Pupil Labs surface tracking -->
                 <div class="apriltag top-left">
                     <img src="/assets/apriltags/tag36h11_0.png" alt="AprilTag 0">
-                    <span class="tag-id">tag 0</span>
                 </div>
                 <div class="apriltag top-right">
                     <img src="/assets/apriltags/tag36h11_3.png" alt="AprilTag 3">
-                    <span class="tag-id">tag 3</span>
                 </div>
                 <div class="apriltag bottom-left">
                     <img src="/assets/apriltags/tag36h11_7.png" alt="AprilTag 7">
-                    <span class="tag-id">tag 7</span>
                 </div>
                 <div class="apriltag bottom-right">
                     <img src="/assets/apriltags/tag36h11_4.png" alt="AprilTag 4">
-                    <span class="tag-id">tag 4</span>
                 </div>
 
                 <div class="canvas-wrapper" id="canvasWrapper">
