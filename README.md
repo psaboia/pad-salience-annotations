@@ -6,6 +6,12 @@ A system for capturing expert annotations on PAD (Paper Analytical Device) card 
 
 **PAD (Paper Analytical Device)** is a paper-based test card developed by the [Notre Dame PAD Project](https://padproject.nd.edu/) for screening pharmaceutical quality. Each card has 12 lanes (A-L) with different chemical reagents that produce color reactions to identify drugs and detect counterfeits.
 
+<p align="center">
+  <img src="sample_images/amoxicillin_15214_processed.png" alt="PAD Card Example - Amoxicillin" width="300">
+  <br>
+  <em>Example PAD card showing 12 lanes (A-L) with color reactions for Amoxicillin</em>
+</p>
+
 ## Purpose
 
 This project builds a structured annotation system where:
