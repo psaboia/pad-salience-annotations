@@ -1235,6 +1235,23 @@
             if (isRecording) {
                 await stopRecordingForExport();
             }
+            // Capture current layout settings for reconstruction
+            const root = document.documentElement;
+            const style = getComputedStyle(root);
+            const layoutSettings = {
+                apriltags: {
+                    size_px: parseInt(style.getPropertyValue('--tag-size')) || 60,
+                    margin_px: parseInt(style.getPropertyValue('--tag-margin')) || 0
+                },
+                pad_image: {
+                    width_px: parseInt(style.getPropertyValue('--pad-width')) || null,
+                    height_px: style.getPropertyValue('--pad-height').trim() === 'auto' ? null : parseInt(style.getPropertyValue('--pad-height'))
+                },
+                layout: {
+                    tracked_padding_px: parseInt(style.getPropertyValue('--tracked-padding')) || 0
+                }
+            };
+
             const sessionData = {
                 session_id: `session_${Date.now()}`,
                 timestamp: new Date().toISOString(),
@@ -1243,6 +1260,7 @@
                     width: canvas.width,
                     height: canvas.height
                 },
+                layout_settings: layoutSettings,
                 annotations: JSON.parse(JSON.stringify(annotations)),
                 audio: null
             };
