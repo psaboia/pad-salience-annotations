@@ -17,22 +17,20 @@ A system for capturing expert annotations on PAD (Paper Analytical Device) card 
 This project builds a structured annotation system where:
 - **Specialists** mark salient regions on PAD card images
 - **Audio explanations** capture expert reasoning
+- **Eye-tracking** captures gaze patterns during annotation
 - **Data** is formatted for training multimodal AI models (fine-tuning, distillation, embeddings)
 
 ## Features
 
-### Prototype (Current)
-- Web-based annotation interface
+### Current
+- Web-based annotation interface with two layout options
 - Rectangle and polygon drawing tools
 - Automatic lane detection (A-L)
 - Continuous audio recording with timestamps
+- **Eye-tracking support** with AprilTag markers for Pupil Labs surface tracking
+- YAML configuration file for easy customization
 - Export to JSONL format
 - 26 drug samples from FHI2020 project
-
-### Eye-Tracking (feature/eye-tracking branch)
-- AprilTag markers for Pupil Labs surface tracking
-- 4 tags (tag36h11 family) displayed around PAD image
-- Enables gaze data to be mapped to image coordinates
 
 ### Planned
 - SQLite database for data integrity
@@ -59,6 +57,65 @@ uv sync
 # http://localhost:8765
 ```
 
+## Layout Options
+
+Two interface layouts are available:
+
+| Layout | URL | Description |
+|--------|-----|-------------|
+| With Header | `http://localhost:8765` | Toolbar in header, sidebar for recording/annotations |
+| Fullscreen | `http://localhost:8765/prototype/index-fullscreen.html` | All controls in sidebar, maximizes tracked area |
+
+Both layouts include 4 AprilTags (tag36h11 family) positioned around the PAD image for Pupil Labs eye-tracking surface detection.
+
+## Configuration
+
+Settings are stored in `config.yaml`:
+
+```yaml
+# AprilTag settings
+apriltags:
+  size_px: 60          # Tag size in pixels (recommended: 60-80)
+  margin_px: 10        # Margin between tags and PAD image
+  family: "tag36h11"
+  ids: [0, 3, 7, 4]
+
+# Layout settings
+layout:
+  sidebar_width_px: 240
+  background_color: "#1a1a2e"
+  sidebar_color: "#16213e"
+
+# PAD image settings
+pad_image:
+  max_height_vh: 85    # Max height as % of viewport
+  border_px: 3
+  border_color: "#333333"
+
+# Lane detection
+lanes:
+  start_percent: 0.082
+  end_percent: 0.986
+  labels: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"]
+```
+
+Changes take effect after restarting the server and reloading the page.
+
+## Eye-Tracking Setup
+
+For Pupil Labs integration, see [Eye-Tracking Integration](docs/eye-tracking-integration.md).
+
+**AprilTag size recommendations:**
+- Minimum detectable: ~32 pixels (white border to white border)
+- Recommended: 60-80 pixels for reliable detection at 50-70cm distance
+- Tags at corners should be larger if detection issues occur at angles
+
+Generate a reference image showing the tracked area layout:
+
+```bash
+python generate_eyetracking_layout.py --output reference.png
+```
+
 ## Documentation
 
 | Document | Description |
@@ -74,25 +131,33 @@ uv sync
 ```
 pad-salience-annotations/
 ├── prototype/
-│   └── index.html          # Annotation interface
+│   ├── index.html              # Annotation interface (with header)
+│   └── index-fullscreen.html   # Fullscreen layout (all controls in sidebar)
 ├── sample_images/
-│   ├── manifest.json       # Image metadata
-│   └── *.png               # PAD card images
+│   ├── manifest.json           # Image metadata
+│   └── *.png                   # PAD card images
 ├── assets/
-│   └── apriltags/          # AprilTag markers for eye-tracking
+│   ├── apriltags/              # AprilTag markers for eye-tracking
+│   └── eyetracking_layout.png  # Generated layout reference
 ├── data/
-│   ├── annotations.jsonl   # Saved annotations
-│   └── audio/              # Audio recordings
-├── docs/
-│   ├── requirements.md
-│   ├── experiment-system.md
-│   ├── prototype-specifications.md
-│   ├── eye-tracking-integration.md
-│   └── feedback-questionnaire.md
-├── server.py               # FastAPI backend
-├── run_prototype.sh        # Server launcher
-└── pyproject.toml          # Python dependencies
+│   ├── annotations.jsonl       # Saved annotations
+│   └── audio/                  # Audio recordings
+├── docs/                       # Documentation
+├── config.yaml                 # Configuration file
+├── server.py                   # FastAPI backend
+├── generate_eyetracking_layout.py  # Layout image generator
+├── run_prototype.sh            # Server launcher
+└── pyproject.toml              # Python dependencies
 ```
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Serve annotation interface |
+| `/api/config` | GET | Get configuration from config.yaml |
+| `/api/save-annotation` | POST | Save annotation session |
+| `/api/stats` | GET | Get annotation statistics |
 
 ## Data Format
 
@@ -120,6 +185,8 @@ Annotations are saved in JSONL format with normalized coordinates (0-999) compat
 - Python 3.12+
 - [uv](https://github.com/astral-sh/uv) - Package manager
 - [pad-analytics](https://github.com/PaperAnalyticalDeviceND/pad-analytics) - PAD database API
+- [Pillow](https://pillow.readthedocs.io/) - Image processing (for layout generator)
+- [PyYAML](https://pyyaml.org/) - Configuration file parsing
 
 ## Contributing
 
@@ -135,3 +202,4 @@ TBD
 
 - [Notre Dame PAD Project](https://padproject.nd.edu/) for PAD technology and data
 - [pad-analytics](https://github.com/PaperAnalyticalDeviceND/pad-analytics) package for API access
+- [Pupil Labs](https://pupil-labs.com/) for eye-tracking technology
