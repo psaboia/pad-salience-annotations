@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Experiment Progress - PAD Annotation System{% endblock %}
+{% block title %}Study Progress - PAD Annotation System{% endblock %}
 
 {% block head %}
 <style>
@@ -176,9 +176,9 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/experiments/new" class="nav-link">
+                    <a href="/admin/studies/new" class="nav-link">
                         <span class="icon">➕</span>
-                        New Experiment
+                        New Study
                     </a>
                 </li>
                 <li class="nav-item">
@@ -203,12 +203,12 @@
 
 {% block scripts %}
 <script>
-    const experimentId = {{ experiment_id }};
+    const studyId = {{ study_id }};
     let refreshInterval = null;
 
     async function loadProgress() {
         try {
-            const progress = await apiCall(`/api/admin/experiments/${experimentId}/progress`);
+            const progress = await apiCall(`/api/admin/studies/${studyId}/progress`);
             renderProgress(progress);
         } catch (error) {
             showError(error.message);
@@ -217,7 +217,7 @@
 
     function renderProgress(data) {
         const content = document.getElementById('content');
-        const exp = data.experiment;
+        const exp = data.study;
         const overall = data.overall_percentage;
 
         content.innerHTML = `
@@ -227,7 +227,7 @@
                     <span class="badge badge-${getStatusBadge(exp.status)}">${exp.status.toUpperCase()}</span>
                 </div>
                 <div>
-                    <a href="/admin/experiments/${experimentId}" class="btn btn-secondary">View Details</a>
+                    <a href="/admin/studies/${studyId}" class="btn btn-secondary">View Details</a>
                     <button class="btn btn-primary refresh-btn" onclick="loadProgress()" id="refreshBtn">
                         Refresh
                     </button>

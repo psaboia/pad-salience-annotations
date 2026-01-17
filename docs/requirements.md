@@ -300,17 +300,17 @@ The export layer converts raw data to specific formats for integration with open
 
 ---
 
-## Experiment System
+## Study System
 
-The data collection uses a structured experiment system where:
-- Administrators define experiments with pre-selected image sets
-- Specialists are assigned to experiments
+The data collection uses a structured study system where:
+- Administrators define studies with pre-selected image sets
+- Specialists are assigned to studies
 - Each specialist sees the same images in the same order
-- Progress is tracked per user per experiment
+- Progress is tracked per user per study
 - Data stored in SQLite database for integrity
 
-See [experiment-system.md](./experiment-system.md) for full design details including:
-- Database schema (specialists, experiments, images, annotations)
+See [study-system.md](./study-system.md) for full design details including:
+- Database schema (specialists, studies, images, annotations)
 - API endpoints
 - Workflow for admins and specialists
 - Progress tracking
@@ -339,7 +339,7 @@ See [experiment-system.md](./experiment-system.md) for full design details inclu
 ### Pending
 - [ ] Specific PAD configuration to start with
 - [ ] Review/validation workflow for annotations
-- [ ] Expected volume of images/annotations per experiment
+- [ ] Expected volume of images/annotations per study
 - [ ] Specialist authentication method (simple name selection vs login system)
-- [ ] Admin interface for experiment management
+- [ ] Admin interface for study management
 - [ ] Backup and data recovery procedures

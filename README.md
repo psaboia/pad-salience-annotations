@@ -23,8 +23,8 @@ This project builds a structured annotation system where:
 ## Features
 
 ### Current
-- **Experiment Management System** with SQLite database
-  - Admin interface for creating and managing experiments
+- **Study Management System** with SQLite database
+  - Admin interface for creating and managing studies
   - Specialist dashboard with assignment tracking
   - Randomized sample order per specialist
   - Progress tracking and statistics
@@ -68,14 +68,14 @@ uv run uvicorn app.main:app --reload --port 8765
 
 ### Admin Workflow
 1. Admin logs in at `/login`
-2. Creates experiment from `/admin/experiments`
+2. Creates study from `/admin/studies`
 3. Selects samples and assigns specialists
 4. Monitors progress from dashboard
 
 ### Specialist Workflow
 1. Specialist logs in at `/login`
-2. Views assigned experiments at `/specialist`
-3. Starts experiment (samples randomized)
+2. Views assigned studies at `/specialist`
+3. Starts study (samples randomized)
 4. Annotates each sample sequentially (no skipping/going back)
 5. Progress automatically tracked
 
@@ -131,7 +131,7 @@ For Pupil Labs integration, see [Eye-Tracking Integration](docs/eye-tracking-int
 | Document | Description |
 |----------|-------------|
 | [Requirements](docs/requirements.md) | Full system requirements and data architecture |
-| [Experiment System](docs/experiment-system.md) | Database schema and experiment workflow design |
+| [Study System](docs/study-system.md) | Database schema and study workflow design |
 | [Prototype Specs](docs/prototype-specifications.md) | Current prototype implementation details |
 | [Eye-Tracking Integration](docs/eye-tracking-integration.md) | Pupil Labs setup and AprilTag configuration |
 | [AprilTag Identification](docs/apriltag-identification-system.md) | Unique tag allocation for automatic sample identification |
@@ -186,18 +186,18 @@ pad-salience-annotations/
 ### Admin
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/admin/experiments` | GET/POST | List/Create experiments |
-| `/api/admin/experiments/{id}` | GET/PUT/DELETE | CRUD operations |
-| `/api/admin/experiments/{id}/samples` | GET/POST | Manage samples |
-| `/api/admin/experiments/{id}/assignments` | GET/POST/DELETE | Manage assignments |
+| `/api/admin/studies` | GET/POST | List/Create studies |
+| `/api/admin/studies/{id}` | GET/PUT/DELETE | CRUD operations |
+| `/api/admin/studies/{id}/samples` | GET/POST | Manage samples |
+| `/api/admin/studies/{id}/assignments` | GET/POST/DELETE | Manage assignments |
 | `/api/admin/users` | GET/POST | Manage users |
 
 ### Specialist
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/specialist/experiments` | GET | List assigned experiments |
-| `/api/specialist/experiments/{id}/start` | POST | Start experiment |
-| `/api/specialist/experiments/{id}/current` | GET | Get current sample |
+| `/api/specialist/studies` | GET | List assigned studies |
+| `/api/specialist/studies/{id}/start` | POST | Start study |
+| `/api/specialist/studies/{id}/current` | GET | Get current sample |
 | `/api/specialist/sessions/{uuid}/complete` | POST | Complete annotation |
 
 ## Data Format

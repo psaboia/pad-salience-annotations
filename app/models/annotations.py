@@ -54,7 +54,7 @@ class LayoutSettings(BaseModel):
 class AnnotationSessionCreate(BaseModel):
     """Request model for starting a new annotation session."""
     assignment_id: int
-    experiment_sample_id: int
+    study_sample_id: int
 
 
 class AnnotationSessionComplete(BaseModel):

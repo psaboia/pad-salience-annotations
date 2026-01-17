@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Experiment Details - PAD Annotation System{% endblock %}
+{% block title %}Study Details - PAD Annotation System{% endblock %}
 
 {% block head %}
 <style>
@@ -225,9 +225,9 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/experiments/new" class="nav-link">
+                    <a href="/admin/studies/new" class="nav-link">
                         <span class="icon">➕</span>
-                        New Experiment
+                        New Study
                     </a>
                 </li>
                 <li class="nav-item">
@@ -272,19 +272,19 @@
 
 {% block scripts %}
 <script>
-    const experimentId = {{ experiment_id }};
-    let currentExperiment = null;
+    const studyId = {{ study_id }};
+    let currentStudy = null;
     let currentAssignments = [];
     let allSpecialists = [];
 
-    async function loadExperiment() {
+    async function loadStudy() {
         try {
-            const experiment = await apiCall(`/api/admin/experiments/${experimentId}`);
-            const assignments = await apiCall(`/api/admin/experiments/${experimentId}/assignments`);
+            const study = await apiCall(`/api/admin/studies/${studyId}`);
+            const assignments = await apiCall(`/api/admin/studies/${studyId}/assignments`);
 
-            currentExperiment = experiment;
+            currentStudy = study;
             currentAssignments = assignments;
-            renderExperiment(experiment, assignments);
+            renderStudy(study, assignments);
         } catch (error) {
             showError(error.message);
         }
@@ -294,22 +294,22 @@
         return status === 'draft' || status === 'active';
     }
 
-    function renderExperiment(exp, assignments) {
+    function renderStudy(study, assignments) {
         const content = document.getElementById('content');
-        const canModify = canModifyAssignments(exp.status);
+        const canModify = canModifyAssignments(study.status);
 
         content.innerHTML = `
             <div class="page-header">
                 <div>
-                    <h2>${exp.name}</h2>
+                    <h2>${study.name}</h2>
                     <div class="meta">
-                        Created ${formatDate(exp.created_at)}
+                        Created ${formatDate(study.created_at)}
                     </div>
                 </div>
                 <div class="header-actions">
-                    <span class="badge badge-${getStatusBadge(exp.status)}">${exp.status.toUpperCase()}</span>
-                    ${exp.status === 'active' || exp.status === 'paused' ?
-                        `<a href="/admin/experiments/${exp.id}/progress" class="btn btn-primary">View Progress</a>` : ''
+                    <span class="badge badge-${getStatusBadge(study.status)}">${study.status.toUpperCase()}</span>
+                    ${study.status === 'active' || study.status === 'paused' ?
+                        `<a href="/admin/studies/${study.id}/progress" class="btn btn-primary">View Progress</a>` : ''
                     }
                 </div>
             </div>
@@ -321,34 +321,34 @@
                     </div>
                     <div class="info-section">
                         <h4>Description</h4>
-                        <p>${exp.description || 'No description provided'}</p>
+                        <p>${study.description || 'No description provided'}</p>
                     </div>
                     <div class="info-section">
                         <h4>Instructions</h4>
-                        <p>${exp.instructions || 'No instructions provided'}</p>
+                        <p>${study.instructions || 'No instructions provided'}</p>
                     </div>
-                    ${exp.status === 'draft' ? `
+                    ${study.status === 'draft' ? `
                         <div class="status-actions">
-                            <button class="btn btn-success" onclick="activateExperiment()">Activate Experiment</button>
-                            <button class="btn btn-danger" onclick="deleteExperiment()">Delete</button>
+                            <button class="btn btn-success" onclick="activateStudy()">Activate Study</button>
+                            <button class="btn btn-danger" onclick="deleteStudy()">Delete</button>
                         </div>
-                    ` : exp.status === 'active' ? `
+                    ` : study.status === 'active' ? `
                         <div class="status-actions">
-                            <button class="btn btn-warning" onclick="pauseExperiment()">Pause Experiment</button>
+                            <button class="btn btn-warning" onclick="pauseStudy()">Pause Study</button>
                         </div>
-                    ` : exp.status === 'paused' ? `
+                    ` : study.status === 'paused' ? `
                         <div class="status-actions">
-                            <button class="btn btn-success" onclick="resumeExperiment()">Resume Experiment</button>
+                            <button class="btn btn-success" onclick="resumeStudy()">Resume Study</button>
                         </div>
                     ` : ''}
                 </div>
 
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">Samples (${exp.sample_count})</h3>
+                        <h3 class="card-title">Samples (${study.sample_count})</h3>
                     </div>
                     <div class="sample-preview">
-                        ${exp.samples.map(s => `
+                        ${study.samples.map(s => `
                             <span class="sample-chip">${s.drug_name_display}</span>
                         `).join('')}
                     </div>
@@ -365,7 +365,7 @@
                 ${assignments.length === 0 ? `
                     <div class="empty-state">
                         <p>No specialists assigned yet</p>
-                        ${canModify ? `<p><a href="#" onclick="openAddSpecialistModal(); return false;">Add specialists</a> to this experiment</p>` : ''}
+                        ${canModify ? `<p><a href="#" onclick="openAddSpecialistModal(); return false;">Add specialists</a> to this study</p>` : ''}
                     </div>
                 ` : `
                     <table class="table assignment-table">
@@ -376,7 +376,7 @@
                                 <th>Expertise</th>
                                 <th>Status</th>
                                 <th>Started</th>
-                                ${exp.status === 'draft' ? '<th></th>' : ''}
+                                ${study.status === 'draft' ? '<th></th>' : ''}
                             </tr>
                         </thead>
                         <tbody>
@@ -387,7 +387,7 @@
                                     <td>${a.expertise_level_snapshot ? formatExpertise(a.expertise_level_snapshot) : '-'}</td>
                                     <td><span class="badge badge-${getAssignmentStatusBadge(a.status)}">${a.status}</span></td>
                                     <td>${a.started_at ? formatDate(a.started_at) : '-'}</td>
-                                    ${exp.status === 'draft' ? `
+                                    ${study.status === 'draft' ? `
                                         <td>
                                             <span class="remove-btn" onclick="removeSpecialist(${a.specialist_id}, '${a.specialist_name}')" title="Remove">✕</span>
                                         </td>
@@ -474,14 +474,14 @@
 
     async function addSpecialist(specialistId) {
         try {
-            await apiCall(`/api/admin/experiments/${experimentId}/assignments`, {
+            await apiCall(`/api/admin/studies/${studyId}/assignments`, {
                 method: 'POST',
                 body: JSON.stringify({ specialist_id: specialistId })
             });
 
             // Reload assignments and re-render
-            currentAssignments = await apiCall(`/api/admin/experiments/${experimentId}/assignments`);
-            renderExperiment(currentExperiment, currentAssignments);
+            currentAssignments = await apiCall(`/api/admin/studies/${studyId}/assignments`);
+            renderStudy(currentStudy, currentAssignments);
             renderAvailableSpecialists();
         } catch (error) {
             showError(error.message);
@@ -489,14 +489,14 @@
     }
 
     async function removeSpecialist(specialistId, specialistName) {
-        if (!confirm(`Remove ${specialistName} from this experiment?`)) return;
+        if (!confirm(`Remove ${specialistName} from this study?`)) return;
 
         try {
-            await apiCall(`/api/admin/experiments/${experimentId}/assignments/${specialistId}`, {
+            await apiCall(`/api/admin/studies/${studyId}/assignments/${specialistId}`, {
                 method: 'DELETE'
             });
 
-            loadExperiment();
+            loadStudy();
         } catch (error) {
             showError(error.message);
         }
@@ -523,45 +523,45 @@
         return badges[status] || 'secondary';
     }
 
-    async function activateExperiment() {
-        if (!confirm('Activate this experiment? Specialists will be able to start annotating.')) return;
+    async function activateStudy() {
+        if (!confirm('Activate this study? Specialists will be able to start annotating.')) return;
         try {
-            await apiCall(`/api/admin/experiments/${experimentId}/activate`, { method: 'POST' });
-            loadExperiment();
+            await apiCall(`/api/admin/studies/${studyId}/activate`, { method: 'POST' });
+            loadStudy();
         } catch (error) {
             showError(error.message);
         }
     }
 
-    async function pauseExperiment() {
-        if (!confirm('Pause this experiment? Specialists will not be able to continue until resumed.')) return;
+    async function pauseStudy() {
+        if (!confirm('Pause this study? Specialists will not be able to continue until resumed.')) return;
         try {
-            await apiCall(`/api/admin/experiments/${experimentId}/pause`, { method: 'POST' });
-            loadExperiment();
+            await apiCall(`/api/admin/studies/${studyId}/pause`, { method: 'POST' });
+            loadStudy();
         } catch (error) {
             showError(error.message);
         }
     }
 
-    async function resumeExperiment() {
+    async function resumeStudy() {
         try {
-            await apiCall(`/api/admin/experiments/${experimentId}/resume`, { method: 'POST' });
-            loadExperiment();
+            await apiCall(`/api/admin/studies/${studyId}/resume`, { method: 'POST' });
+            loadStudy();
         } catch (error) {
             showError(error.message);
         }
     }
 
-    async function deleteExperiment() {
-        if (!confirm('Delete this experiment? This action cannot be undone.')) return;
+    async function deleteStudy() {
+        if (!confirm('Delete this study? This action cannot be undone.')) return;
         try {
-            await apiCall(`/api/admin/experiments/${experimentId}`, { method: 'DELETE' });
+            await apiCall(`/api/admin/studies/${studyId}`, { method: 'DELETE' });
             window.location.href = '/admin';
         } catch (error) {
             showError(error.message);
         }
     }
 
-    loadExperiment();
+    loadStudy();
 </script>
 {% endblock %}

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}New Experiment - PAD Annotation System{% endblock %}
+{% block title %}New Study - PAD Annotation System{% endblock %}
 
 {% block head %}
 <style>
@@ -224,9 +224,9 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/experiments/new" class="nav-link active">
+                    <a href="/admin/studies/new" class="nav-link active">
                         <span class="icon">➕</span>
-                        New Experiment
+                        New Study
                     </a>
                 </li>
                 <li class="nav-item">
@@ -241,7 +241,7 @@
 
     <main class="main-content">
         <div class="page-header">
-            <h2>Create New Experiment</h2>
+            <h2>Create New Study</h2>
         </div>
 
         <div class="wizard-steps">
@@ -254,16 +254,16 @@
         <div class="step-content active" id="step1">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">Experiment Details</h3>
+                    <h3 class="card-title">Study Details</h3>
                 </div>
                 <form id="basicInfoForm">
                     <div class="form-group">
-                        <label for="name">Experiment Name *</label>
+                        <label for="name">Study Name *</label>
                         <input type="text" id="name" class="form-control" placeholder="e.g., Drug Classification Study v1" required>
                     </div>
                     <div class="form-group">
                         <label for="description">Description</label>
-                        <textarea id="description" class="form-control" placeholder="Brief description of the experiment"></textarea>
+                        <textarea id="description" class="form-control" placeholder="Brief description of the study"></textarea>
                     </div>
                     <div class="form-group">
                         <label for="instructions">Instructions for Specialists</label>
@@ -315,7 +315,7 @@
                 </div>
                 <div class="wizard-actions">
                     <button type="button" class="btn btn-secondary" onclick="goToStep(2)">Back</button>
-                    <button type="button" class="btn btn-success" onclick="createExperiment()" id="createBtn">Create Experiment</button>
+                    <button type="button" class="btn btn-success" onclick="createStudy()" id="createBtn">Create Study</button>
                 </div>
             </div>
         </div>
@@ -330,7 +330,7 @@
     let specialists = [];
     let selectedSamples = new Set();
     let selectedSpecialists = new Set();
-    let experimentId = null;
+    let studyId = null;
 
     async function loadData() {
         try {
@@ -421,7 +421,7 @@
             if (currentStep === 1) {
                 const name = document.getElementById('name').value.trim();
                 if (!name) {
-                    showError('Please enter an experiment name');
+                    showError('Please enter an study name');
                     return;
                 }
             } else if (currentStep === 2) {
@@ -450,7 +450,7 @@
         currentStep = step;
     }
 
-    async function createExperiment() {
+    async function createStudy() {
         if (selectedSamples.size === 0) {
             showError('Please select at least one sample');
             return;
@@ -461,39 +461,39 @@
         createBtn.textContent = 'Creating...';
 
         try {
-            // Step 1: Create experiment
+            // Step 1: Create study
             const expData = {
                 name: document.getElementById('name').value.trim(),
                 description: document.getElementById('description').value.trim() || null,
                 instructions: document.getElementById('instructions').value.trim() || null
             };
-            const experiment = await apiCall('/api/admin/experiments', {
+            const study = await apiCall('/api/admin/studies', {
                 method: 'POST',
                 body: JSON.stringify(expData)
             });
-            experimentId = experiment.id;
+            studyId = study.id;
 
             // Step 2: Add samples
-            await apiCall(`/api/admin/experiments/${experimentId}/samples`, {
+            await apiCall(`/api/admin/studies/${studyId}/samples`, {
                 method: 'POST',
                 body: JSON.stringify({ sample_ids: Array.from(selectedSamples) })
             });
 
             // Step 3: Assign specialists
             for (const specialistId of selectedSpecialists) {
-                await apiCall(`/api/admin/experiments/${experimentId}/assignments`, {
+                await apiCall(`/api/admin/studies/${studyId}/assignments`, {
                     method: 'POST',
                     body: JSON.stringify({ specialist_id: specialistId })
                 });
             }
 
-            // Success - redirect to experiment detail
-            window.location.href = `/admin/experiments/${experimentId}`;
+            // Success - redirect to study detail
+            window.location.href = `/admin/studies/${studyId}`;
 
         } catch (error) {
             showError(error.message);
             createBtn.disabled = false;
-            createBtn.textContent = 'Create Experiment';
+            createBtn.textContent = 'Create Study';
         }
     }
 

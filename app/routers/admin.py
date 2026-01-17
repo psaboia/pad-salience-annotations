@@ -6,16 +6,16 @@ from typing import List
 from ..database import (
     get_db_context,
     get_all_samples,
-    get_all_experiments,
-    get_experiment_by_id,
-    create_experiment,
-    update_experiment_status,
-    add_samples_to_experiment,
-    get_experiment_samples,
+    get_all_studies,
+    get_study_by_id,
+    create_study,
+    update_study_status,
+    add_samples_to_study,
+    get_study_samples,
     get_specialists,
     create_assignment,
-    get_experiment_assignments,
-    get_experiment_progress,
+    get_study_assignments,
+    get_study_progress,
     get_all_users,
     create_user,
     update_user,
@@ -24,17 +24,17 @@ from ..database import (
     get_user_by_email,
 )
 from ..models import (
-    ExperimentCreate,
-    ExperimentUpdate,
-    ExperimentResponse,
-    ExperimentWithSamples,
+    StudyCreate,
+    StudyUpdate,
+    StudyResponse,
+    StudyWithSamples,
     SampleResponse,
     SampleSelectionRequest,
     AssignmentCreate,
     AssignmentResponse,
 )
 from ..models.auth import UserCreate, UserUpdate, UserResponse
-from ..models.experiments import SampleInExperiment, AssignmentProgress
+from ..models.studies import SampleInStudy, AssignmentProgress
 from ..services.auth import require_admin, hash_password
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -49,214 +49,214 @@ async def list_samples(_: dict = Depends(require_admin)):
         return [SampleResponse(**s) for s in samples]
 
 
-# Experiment endpoints
-@router.get("/experiments", response_model=List[ExperimentResponse])
-async def list_experiments(_: dict = Depends(require_admin)):
-    """Get all experiments."""
+# Study endpoints
+@router.get("/studies", response_model=List[StudyResponse])
+async def list_studies(_: dict = Depends(require_admin)):
+    """Get all studies."""
     async with get_db_context() as db:
-        experiments = await get_all_experiments(db)
-        return [ExperimentResponse(**e) for e in experiments]
+        studies = await get_all_studies(db)
+        return [StudyResponse(**s) for s in studies]
 
 
-@router.post("/experiments", response_model=ExperimentResponse, status_code=status.HTTP_201_CREATED)
-async def create_new_experiment(data: ExperimentCreate, admin: dict = Depends(require_admin)):
-    """Create a new experiment."""
+@router.post("/studies", response_model=StudyResponse, status_code=status.HTTP_201_CREATED)
+async def create_new_study(data: StudyCreate, admin: dict = Depends(require_admin)):
+    """Create a new study."""
     async with get_db_context() as db:
-        exp_id = await create_experiment(
+        study_id = await create_study(
             db,
             name=data.name,
             description=data.description,
             instructions=data.instructions,
             created_by=admin["id"]
         )
-        experiment = await get_experiment_by_id(db, exp_id)
-        return ExperimentResponse(**experiment)
+        study = await get_study_by_id(db, study_id)
+        return StudyResponse(**study)
 
 
-@router.get("/experiments/{experiment_id}", response_model=ExperimentWithSamples)
-async def get_experiment(experiment_id: int, _: dict = Depends(require_admin)):
-    """Get a specific experiment with its samples."""
+@router.get("/studies/{study_id}", response_model=StudyWithSamples)
+async def get_study(study_id: int, _: dict = Depends(require_admin)):
+    """Get a specific study with its samples."""
     async with get_db_context() as db:
-        experiment = await get_experiment_by_id(db, experiment_id)
-        if not experiment:
-            raise HTTPException(status_code=404, detail="Experiment not found")
+        study = await get_study_by_id(db, study_id)
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
 
-        samples = await get_experiment_samples(db, experiment_id)
-        sample_models = [SampleInExperiment(**s) for s in samples]
+        samples = await get_study_samples(db, study_id)
+        sample_models = [SampleInStudy(**s) for s in samples]
 
-        return ExperimentWithSamples(
-            **experiment,
+        return StudyWithSamples(
+            **study,
             samples=sample_models,
             sample_count=len(sample_models)
         )
 
 
-@router.put("/experiments/{experiment_id}", response_model=ExperimentResponse)
-async def update_experiment(experiment_id: int, data: ExperimentUpdate, _: dict = Depends(require_admin)):
-    """Update an experiment."""
+@router.put("/studies/{study_id}", response_model=StudyResponse)
+async def update_study(study_id: int, data: StudyUpdate, _: dict = Depends(require_admin)):
+    """Update a study."""
     async with get_db_context() as db:
-        experiment = await get_experiment_by_id(db, experiment_id)
-        if not experiment:
-            raise HTTPException(status_code=404, detail="Experiment not found")
+        study = await get_study_by_id(db, study_id)
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
 
         # Update fields
         if data.name is not None:
             await db.execute(
-                "UPDATE experiments SET name = ?, updated_at = datetime('now') WHERE id = ?",
-                (data.name, experiment_id)
+                "UPDATE studies SET name = ?, updated_at = datetime('now') WHERE id = ?",
+                (data.name, study_id)
             )
         if data.description is not None:
             await db.execute(
-                "UPDATE experiments SET description = ?, updated_at = datetime('now') WHERE id = ?",
-                (data.description, experiment_id)
+                "UPDATE studies SET description = ?, updated_at = datetime('now') WHERE id = ?",
+                (data.description, study_id)
             )
         if data.instructions is not None:
             await db.execute(
-                "UPDATE experiments SET instructions = ?, updated_at = datetime('now') WHERE id = ?",
-                (data.instructions, experiment_id)
+                "UPDATE studies SET instructions = ?, updated_at = datetime('now') WHERE id = ?",
+                (data.instructions, study_id)
             )
         if data.status is not None:
-            await update_experiment_status(db, experiment_id, data.status)
+            await update_study_status(db, study_id, data.status)
         else:
             await db.commit()
 
-        experiment = await get_experiment_by_id(db, experiment_id)
-        return ExperimentResponse(**experiment)
+        study = await get_study_by_id(db, study_id)
+        return StudyResponse(**study)
 
 
-@router.delete("/experiments/{experiment_id}")
-async def delete_experiment(experiment_id: int, _: dict = Depends(require_admin)):
-    """Delete an experiment (only if draft)."""
+@router.delete("/studies/{study_id}")
+async def delete_study(study_id: int, _: dict = Depends(require_admin)):
+    """Delete a study (only if draft)."""
     async with get_db_context() as db:
-        experiment = await get_experiment_by_id(db, experiment_id)
-        if not experiment:
-            raise HTTPException(status_code=404, detail="Experiment not found")
+        study = await get_study_by_id(db, study_id)
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
 
-        if experiment["status"] not in ("draft", "archived"):
+        if study["status"] not in ("draft", "archived"):
             raise HTTPException(
                 status_code=400,
-                detail="Can only delete draft or archived experiments"
+                detail="Can only delete draft or archived studies"
             )
 
-        await db.execute("DELETE FROM experiments WHERE id = ?", (experiment_id,))
+        await db.execute("DELETE FROM studies WHERE id = ?", (study_id,))
         await db.commit()
 
-        return {"status": "success", "message": "Experiment deleted"}
+        return {"status": "success", "message": "Study deleted"}
 
 
-@router.post("/experiments/{experiment_id}/activate")
-async def activate_experiment(experiment_id: int, _: dict = Depends(require_admin)):
-    """Activate an experiment (move from draft to active)."""
+@router.post("/studies/{study_id}/activate")
+async def activate_study(study_id: int, _: dict = Depends(require_admin)):
+    """Activate a study (move from draft to active)."""
     async with get_db_context() as db:
-        experiment = await get_experiment_by_id(db, experiment_id)
-        if not experiment:
-            raise HTTPException(status_code=404, detail="Experiment not found")
+        study = await get_study_by_id(db, study_id)
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
 
-        if experiment["status"] != "draft":
+        if study["status"] != "draft":
             raise HTTPException(
                 status_code=400,
-                detail="Can only activate draft experiments"
+                detail="Can only activate draft studies"
             )
 
-        # Check that experiment has samples
-        samples = await get_experiment_samples(db, experiment_id)
+        # Check that study has samples
+        samples = await get_study_samples(db, study_id)
         if not samples:
             raise HTTPException(
                 status_code=400,
-                detail="Cannot activate experiment without samples"
+                detail="Cannot activate study without samples"
             )
 
-        # Check that experiment has assignments
-        assignments = await get_experiment_assignments(db, experiment_id)
+        # Check that study has assignments
+        assignments = await get_study_assignments(db, study_id)
         if not assignments:
             raise HTTPException(
                 status_code=400,
-                detail="Cannot activate experiment without specialist assignments"
+                detail="Cannot activate study without specialist assignments"
             )
 
-        await update_experiment_status(db, experiment_id, "active")
+        await update_study_status(db, study_id, "active")
 
-        return {"status": "success", "message": "Experiment activated"}
+        return {"status": "success", "message": "Study activated"}
 
 
-@router.post("/experiments/{experiment_id}/pause")
-async def pause_experiment(experiment_id: int, _: dict = Depends(require_admin)):
-    """Pause an active experiment."""
+@router.post("/studies/{study_id}/pause")
+async def pause_study(study_id: int, _: dict = Depends(require_admin)):
+    """Pause an active study."""
     async with get_db_context() as db:
-        experiment = await get_experiment_by_id(db, experiment_id)
-        if not experiment:
-            raise HTTPException(status_code=404, detail="Experiment not found")
+        study = await get_study_by_id(db, study_id)
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
 
-        if experiment["status"] != "active":
+        if study["status"] != "active":
             raise HTTPException(
                 status_code=400,
-                detail="Can only pause active experiments"
+                detail="Can only pause active studies"
             )
 
-        await update_experiment_status(db, experiment_id, "paused")
+        await update_study_status(db, study_id, "paused")
 
-        return {"status": "success", "message": "Experiment paused"}
+        return {"status": "success", "message": "Study paused"}
 
 
-@router.post("/experiments/{experiment_id}/resume")
-async def resume_experiment(experiment_id: int, _: dict = Depends(require_admin)):
-    """Resume a paused experiment."""
+@router.post("/studies/{study_id}/resume")
+async def resume_study(study_id: int, _: dict = Depends(require_admin)):
+    """Resume a paused study."""
     async with get_db_context() as db:
-        experiment = await get_experiment_by_id(db, experiment_id)
-        if not experiment:
-            raise HTTPException(status_code=404, detail="Experiment not found")
+        study = await get_study_by_id(db, study_id)
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
 
-        if experiment["status"] != "paused":
+        if study["status"] != "paused":
             raise HTTPException(
                 status_code=400,
-                detail="Can only resume paused experiments"
+                detail="Can only resume paused studies"
             )
 
-        await update_experiment_status(db, experiment_id, "active")
+        await update_study_status(db, study_id, "active")
 
-        return {"status": "success", "message": "Experiment resumed"}
+        return {"status": "success", "message": "Study resumed"}
 
 
-# Sample management for experiments
-@router.get("/experiments/{experiment_id}/samples", response_model=List[SampleInExperiment])
-async def get_experiment_sample_list(experiment_id: int, _: dict = Depends(require_admin)):
-    """Get samples assigned to an experiment."""
+# Sample management for studies
+@router.get("/studies/{study_id}/samples", response_model=List[SampleInStudy])
+async def get_study_sample_list(study_id: int, _: dict = Depends(require_admin)):
+    """Get samples assigned to a study."""
     async with get_db_context() as db:
-        experiment = await get_experiment_by_id(db, experiment_id)
-        if not experiment:
-            raise HTTPException(status_code=404, detail="Experiment not found")
+        study = await get_study_by_id(db, study_id)
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
 
-        samples = await get_experiment_samples(db, experiment_id)
-        return [SampleInExperiment(**s) for s in samples]
+        samples = await get_study_samples(db, study_id)
+        return [SampleInStudy(**s) for s in samples]
 
 
-@router.post("/experiments/{experiment_id}/samples")
-async def set_experiment_samples(
-    experiment_id: int,
+@router.post("/studies/{study_id}/samples")
+async def set_study_samples(
+    study_id: int,
     data: SampleSelectionRequest,
     _: dict = Depends(require_admin)
 ):
-    """Set the samples for an experiment (replaces existing)."""
+    """Set the samples for a study (replaces existing)."""
     async with get_db_context() as db:
-        experiment = await get_experiment_by_id(db, experiment_id)
-        if not experiment:
-            raise HTTPException(status_code=404, detail="Experiment not found")
+        study = await get_study_by_id(db, study_id)
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
 
-        if experiment["status"] != "draft":
+        if study["status"] != "draft":
             raise HTTPException(
                 status_code=400,
-                detail="Can only modify samples for draft experiments"
+                detail="Can only modify samples for draft studies"
             )
 
         # Clear existing samples
         await db.execute(
-            "DELETE FROM experiment_samples WHERE experiment_id = ?",
-            (experiment_id,)
+            "DELETE FROM study_samples WHERE study_id = ?",
+            (study_id,)
         )
         await db.commit()
 
         # Add new samples
-        await add_samples_to_experiment(db, experiment_id, data.sample_ids)
+        await add_samples_to_study(db, study_id, data.sample_ids)
 
         return {"status": "success", "sample_count": len(data.sample_ids)}
 
@@ -445,34 +445,34 @@ async def delete_user(user_id: int, admin: dict = Depends(require_admin)):
 
 
 # Assignment management
-@router.get("/experiments/{experiment_id}/assignments", response_model=List[AssignmentResponse])
-async def get_assignments(experiment_id: int, _: dict = Depends(require_admin)):
-    """Get all assignments for an experiment."""
+@router.get("/studies/{study_id}/assignments", response_model=List[AssignmentResponse])
+async def get_assignments(study_id: int, _: dict = Depends(require_admin)):
+    """Get all assignments for a study."""
     async with get_db_context() as db:
-        experiment = await get_experiment_by_id(db, experiment_id)
-        if not experiment:
-            raise HTTPException(status_code=404, detail="Experiment not found")
+        study = await get_study_by_id(db, study_id)
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
 
-        assignments = await get_experiment_assignments(db, experiment_id)
+        assignments = await get_study_assignments(db, study_id)
         return [AssignmentResponse(**a) for a in assignments]
 
 
-@router.post("/experiments/{experiment_id}/assignments", response_model=AssignmentResponse)
+@router.post("/studies/{study_id}/assignments", response_model=AssignmentResponse)
 async def create_new_assignment(
-    experiment_id: int,
+    study_id: int,
     data: AssignmentCreate,
     _: dict = Depends(require_admin)
 ):
-    """Assign a specialist to an experiment."""
+    """Assign a specialist to a study."""
     async with get_db_context() as db:
-        experiment = await get_experiment_by_id(db, experiment_id)
-        if not experiment:
-            raise HTTPException(status_code=404, detail="Experiment not found")
+        study = await get_study_by_id(db, study_id)
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
 
-        if experiment["status"] not in ("draft", "active"):
+        if study["status"] not in ("draft", "active"):
             raise HTTPException(
                 status_code=400,
-                detail="Cannot add assignments to this experiment"
+                detail="Cannot add assignments to this study"
             )
 
         # Fetch specialist profile for snapshot
@@ -483,7 +483,7 @@ async def create_new_assignment(
         try:
             assignment_id = await create_assignment(
                 db,
-                experiment_id,
+                study_id,
                 data.specialist_id,
                 expertise_level_snapshot=specialist.get("expertise_level"),
                 years_experience_snapshot=specialist.get("years_experience"),
@@ -493,37 +493,37 @@ async def create_new_assignment(
             if "UNIQUE constraint" in str(e):
                 raise HTTPException(
                     status_code=400,
-                    detail="Specialist already assigned to this experiment"
+                    detail="Specialist already assigned to this study"
                 )
             raise
 
-        assignments = await get_experiment_assignments(db, experiment_id)
+        assignments = await get_study_assignments(db, study_id)
         assignment = next((a for a in assignments if a["id"] == assignment_id), None)
 
         return AssignmentResponse(**assignment)
 
 
-@router.delete("/experiments/{experiment_id}/assignments/{specialist_id}")
+@router.delete("/studies/{study_id}/assignments/{specialist_id}")
 async def delete_assignment(
-    experiment_id: int,
+    study_id: int,
     specialist_id: int,
     _: dict = Depends(require_admin)
 ):
-    """Remove a specialist from an experiment."""
+    """Remove a specialist from a study."""
     async with get_db_context() as db:
-        experiment = await get_experiment_by_id(db, experiment_id)
-        if not experiment:
-            raise HTTPException(status_code=404, detail="Experiment not found")
+        study = await get_study_by_id(db, study_id)
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
 
-        if experiment["status"] not in ("draft",):
+        if study["status"] not in ("draft",):
             raise HTTPException(
                 status_code=400,
-                detail="Can only remove assignments from draft experiments"
+                detail="Can only remove assignments from draft studies"
             )
 
         await db.execute(
-            "DELETE FROM assignments WHERE experiment_id = ? AND specialist_id = ?",
-            (experiment_id, specialist_id)
+            "DELETE FROM assignments WHERE study_id = ? AND specialist_id = ?",
+            (study_id, specialist_id)
         )
         await db.commit()
 
@@ -531,15 +531,15 @@ async def delete_assignment(
 
 
 # Progress tracking
-@router.get("/experiments/{experiment_id}/progress")
-async def get_progress(experiment_id: int, _: dict = Depends(require_admin)):
-    """Get detailed progress for an experiment."""
+@router.get("/studies/{study_id}/progress")
+async def get_progress(study_id: int, _: dict = Depends(require_admin)):
+    """Get detailed progress for a study."""
     async with get_db_context() as db:
-        experiment = await get_experiment_by_id(db, experiment_id)
-        if not experiment:
-            raise HTTPException(status_code=404, detail="Experiment not found")
+        study = await get_study_by_id(db, study_id)
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
 
-        progress = await get_experiment_progress(db, experiment_id)
-        progress["experiment"] = ExperimentResponse(**experiment).model_dump()
+        progress = await get_study_progress(db, study_id)
+        progress["study"] = StudyResponse(**study).model_dump()
 
         return progress

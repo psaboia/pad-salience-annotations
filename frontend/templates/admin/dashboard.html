@@ -109,13 +109,13 @@
         margin-top: 8px;
     }
 
-    .experiment-list {
+    .study-list {
         display: flex;
         flex-direction: column;
         gap: 12px;
     }
 
-    .experiment-item {
+    .study-item {
         background: var(--card-color);
         border-radius: 12px;
         padding: 16px 20px;
@@ -127,44 +127,44 @@
         transition: all 0.2s;
     }
 
-    .experiment-item:hover {
+    .study-item:hover {
         border-color: var(--primary-color);
     }
 
-    .experiment-info h3 {
+    .study-info h3 {
         font-size: 1rem;
         margin-bottom: 4px;
     }
 
-    .experiment-info p {
+    .study-info p {
         font-size: 0.8rem;
         color: var(--text-muted);
     }
 
-    .experiment-progress {
+    .study-progress {
         display: flex;
         align-items: center;
         gap: 12px;
         min-width: 200px;
     }
 
-    .experiment-progress .progress-bar {
+    .study-progress .progress-bar {
         flex: 1;
         height: 8px;
         min-width: 80px;
     }
 
-    .experiment-progress .progress-text {
+    .study-progress .progress-text {
         font-size: 0.8rem;
         color: var(--text-muted);
         white-space: nowrap;
     }
 
-    .experiment-progress .progress-text strong {
+    .study-progress .progress-text strong {
         color: var(--primary-color);
     }
 
-    .experiment-meta {
+    .study-meta {
         display: flex;
         align-items: center;
         gap: 10px;
@@ -218,9 +218,9 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/experiments/new" class="nav-link">
+                    <a href="/admin/studies/new" class="nav-link">
                         <span class="icon">➕</span>
-                        New Experiment
+                        New Study
                     </a>
                 </li>
                 <li class="nav-item">
@@ -243,15 +243,15 @@
     <main class="main-content">
         <div class="page-header">
             <h2>Dashboard</h2>
-            <a href="/admin/experiments/new" class="btn btn-primary">
-                + New Experiment
+            <a href="/admin/studies/new" class="btn btn-primary">
+                + New Study
             </a>
         </div>
 
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="label">Active Experiments</div>
-                <div class="value" id="activeExperiments">-</div>
+                <div class="label">Active Studies</div>
+                <div class="value" id="activeStudies">-</div>
             </div>
             <div class="stat-card">
                 <div class="label">Total Specialists</div>
@@ -269,9 +269,9 @@
 
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">Experiments</h3>
+                <h3 class="card-title">Studies</h3>
             </div>
-            <div id="experimentsList" class="experiment-list">
+            <div id="studiesList" class="study-list">
                 <div class="loading">
                     <div class="spinner"></div>
                 </div>
@@ -285,66 +285,66 @@
 <script>
     async function loadDashboard() {
         try {
-            // Load experiments
-            const experiments = await apiCall('/api/admin/experiments');
+            // Load studies
+            const studies = await apiCall('/api/admin/studies');
             const samples = await apiCall('/api/admin/samples');
             const specialists = await apiCall('/api/admin/specialists');
             const stats = await apiCall('/api/stats');
 
             // Update stats
-            const activeCount = experiments.filter(e => e.status === 'active').length;
-            document.getElementById('activeExperiments').textContent = activeCount;
+            const activeCount = studies.filter(s => s.status === 'active').length;
+            document.getElementById('activeStudies').textContent = activeCount;
             document.getElementById('totalSpecialists').textContent = specialists.length;
             document.getElementById('totalSamples').textContent = samples.length;
             document.getElementById('legacySessions').textContent = stats.total_sessions;
 
-            // Load progress for active/paused experiments
+            // Load progress for active/paused studies
             const progressMap = {};
-            const activeExperiments = experiments.filter(e =>
-                e.status === 'active' || e.status === 'paused' || e.status === 'completed'
+            const activeStudies = studies.filter(s =>
+                s.status === 'active' || s.status === 'paused' || s.status === 'completed'
             );
 
-            await Promise.all(activeExperiments.map(async exp => {
+            await Promise.all(activeStudies.map(async study => {
                 try {
-                    const progress = await apiCall(`/api/admin/experiments/${exp.id}/progress`);
-                    progressMap[exp.id] = progress;
+                    const progress = await apiCall(`/api/admin/studies/${study.id}/progress`);
+                    progressMap[study.id] = progress;
                 } catch (e) {
                     // Ignore errors for individual progress loads
                 }
             }));
 
-            // Render experiments
-            renderExperiments(experiments, progressMap);
+            // Render studies
+            renderStudies(studies, progressMap);
         } catch (error) {
             showError(error.message);
         }
     }
 
-    function renderExperiments(experiments, progressMap) {
-        const list = document.getElementById('experimentsList');
+    function renderStudies(studies, progressMap) {
+        const list = document.getElementById('studiesList');
 
-        if (experiments.length === 0) {
+        if (studies.length === 0) {
             list.innerHTML = `
                 <div class="empty-state">
-                    <h3>No experiments yet</h3>
-                    <p>Create your first experiment to get started</p>
+                    <h3>No studies yet</h3>
+                    <p>Create your first study to get started</p>
                 </div>
             `;
             return;
         }
 
-        list.innerHTML = experiments.map(exp => {
-            const progress = progressMap[exp.id];
+        list.innerHTML = studies.map(study => {
+            const progress = progressMap[study.id];
             const hasProgress = progress && progress.specialists.length > 0;
 
             return `
-                <div class="experiment-item">
-                    <div class="experiment-info">
-                        <h3>${exp.name}</h3>
-                        <p>${exp.description || 'No description'}</p>
+                <div class="study-item">
+                    <div class="study-info">
+                        <h3>${study.name}</h3>
+                        <p>${study.description || 'No description'}</p>
                     </div>
                     ${hasProgress ? `
-                        <div class="experiment-progress">
+                        <div class="study-progress">
                             <div class="progress-bar">
                                 <div class="progress-bar-fill" style="width: ${progress.overall_percentage}%"></div>
                             </div>
@@ -353,18 +353,18 @@
                             </div>
                         </div>
                     ` : `
-                        <div class="experiment-progress">
+                        <div class="study-progress">
                             <div class="progress-text" style="color: var(--text-muted);">
-                                ${exp.status === 'draft' ? 'Draft' : 'No specialists'}
+                                ${study.status === 'draft' ? 'Draft' : 'No specialists'}
                             </div>
                         </div>
                     `}
-                    <div class="experiment-meta">
-                        <span class="badge badge-${getStatusBadge(exp.status)}" title="Status: ${exp.status}">${exp.status}</span>
-                        ${exp.status === 'active' || exp.status === 'paused' ?
-                            `<a href="/admin/experiments/${exp.id}/progress" class="btn btn-primary btn-sm" title="Track progress">Track</a>` : ''
+                    <div class="study-meta">
+                        <span class="badge badge-${getStatusBadge(study.status)}" title="Status: ${study.status}">${study.status}</span>
+                        ${study.status === 'active' || study.status === 'paused' ?
+                            `<a href="/admin/studies/${study.id}/progress" class="btn btn-primary btn-sm" title="Track progress">Track</a>` : ''
                         }
-                        <a href="/admin/experiments/${exp.id}" class="settings-btn" title="Experiment settings">⚙</a>
+                        <a href="/admin/studies/${study.id}" class="settings-btn" title="Study settings">⚙</a>
                     </div>
                 </div>
             `;

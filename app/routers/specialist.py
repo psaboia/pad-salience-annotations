@@ -38,9 +38,9 @@ AUDIO_DIR = BASE_DIR / "data" / "audio"
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
 
-@router.get("/experiments")
-async def list_my_experiments(user: dict = Depends(require_specialist)):
-    """Get all experiments assigned to the current specialist."""
+@router.get("/studies")
+async def list_my_studies(user: dict = Depends(require_specialist)):
+    """Get all studies assigned to the current specialist."""
     async with get_db_context() as db:
         assignments = await get_specialist_assignments(db, user["id"])
 
@@ -55,16 +55,16 @@ async def list_my_experiments(user: dict = Depends(require_specialist)):
         return result
 
 
-@router.post("/experiments/{experiment_id}/start")
-async def start_experiment(experiment_id: int, user: dict = Depends(require_specialist)):
-    """Start working on an experiment (generates randomized order)."""
+@router.post("/studies/{study_id}/start")
+async def start_study(study_id: int, user: dict = Depends(require_specialist)):
+    """Start working on a study (generates randomized order)."""
     async with get_db_context() as db:
-        assignment = await get_assignment(db, experiment_id, user["id"])
+        assignment = await get_assignment(db, study_id, user["id"])
         if not assignment:
             raise HTTPException(status_code=404, detail="Assignment not found")
 
         if assignment["status"] == "completed":
-            raise HTTPException(status_code=400, detail="Experiment already completed")
+            raise HTTPException(status_code=400, detail="Study already completed")
 
         if assignment["status"] == "in_progress":
             # Already started, return current progress
@@ -91,18 +91,18 @@ async def start_experiment(experiment_id: int, user: dict = Depends(require_spec
         }
 
 
-@router.get("/experiments/{experiment_id}/current", response_model=SessionProgressResponse)
-async def get_current_sample(experiment_id: int, user: dict = Depends(require_specialist)):
-    """Get the current sample to annotate for an experiment."""
+@router.get("/studies/{study_id}/current", response_model=SessionProgressResponse)
+async def get_current_sample(study_id: int, user: dict = Depends(require_specialist)):
+    """Get the current sample to annotate for a study."""
     async with get_db_context() as db:
-        assignment = await get_assignment(db, experiment_id, user["id"])
+        assignment = await get_assignment(db, study_id, user["id"])
         if not assignment:
             raise HTTPException(status_code=404, detail="Assignment not found")
 
         if assignment["status"] == "pending":
             raise HTTPException(
                 status_code=400,
-                detail="Experiment not started. Call /start first."
+                detail="Study not started. Call /start first."
             )
 
         progress = await get_assignment_progress(db, assignment["id"])
@@ -137,7 +137,7 @@ async def get_current_sample(experiment_id: int, user: dict = Depends(require_sp
             session_id = await create_annotation_session(
                 db,
                 assignment_id=assignment["id"],
-                experiment_sample_id=current["experiment_sample_id"],
+                study_sample_id=current["study_sample_id"],
                 session_uuid=session_uuid
             )
 
@@ -279,18 +279,18 @@ async def complete_annotation_session(
         }
 
 
-@router.get("/experiments/{experiment_id}/progress")
-async def get_my_progress(experiment_id: int, user: dict = Depends(require_specialist)):
-    """Get progress for a specific experiment."""
+@router.get("/studies/{study_id}/progress")
+async def get_my_progress(study_id: int, user: dict = Depends(require_specialist)):
+    """Get progress for a specific study."""
     async with get_db_context() as db:
-        assignment = await get_assignment(db, experiment_id, user["id"])
+        assignment = await get_assignment(db, study_id, user["id"])
         if not assignment:
             raise HTTPException(status_code=404, detail="Assignment not found")
 
         if assignment["status"] == "pending":
             return {
                 "status": "pending",
-                "message": "Experiment not started yet"
+                "message": "Study not started yet"
             }
 
         progress = await get_assignment_progress(db, assignment["id"])
