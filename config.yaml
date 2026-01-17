@@ -1,0 +1,65 @@
+# PAD Annotation Tool Configuration
+# ---------------------------------
+
+# AprilTag settings for eye-tracking surface detection
+apriltags:
+  # Tag size in pixels (recommended: 60-80 for reliable detection at 50-70cm)
+  size_px: 60
+
+  # Margin between tags and PAD image in pixels
+  margin_px: 10
+
+  # Tag family (must match assets in /assets/apriltags/)
+  family: "tag36h11"
+
+  # Tag IDs used (corners: top-left, top-right, bottom-left, bottom-right)
+  ids: [0, 3, 7, 4]
+
+# Layout settings
+layout:
+  # Sidebar width in pixels
+  sidebar_width_px: 240
+
+  # Background color (hex)
+  background_color: "#1a1a2e"
+
+  # Sidebar background color (hex)
+  sidebar_color: "#16213e"
+
+# PAD image settings
+pad_image:
+  # Maximum height as percentage of viewport height (0-100)
+  max_height_vh: 85
+
+  # Border width in pixels
+  border_px: 3
+
+  # Border color (hex)
+  border_color: "#333333"
+
+# Lane detection settings (for processed PAD images ~730px wide)
+lanes:
+  # Where lanes start as percentage of image width
+  start_percent: 0.082
+
+  # Where lanes end as percentage of image width
+  end_percent: 0.986
+
+  # Lane labels
+  labels: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"]
+
+# Audio recording settings
+audio:
+  # Audio format
+  format: "webm"
+
+  # Enable audio recording
+  enabled: true
+
+# Export settings
+export:
+  # Default export format
+  format: "jsonl"
+
+  # Include audio in export
+  include_audio: true

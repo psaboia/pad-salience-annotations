@@ -12,6 +12,7 @@ import base64
 from datetime import datetime
 from pathlib import Path
 
+import yaml
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -25,10 +26,19 @@ BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "data"
 AUDIO_DIR = DATA_DIR / "audio"
 ANNOTATIONS_FILE = DATA_DIR / "annotations.jsonl"
+CONFIG_FILE = BASE_DIR / "config.yaml"
 
 # Ensure directories exist
 DATA_DIR.mkdir(exist_ok=True)
 AUDIO_DIR.mkdir(exist_ok=True)
+
+
+def load_config():
+    """Load configuration from YAML file."""
+    if CONFIG_FILE.exists():
+        with open(CONFIG_FILE) as f:
+            return yaml.safe_load(f)
+    return {}
 
 
 class AudioData(BaseModel):
@@ -89,6 +99,12 @@ async def save_annotation(session: AnnotationSession):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/config")
+async def get_config():
+    """Get application configuration."""
+    return load_config()
 
 
 @app.get("/api/stats")

@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PAD Annotation - Eye-tracking (Fullscreen)</title>
     <style>
+        /* CSS Custom Properties - loaded from config.yaml */
+        :root {
+            --tag-size: 60px;
+            --tag-margin: 10px;
+            --tag-offset: calc(var(--tag-size) + 8px);
+            --sidebar-width: 240px;
+            --bg-color: #1a1a2e;
+            --sidebar-color: #16213e;
+            --pad-max-height: 85vh;
+            --pad-border: 3px;
+            --pad-border-color: #333333;
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -13,7 +26,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #1a1a2e;
+            background: var(--bg-color);
             color: #eee;
             min-height: 100vh;
             overflow-x: hidden;
@@ -22,7 +35,7 @@
         /* Main Layout - 2 columns only: tracked area + sidebar */
         .main-layout {
             display: grid;
-            grid-template-columns: 1fr 240px;
+            grid-template-columns: 1fr var(--sidebar-width);
             min-height: 100vh;
         }
 
@@ -31,8 +44,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 55px 10px;
-            background: #1a1a2e;
+            padding: calc(var(--tag-offset) + 10px) 10px;
+            background: var(--bg-color);
             overflow: visible;
         }
 
@@ -45,8 +58,8 @@
 
         .apriltag {
             position: absolute;
-            width: 40px;
-            height: 40px;
+            width: var(--tag-size);
+            height: var(--tag-size);
             background: white;
             padding: 4px;
             z-index: 100;
@@ -60,29 +73,29 @@
         }
 
         .apriltag.top-left {
-            top: -48px;
-            left: -48px;
+            top: calc(-1 * var(--tag-offset));
+            left: calc(-1 * var(--tag-offset));
         }
 
         .apriltag.top-right {
-            top: -48px;
-            right: -48px;
+            top: calc(-1 * var(--tag-offset));
+            right: calc(-1 * var(--tag-offset));
         }
 
         .apriltag.bottom-left {
-            bottom: -48px;
-            left: -48px;
+            bottom: calc(-1 * var(--tag-offset));
+            left: calc(-1 * var(--tag-offset));
         }
 
         .apriltag.bottom-right {
-            bottom: -48px;
-            right: -48px;
+            bottom: calc(-1 * var(--tag-offset));
+            right: calc(-1 * var(--tag-offset));
         }
 
         .canvas-wrapper {
             position: relative;
             display: inline-block;
-            border: 3px solid #333;
+            border: var(--pad-border) solid var(--pad-border-color);
             border-radius: 8px;
             overflow: hidden;
         }
@@ -90,7 +103,7 @@
         #padImage {
             display: block;
             max-width: 100%;
-            max-height: calc(100vh - 120px);
+            max-height: var(--pad-max-height);
             height: auto;
         }
 
@@ -119,7 +132,7 @@
         .sidebar {
             display: flex;
             flex-direction: column;
-            background: #16213e;
+            background: var(--sidebar-color);
             border-left: 1px solid #333;
             padding: 15px;
             overflow-y: auto;
@@ -556,12 +569,65 @@
         // Drawing timestamp tracking
         let drawingStartTime = null;
 
-        // Lane detection configuration
-        const LANE_CONFIG = {
+        // Lane detection configuration (will be updated from config.yaml)
+        let LANE_CONFIG = {
             startPercent: 0.082,
             endPercent: 0.986,
             lanes: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
         };
+
+        // Load configuration from server
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                const config = await response.json();
+
+                // Apply CSS variables
+                const root = document.documentElement;
+
+                if (config.apriltags) {
+                    root.style.setProperty('--tag-size', `${config.apriltags.size_px}px`);
+                    root.style.setProperty('--tag-margin', `${config.apriltags.margin_px}px`);
+                    root.style.setProperty('--tag-offset', `calc(${config.apriltags.size_px}px + 8px)`);
+                }
+
+                if (config.layout) {
+                    if (config.layout.sidebar_width_px) {
+                        root.style.setProperty('--sidebar-width', `${config.layout.sidebar_width_px}px`);
+                    }
+                    if (config.layout.background_color) {
+                        root.style.setProperty('--bg-color', config.layout.background_color);
+                    }
+                    if (config.layout.sidebar_color) {
+                        root.style.setProperty('--sidebar-color', config.layout.sidebar_color);
+                    }
+                }
+
+                if (config.pad_image) {
+                    if (config.pad_image.max_height_vh) {
+                        root.style.setProperty('--pad-max-height', `${config.pad_image.max_height_vh}vh`);
+                    }
+                    if (config.pad_image.border_px) {
+                        root.style.setProperty('--pad-border', `${config.pad_image.border_px}px`);
+                    }
+                    if (config.pad_image.border_color) {
+                        root.style.setProperty('--pad-border-color', config.pad_image.border_color);
+                    }
+                }
+
+                if (config.lanes) {
+                    LANE_CONFIG = {
+                        startPercent: config.lanes.start_percent || LANE_CONFIG.startPercent,
+                        endPercent: config.lanes.end_percent || LANE_CONFIG.endPercent,
+                        lanes: config.lanes.labels || LANE_CONFIG.lanes
+                    };
+                }
+
+                console.log('Config loaded:', config);
+            } catch (error) {
+                console.warn('Could not load config, using defaults:', error);
+            }
+        }
 
         function getLaneBoundaries() {
             if (!canvas.width) return [];
@@ -999,7 +1065,13 @@
             updateAnnotationsList();
         }
 
-        loadManifest();
+        // Initialize app
+        async function init() {
+            await loadConfig();
+            await loadManifest();
+        }
+
+        init();
     </script>
 </body>
 </html>
