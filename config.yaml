@@ -7,7 +7,7 @@ apriltags:
   size_px: 60
 
   # Margin between tags and PAD image in pixels
-  margin_px: 10
+  margin_px: 0
 
   # Tag family (must match assets in /assets/apriltags/)
   family: "tag36h11"
@@ -19,6 +19,9 @@ apriltags:
 layout:
   # Sidebar width in pixels
   sidebar_width_px: 240
+
+  # Padding around tracked area (top/bottom) in pixels
+  tracked_padding_px: 0
 
   # Background color (hex)
   background_color: "#1a1a2e"

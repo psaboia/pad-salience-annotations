@@ -10,6 +10,7 @@
             --tag-size: 60px;
             --tag-margin: 0px;
             --tag-offset: 60px;
+            --tracked-padding: 0px;
             --sidebar-width: 240px;
             --bg-color: #1a1a2e;
             --sidebar-color: #16213e;
@@ -44,7 +45,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: calc(var(--tag-offset) + 10px) 10px;
+            padding: calc(var(--tag-offset) + var(--tracked-padding)) 10px;
             background: var(--bg-color);
             overflow: visible;
         }
@@ -596,6 +597,9 @@
                 if (config.layout) {
                     if (config.layout.sidebar_width_px) {
                         root.style.setProperty('--sidebar-width', `${config.layout.sidebar_width_px}px`);
+                    }
+                    if (config.layout.tracked_padding_px !== undefined) {
+                        root.style.setProperty('--tracked-padding', `${config.layout.tracked_padding_px}px`);
                     }
                     if (config.layout.background_color) {
                         root.style.setProperty('--bg-color', config.layout.background_color);
