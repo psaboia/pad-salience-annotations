@@ -224,6 +224,11 @@
             font-size: 0.95rem;
         }
 
+        .tool-btn.rec-btn {
+            padding: 6px 12px;
+            font-size: 0.75rem;
+        }
+
         .tool-btn.secondary {
             background: #333;
             color: #eee;
@@ -739,8 +744,8 @@
                     <div class="audio-indicator" id="audioIndicator"></div>
                     <span class="audio-time" id="audioTime">00:00</span>
                 </div>
-                <button class="tool-btn primary" id="recordBtn" onclick="toggleRecording()" style="width: 100%;">
-                    Start Recording
+                <button class="tool-btn primary rec-btn" id="recordBtn" onclick="toggleRecording()" title="Start/Stop Recording">
+                    ● Rec
                 </button>
             </div>
 
@@ -1226,7 +1231,7 @@
                     mediaRecorder.start();
                     isRecording = true;
                     recordingStartTime = Date.now();
-                    document.getElementById('recordBtn').textContent = 'Stop Recording';
+                    document.getElementById('recordBtn').textContent = '■ Stop';
                     document.getElementById('recordBtn').classList.add('recording');
                     document.getElementById('audioIndicator').classList.add('recording');
                     audioTimerInterval = setInterval(updateAudioTimer, 1000);
@@ -1237,7 +1242,7 @@
                 mediaRecorder.stop();
                 isRecording = false;
                 clearInterval(audioTimerInterval);
-                document.getElementById('recordBtn').textContent = 'Start Recording';
+                document.getElementById('recordBtn').textContent = '● Rec';
                 document.getElementById('recordBtn').classList.remove('recording');
                 document.getElementById('audioIndicator').classList.remove('recording');
                 mediaRecorder.stream.getTracks().forEach(track => track.stop());
@@ -1337,7 +1342,7 @@
                 mediaRecorder.onstop = () => {
                     isRecording = false;
                     clearInterval(audioTimerInterval);
-                    document.getElementById('recordBtn').textContent = 'Start Recording';
+                    document.getElementById('recordBtn').textContent = '● Rec';
                     document.getElementById('recordBtn').classList.remove('recording');
                     document.getElementById('audioIndicator').classList.remove('recording');
                     window.lastRecordingDuration = duration;
@@ -1392,7 +1397,7 @@
             annotations = [];
             audioChunks = [];
             recordingStartTime = null;
-            document.getElementById('recordBtn').textContent = 'Start Recording';
+            document.getElementById('recordBtn').textContent = '● Rec';
             document.getElementById('recordBtn').classList.remove('recording');
             document.getElementById('audioIndicator').classList.remove('recording');
             document.getElementById('audioTime').textContent = '00:00';
