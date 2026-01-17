@@ -3,8 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PAD Annotation - Eye-tracking</title>
+    <title>PAD Annotation - Eye-tracking (Fullscreen)</title>
     <style>
+        /* CSS Custom Properties - loaded from config.yaml */
+        :root {
+            --tag-size: 60px;
+            --tag-margin: 0px;
+            --tag-offset: 60px;
+            --tracked-padding: 0px;
+            --sidebar-width: 240px;
+            --bg-color: #1a1a2e;
+            --sidebar-color: #16213e;
+            --pad-width: 730px;
+            --pad-height: auto;
+            --pad-max-height: 85vh;
+            --pad-border: 0px;
+            --pad-border-radius: 0px;
+            --pad-border-color: #333333;
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -13,40 +30,127 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #1a1a2e;
+            background: var(--bg-color);
             color: #eee;
             min-height: 100vh;
             overflow-x: hidden;
         }
 
-        /* Main Layout - 2 columns: tracked area + sidebar */
+        /* Main Layout - 2 columns only: tracked area + sidebar */
         .main-layout {
             display: grid;
-            grid-template-columns: 1fr 220px;
-            grid-template-rows: auto 1fr;
+            grid-template-columns: 1fr var(--sidebar-width);
             min-height: 100vh;
         }
 
-        /* Compact Header */
-        .compact-header {
-            grid-column: 1 / -1;
+        /* Tracked Area - ONLY tags + PAD image */
+        .tracked-area {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding: 10px 20px;
-            background: #16213e;
+            justify-content: center;
+            padding: calc(var(--tag-offset) + var(--tracked-padding)) 10px;
+            background: var(--bg-color);
+            overflow: visible;
+        }
+
+        .apriltag-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .apriltag {
+            position: absolute;
+            width: var(--tag-size);
+            height: var(--tag-size);
+            background: white;
+            padding: 4px;
+            z-index: 100;
+        }
+
+        .apriltag img {
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        .apriltag.top-left {
+            top: calc(-1 * var(--tag-offset));
+            left: calc(-1 * var(--tag-offset));
+        }
+
+        .apriltag.top-right {
+            top: calc(-1 * var(--tag-offset));
+            right: calc(-1 * var(--tag-offset));
+        }
+
+        .apriltag.bottom-left {
+            bottom: calc(-1 * var(--tag-offset));
+            left: calc(-1 * var(--tag-offset));
+        }
+
+        .apriltag.bottom-right {
+            bottom: calc(-1 * var(--tag-offset));
+            right: calc(-1 * var(--tag-offset));
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            display: inline-block;
+            border: var(--pad-border) solid var(--pad-border-color);
+            border-radius: var(--pad-border-radius);
+            overflow: hidden;
+        }
+
+        #padImage {
+            display: block;
+            width: var(--pad-width);
+            height: var(--pad-height);
+        }
+
+        #annotationCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+        }
+
+        .no-image {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 800px;
+            height: 450px;
+            background: #252550;
+            border-radius: 8px;
+            color: #666;
+            font-size: 1.1rem;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Right Sidebar - contains everything */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            background: var(--sidebar-color);
+            border-left: 1px solid #333;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            margin-bottom: 15px;
+            padding-bottom: 12px;
             border-bottom: 1px solid #333;
         }
 
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .compact-header h1 {
-            font-size: 1.3rem;
+        .sidebar-header h1 {
+            font-size: 1.1rem;
             color: #00d4ff;
+            margin-bottom: 8px;
         }
 
         .eyetracking-badge {
@@ -57,33 +161,48 @@
             background: #2ed573;
             color: #000;
             border-radius: 12px;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 600;
         }
 
         .eyetracking-badge .dot {
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
             background: #fff;
             border-radius: 50%;
         }
 
-        .toolbar {
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        .sidebar h3 {
+            font-size: 0.8rem;
+            color: #00d4ff;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #333;
+        }
+
+        /* Tools Section */
+        .tools-section {
+            margin-bottom: 15px;
+        }
+
+        .tool-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 10px;
         }
 
         .tool-btn {
-            padding: 8px 16px;
+            padding: 8px 10px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             transition: all 0.2s;
             display: flex;
             align-items: center;
-            gap: 6px;
+            justify-content: center;
+            gap: 4px;
         }
 
         .tool-btn.secondary {
@@ -131,14 +250,12 @@
         .color-picker {
             display: flex;
             gap: 6px;
-            margin-left: 10px;
-            padding-left: 10px;
-            border-left: 1px solid #444;
+            justify-content: center;
         }
 
         .color-option {
-            width: 24px;
-            height: 24px;
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
             cursor: pointer;
             border: 2px solid transparent;
@@ -150,116 +267,9 @@
             transform: scale(1.1);
         }
 
-        /* Tracked Area - ONLY tags + PAD image */
-        .tracked-area {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 55px 10px;
-            background: #1a1a2e;
-            overflow: visible;
-        }
-
-        .apriltag-container {
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .apriltag {
-            position: absolute;
-            width: 40px;
-            height: 40px;
-            background: white;
-            padding: 4px;
-            z-index: 100;
-        }
-
-        .apriltag img {
-            width: 100%;
-            height: 100%;
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
-        }
-
-        /* Position tags at corners of the tracked area */
-        .apriltag.top-left {
-            top: -48px;
-            left: -48px;
-        }
-
-        .apriltag.top-right {
-            top: -48px;
-            right: -48px;
-        }
-
-        .apriltag.bottom-left {
-            bottom: -48px;
-            left: -48px;
-        }
-
-        .apriltag.bottom-right {
-            bottom: -48px;
-            right: -48px;
-        }
-
-        .canvas-wrapper {
-            position: relative;
-            display: inline-block;
-            border: 3px solid #333;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        #padImage {
-            display: block;
-            max-width: 100%;
-            max-height: calc(100vh - 120px);
-            height: auto;
-        }
-
-        #annotationCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            cursor: crosshair;
-        }
-
-        .no-image {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 800px;
-            height: 450px;
-            background: #252550;
-            border-radius: 8px;
-            color: #666;
-            font-size: 1.1rem;
-            text-align: center;
-            padding: 20px;
-        }
-
-        /* Right Sidebar */
-        .sidebar {
-            display: flex;
-            flex-direction: column;
-            background: #16213e;
-            border-left: 1px solid #333;
-            padding: 15px;
-            overflow-y: auto;
-        }
-
-        .sidebar h3 {
-            font-size: 0.85rem;
-            color: #00d4ff;
-            margin-bottom: 10px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #333;
-        }
-
+        /* Audio Section */
         .audio-section {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         .audio-status {
@@ -269,7 +279,7 @@
             padding: 10px;
             background: #1a1a2e;
             border-radius: 8px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .audio-indicator {
@@ -290,17 +300,13 @@
             font-size: 1.1rem;
         }
 
-        .audio-status-text {
-            font-size: 0.75rem;
-            color: #888;
-        }
-
         .divider {
             height: 1px;
             background: #333;
-            margin: 15px 0;
+            margin: 12px 0;
         }
 
+        /* Annotations Section */
         .annotations-section {
             flex: 1;
             min-height: 0;
@@ -311,26 +317,26 @@
         .annotations-list {
             flex: 1;
             overflow-y: auto;
-            min-height: 100px;
+            min-height: 80px;
         }
 
         .annotation-item {
-            padding: 10px;
+            padding: 8px;
             background: #1a1a2e;
             border-radius: 6px;
-            margin-bottom: 6px;
+            margin-bottom: 5px;
             border-left: 3px solid #00d4ff;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
         }
 
         .annotation-item .time {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             color: #00d4ff;
-            margin-bottom: 3px;
+            margin-bottom: 2px;
         }
 
         .annotation-item .type {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: #888;
         }
 
@@ -340,14 +346,15 @@
             border: none;
             color: #ff4757;
             cursor: pointer;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             padding: 0;
             line-height: 1;
         }
 
+        /* Done Section */
         .done-section {
             margin-top: auto;
-            padding-top: 15px;
+            padding-top: 12px;
         }
 
         .done-btn {
@@ -367,12 +374,6 @@
             background: #26c066;
         }
 
-        .done-btn:disabled {
-            background: #333;
-            color: #666;
-            cursor: not-allowed;
-        }
-
         .new-session-btn {
             width: 100%;
             padding: 8px;
@@ -381,7 +382,7 @@
             color: #eee;
             border: none;
             border-radius: 6px;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -390,7 +391,7 @@
             background: #444;
         }
 
-        /* Lane tooltip that follows cursor */
+        /* Lane tooltip */
         .lane-tooltip {
             position: fixed;
             padding: 6px 12px;
@@ -445,50 +446,207 @@
 
         .empty-state {
             color: #666;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             text-align: center;
-            padding: 20px 10px;
+            padding: 15px 10px;
+        }
+
+        /* Settings button */
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .settings-btn {
+            background: none;
+            border: 1px solid #444;
+            color: #888;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .settings-btn:hover {
+            background: #333;
+            color: #fff;
+            border-color: #555;
+        }
+
+        /* Modal styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal {
+            background: #1e1e3f;
+            border-radius: 12px;
+            width: 400px;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: #16213e;
+            border-bottom: 1px solid #333;
+        }
+
+        .modal-header h2 {
+            font-size: 1.1rem;
+            color: #00d4ff;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 60vh;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 20px;
+            background: #16213e;
+            border-top: 1px solid #333;
+        }
+
+        .settings-section {
+            margin-bottom: 20px;
+        }
+
+        .settings-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .settings-section h3 {
+            font-size: 0.85rem;
+            color: #00d4ff;
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #333;
+        }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .setting-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .setting-row label {
+            font-size: 0.8rem;
+            color: #aaa;
+            min-width: 80px;
+        }
+
+        .setting-row input[type="range"] {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #333;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .setting-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00d4ff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .setting-row input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #00d4ff;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .setting-value {
+            font-size: 0.8rem;
+            color: #00d4ff;
+            min-width: 50px;
+            text-align: right;
+            font-family: monospace;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-row input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .checkbox-row label {
+            font-size: 0.8rem;
+            color: #aaa;
+            min-width: auto;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
-    <!-- Lane tooltip that follows cursor -->
     <div class="lane-tooltip" id="laneTooltip">Lane A</div>
 
     <div class="main-layout">
-        <!-- Compact Header -->
-        <header class="compact-header">
-            <div class="header-left">
-                <h1>PAD Annotation</h1>
-                <span class="eyetracking-badge"><span class="dot"></span>Eye-tracking</span>
-            </div>
-            <div class="toolbar">
-                <button class="tool-btn secondary active" id="rectTool" onclick="setTool('rectangle')">
-                    <span>[ ]</span> Rect
-                </button>
-                <button class="tool-btn secondary" id="freeTool" onclick="setTool('polygon')">
-                    <span>⬡</span> Poly
-                </button>
-                <button class="tool-btn secondary" onclick="undoLast()">
-                    Undo
-                </button>
-                <button class="tool-btn danger" onclick="clearAnnotations()">
-                    Clear
-                </button>
-                <div class="color-picker">
-                    <div class="color-option active" style="background: #00d4ff;" onclick="setColor('#00d4ff')"></div>
-                    <div class="color-option" style="background: #ff4757;" onclick="setColor('#ff4757')"></div>
-                    <div class="color-option" style="background: #2ed573;" onclick="setColor('#2ed573')"></div>
-                    <div class="color-option" style="background: #ffa502;" onclick="setColor('#ffa502')"></div>
-                    <div class="color-option" style="background: #a55eea;" onclick="setColor('#a55eea')"></div>
-                </div>
-            </div>
-        </header>
-
         <!-- Tracked Area - ONLY AprilTags + PAD Image -->
         <div class="tracked-area">
             <div class="apriltag-container" id="apriltagContainer">
-                <!-- AprilTags for Pupil Labs surface tracking -->
                 <div class="apriltag top-left">
                     <img src="/assets/apriltags/tag36h11_0.png" alt="AprilTag 0">
                 </div>
@@ -512,8 +670,43 @@
             </div>
         </div>
 
-        <!-- Right Sidebar -->
+        <!-- Right Sidebar - All controls -->
         <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="header-row">
+                    <h1>PAD Annotation</h1>
+                    <button class="settings-btn" onclick="openSettings()" title="Settings">⚙</button>
+                </div>
+                <span class="eyetracking-badge"><span class="dot"></span>Eye-tracking</span>
+            </div>
+
+            <div class="tools-section">
+                <h3>Tools</h3>
+                <div class="tool-buttons">
+                    <button class="tool-btn secondary active" id="rectTool" onclick="setTool('rectangle')">
+                        [ ] Rect
+                    </button>
+                    <button class="tool-btn secondary" id="freeTool" onclick="setTool('polygon')">
+                        ⬡ Poly
+                    </button>
+                    <button class="tool-btn secondary" onclick="undoLast()">
+                        Undo
+                    </button>
+                    <button class="tool-btn danger" onclick="clearAnnotations()">
+                        Clear
+                    </button>
+                </div>
+                <div class="color-picker">
+                    <div class="color-option active" style="background: #00d4ff;" onclick="setColor('#00d4ff')"></div>
+                    <div class="color-option" style="background: #ff4757;" onclick="setColor('#ff4757')"></div>
+                    <div class="color-option" style="background: #2ed573;" onclick="setColor('#2ed573')"></div>
+                    <div class="color-option" style="background: #ffa502;" onclick="setColor('#ffa502')"></div>
+                    <div class="color-option" style="background: #a55eea;" onclick="setColor('#a55eea')"></div>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
             <div class="audio-section">
                 <h3>Recording</h3>
                 <div class="audio-status">
@@ -521,7 +714,7 @@
                     <span class="audio-time" id="audioTime">00:00</span>
                 </div>
                 <button class="tool-btn primary" id="recordBtn" onclick="toggleRecording()" style="width: 100%;">
-                    Start Rec
+                    Start Recording
                 </button>
             </div>
 
@@ -543,6 +736,65 @@
                 </button>
             </div>
         </aside>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="modal-close" onclick="closeSettings()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h3>AprilTags</h3>
+                    <div class="setting-row">
+                        <label>Size</label>
+                        <input type="range" id="tagSize" min="30" max="120" value="60">
+                        <span class="setting-value" id="tagSizeValue">60px</span>
+                    </div>
+                    <div class="setting-row">
+                        <label>Margin</label>
+                        <input type="range" id="tagMargin" min="0" max="30" value="0">
+                        <span class="setting-value" id="tagMarginValue">0px</span>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>PAD Image</h3>
+                    <div class="setting-row">
+                        <label>Width</label>
+                        <input type="range" id="padWidth" min="400" max="1200" value="730">
+                        <span class="setting-value" id="padWidthValue">730px</span>
+                    </div>
+                    <div class="setting-row">
+                        <label>Height</label>
+                        <div class="checkbox-row">
+                            <input type="checkbox" id="padHeightAuto" checked>
+                            <label for="padHeightAuto">Auto (keep aspect ratio)</label>
+                        </div>
+                    </div>
+                    <div class="setting-row" id="padHeightRow" style="display: none;">
+                        <label>Height</label>
+                        <input type="range" id="padHeight" min="400" max="1500" value="1220">
+                        <span class="setting-value" id="padHeightValue">1220px</span>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Layout</h3>
+                    <div class="setting-row">
+                        <label>Tracked Area Padding</label>
+                        <input type="range" id="trackedPadding" min="0" max="50" value="0">
+                        <span class="setting-value" id="trackedPaddingValue">0px</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="tool-btn secondary" onclick="resetSettings()">Reset to Default</button>
+                <button class="tool-btn primary" onclick="closeSettings()">Done</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -570,21 +822,89 @@
         // Drawing timestamp tracking
         let drawingStartTime = null;
 
-        // Lane detection configuration (for processed images ~730px wide)
-        const LANE_CONFIG = {
+        // Lane detection configuration (will be updated from config.yaml)
+        let LANE_CONFIG = {
             startPercent: 0.082,
             endPercent: 0.986,
             lanes: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
         };
 
-        // Get lane boundaries for current image
+        // Load configuration from server
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                const config = await response.json();
+
+                // Apply CSS variables
+                const root = document.documentElement;
+
+                if (config.apriltags) {
+                    const tagSize = config.apriltags.size_px || 60;
+                    const tagMargin = config.apriltags.margin_px || 0;
+                    root.style.setProperty('--tag-size', `${tagSize}px`);
+                    root.style.setProperty('--tag-margin', `${tagMargin}px`);
+                    root.style.setProperty('--tag-offset', `${tagSize + tagMargin}px`);
+                }
+
+                if (config.layout) {
+                    if (config.layout.sidebar_width_px) {
+                        root.style.setProperty('--sidebar-width', `${config.layout.sidebar_width_px}px`);
+                    }
+                    if (config.layout.tracked_padding_px !== undefined) {
+                        root.style.setProperty('--tracked-padding', `${config.layout.tracked_padding_px}px`);
+                    }
+                    if (config.layout.background_color) {
+                        root.style.setProperty('--bg-color', config.layout.background_color);
+                    }
+                    if (config.layout.sidebar_color) {
+                        root.style.setProperty('--sidebar-color', config.layout.sidebar_color);
+                    }
+                }
+
+                if (config.pad_image) {
+                    if (config.pad_image.width_px) {
+                        root.style.setProperty('--pad-width', `${config.pad_image.width_px}px`);
+                    } else {
+                        root.style.setProperty('--pad-width', 'auto');
+                    }
+                    if (config.pad_image.height_px) {
+                        root.style.setProperty('--pad-height', `${config.pad_image.height_px}px`);
+                    } else {
+                        root.style.setProperty('--pad-height', 'auto');
+                    }
+                    if (config.pad_image.max_height_vh) {
+                        root.style.setProperty('--pad-max-height', `${config.pad_image.max_height_vh}vh`);
+                    }
+                    if (config.pad_image.border_px !== undefined) {
+                        root.style.setProperty('--pad-border', `${config.pad_image.border_px}px`);
+                    }
+                    if (config.pad_image.border_radius_px !== undefined) {
+                        root.style.setProperty('--pad-border-radius', `${config.pad_image.border_radius_px}px`);
+                    }
+                    if (config.pad_image.border_color) {
+                        root.style.setProperty('--pad-border-color', config.pad_image.border_color);
+                    }
+                }
+
+                if (config.lanes) {
+                    LANE_CONFIG = {
+                        startPercent: config.lanes.start_percent || LANE_CONFIG.startPercent,
+                        endPercent: config.lanes.end_percent || LANE_CONFIG.endPercent,
+                        lanes: config.lanes.labels || LANE_CONFIG.lanes
+                    };
+                }
+
+                console.log('Config loaded:', config);
+            } catch (error) {
+                console.warn('Could not load config, using defaults:', error);
+            }
+        }
+
         function getLaneBoundaries() {
             if (!canvas.width) return [];
-
             const startX = canvas.width * LANE_CONFIG.startPercent;
             const endX = canvas.width * LANE_CONFIG.endPercent;
             const laneWidth = (endX - startX) / LANE_CONFIG.lanes.length;
-
             return LANE_CONFIG.lanes.map((lane, index) => ({
                 lane: lane,
                 x1: startX + (index * laneWidth),
@@ -592,30 +912,23 @@
             }));
         }
 
-        // Auto-detect which lanes an annotation overlaps with
         function detectLanes(x1, x2) {
             const boundaries = getLaneBoundaries();
             const detectedLanes = [];
-
             for (const boundary of boundaries) {
                 if (x2 >= boundary.x1 && x1 <= boundary.x2) {
                     detectedLanes.push(boundary.lane);
                 }
             }
-
             return detectedLanes;
         }
 
-        // Sample data
         let samples = [];
 
-        // Load manifest and auto-select first sample
         async function loadManifest() {
             try {
                 const response = await fetch('/sample_images/manifest.json');
                 samples = await response.json();
-
-                // Auto-load first sample
                 if (samples.length > 0) {
                     loadSample(0);
                 }
@@ -628,26 +941,19 @@
 
         function loadSample(index) {
             currentSample = samples[index];
-
-            // Load image
             document.getElementById('noImagePlaceholder').style.display = 'none';
             padImage.style.display = 'block';
             canvas.style.display = 'block';
 
             padImage.onload = () => {
-                // Set canvas size to match image
                 canvas.width = padImage.naturalWidth;
                 canvas.height = padImage.naturalHeight;
                 canvas.style.width = padImage.width + 'px';
                 canvas.style.height = padImage.height + 'px';
-
                 redrawAnnotations();
             };
 
-            // Load image from server
             padImage.src = `/sample_images/${currentSample.filename}`;
-
-            // Clear annotations for new sample
             annotations = [];
             audioChunks = [];
             updateAnnotationsList();
@@ -666,20 +972,15 @@
             });
         }
 
-        // Canvas drawing
         canvas.addEventListener('mousedown', (e) => {
             if (!currentSample) return;
-
             isDrawing = true;
             drawingStartTime = isRecording ? (Date.now() - recordingStartTime) : null;
-
             const rect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
-
             startX = (e.clientX - rect.left) * scaleX;
             startY = (e.clientY - rect.top) * scaleY;
-
             if (currentTool === 'polygon') {
                 polygonPoints = [{x: startX, y: startY}];
             }
@@ -687,23 +988,17 @@
 
         canvas.addEventListener('mousemove', (e) => {
             if (!currentSample) return;
-
             const rect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / rect.width;
             const x = (e.clientX - rect.left) * scaleX;
-
-            // Detect lane at cursor position
             const lanes = detectLanes(x, x);
             showLaneTooltip(e.clientX, e.clientY, lanes);
 
             if (!isDrawing) return;
-
             const scaleY = canvas.height / rect.height;
             const currentX = (e.clientX - rect.left) * scaleX;
             const currentY = (e.clientY - rect.top) * scaleY;
-
             redrawAnnotations();
-
             ctx.strokeStyle = currentColor;
             ctx.lineWidth = 3;
 
@@ -726,17 +1021,13 @@
         canvas.addEventListener('mouseup', (e) => {
             if (!isDrawing) return;
             isDrawing = false;
-
             const rect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
-
             const endX = (e.clientX - rect.left) * scaleX;
             const endY = (e.clientY - rect.top) * scaleY;
-
             const timestampEnd = isRecording ? (Date.now() - recordingStartTime) : null;
 
-            // Auto-detect lanes
             let autoDetectedLanes;
             if (currentTool === 'rectangle') {
                 autoDetectedLanes = detectLanes(Math.min(startX, endX), Math.max(startX, endX));
@@ -783,7 +1074,6 @@
                 };
             }
 
-            // Only save if significant size
             if (currentTool === 'rectangle' && annotation.bbox.width > 10 && annotation.bbox.height > 10) {
                 annotations.push(annotation);
             } else if (currentTool === 'polygon' && polygonPoints.length > 5) {
@@ -791,7 +1081,6 @@
             }
 
             drawingStartTime = null;
-
             redrawAnnotations();
             updateAnnotationsList();
             polygonPoints = [];
@@ -806,10 +1095,8 @@
             hideLaneTooltip();
         });
 
-        // Lane tooltip functions
         function showLaneTooltip(mouseX, mouseY, lanes) {
             const tooltip = document.getElementById('laneTooltip');
-
             if (lanes.length > 0) {
                 tooltip.textContent = `Lane ${lanes.join(', ')}`;
                 tooltip.classList.remove('outside');
@@ -817,7 +1104,6 @@
                 tooltip.textContent = 'Outside';
                 tooltip.classList.add('outside');
             }
-
             tooltip.style.left = mouseX + 'px';
             tooltip.style.top = mouseY + 'px';
             tooltip.style.display = 'block';
@@ -829,11 +1115,9 @@
 
         function redrawAnnotations() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
             for (let ann of annotations) {
                 ctx.strokeStyle = ann.color;
                 ctx.lineWidth = 3;
-
                 if (ann.type === 'rectangle') {
                     ctx.strokeRect(ann.bbox.x, ann.bbox.y, ann.bbox.width, ann.bbox.height);
                 } else {
@@ -851,12 +1135,10 @@
         function updateAnnotationsList() {
             const list = document.getElementById('annotationsList');
             document.getElementById('annotationCount').textContent = annotations.length;
-
             if (annotations.length === 0) {
                 list.innerHTML = '<p class="empty-state">Draw on the image to create annotations</p>';
                 return;
             }
-
             list.innerHTML = annotations.map((ann, index) => `
                 <div class="annotation-item">
                     <button class="delete-btn" onclick="deleteAnnotation(${index})">x</button>
@@ -889,26 +1171,21 @@
             }
         }
 
-        // Audio recording
         async function toggleRecording() {
             if (!isRecording) {
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     mediaRecorder = new MediaRecorder(stream);
                     audioChunks = [];
-
                     mediaRecorder.ondataavailable = (e) => {
                         audioChunks.push(e.data);
                     };
-
                     mediaRecorder.start();
                     isRecording = true;
                     recordingStartTime = Date.now();
-
-                    document.getElementById('recordBtn').textContent = 'Stop';
+                    document.getElementById('recordBtn').textContent = 'Stop Recording';
                     document.getElementById('recordBtn').classList.add('recording');
                     document.getElementById('audioIndicator').classList.add('recording');
-
                     audioTimerInterval = setInterval(updateAudioTimer, 1000);
                 } catch (error) {
                     alert('Could not access microphone: ' + error.message);
@@ -916,13 +1193,10 @@
             } else {
                 mediaRecorder.stop();
                 isRecording = false;
-
                 clearInterval(audioTimerInterval);
-
-                document.getElementById('recordBtn').textContent = 'Start Rec';
+                document.getElementById('recordBtn').textContent = 'Start Recording';
                 document.getElementById('recordBtn').classList.remove('recording');
                 document.getElementById('audioIndicator').classList.remove('recording');
-
                 mediaRecorder.stream.getTracks().forEach(track => track.stop());
             }
         }
@@ -949,22 +1223,34 @@
             return `${formatTime(startMs)} → ${formatTime(endMs)}`;
         }
 
-        // Export
         async function exportSession() {
             if (!currentSample) {
                 alert('No sample loaded');
                 return;
             }
-
             if (annotations.length === 0) {
                 alert('No annotations to export. Draw some regions first.');
                 return;
             }
-
-            // Stop recording if still active
             if (isRecording) {
                 await stopRecordingForExport();
             }
+            // Capture current layout settings for reconstruction
+            const root = document.documentElement;
+            const style = getComputedStyle(root);
+            const layoutSettings = {
+                apriltags: {
+                    size_px: parseInt(style.getPropertyValue('--tag-size')) || 60,
+                    margin_px: parseInt(style.getPropertyValue('--tag-margin')) || 0
+                },
+                pad_image: {
+                    width_px: parseInt(style.getPropertyValue('--pad-width')) || null,
+                    height_px: style.getPropertyValue('--pad-height').trim() === 'auto' ? null : parseInt(style.getPropertyValue('--pad-height'))
+                },
+                layout: {
+                    tracked_padding_px: parseInt(style.getPropertyValue('--tracked-padding')) || 0
+                }
+            };
 
             const sessionData = {
                 session_id: `session_${Date.now()}`,
@@ -974,23 +1260,20 @@
                     width: canvas.width,
                     height: canvas.height
                 },
+                layout_settings: layoutSettings,
                 annotations: JSON.parse(JSON.stringify(annotations)),
                 audio: null
             };
-
-            // If we have audio, include it
             if (audioChunks.length > 0) {
                 const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                 const reader = new FileReader();
                 reader.readAsDataURL(audioBlob);
-
                 reader.onloadend = () => {
                     sessionData.audio = {
                         format: 'webm',
                         data_base64: reader.result.split(',')[1],
                         duration_ms: sessionData.recording_duration_ms || null
                     };
-
                     downloadSession(sessionData);
                 };
             } else {
@@ -1004,22 +1287,16 @@
                     resolve();
                     return;
                 }
-
                 const duration = Date.now() - recordingStartTime;
-
                 mediaRecorder.onstop = () => {
                     isRecording = false;
                     clearInterval(audioTimerInterval);
-
-                    document.getElementById('recordBtn').textContent = 'Start Rec';
+                    document.getElementById('recordBtn').textContent = 'Start Recording';
                     document.getElementById('recordBtn').classList.remove('recording');
                     document.getElementById('audioIndicator').classList.remove('recording');
-
                     window.lastRecordingDuration = duration;
-
                     resolve();
                 };
-
                 mediaRecorder.stop();
                 mediaRecorder.stream.getTracks().forEach(track => track.stop());
             });
@@ -1034,66 +1311,202 @@
                     },
                     body: JSON.stringify(data)
                 });
-
                 if (!response.ok) {
                     throw new Error(`Server error: ${response.status}`);
                 }
-
                 const result = await response.json();
-
                 alert(`Saved ${data.annotations.length} annotations${result.audio_saved ? ' with audio' : ''} to server.\n\nTotal sessions: ${result.total_sessions}`);
-
             } catch (error) {
                 console.error('Error saving to server:', error);
-
                 if (confirm(`Could not save to server: ${error.message}\n\nDownload as local file instead?`)) {
                     const json = JSON.stringify(data, null, 2);
                     const blob = new Blob([json], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
-
                     const a = document.createElement('a');
                     a.href = url;
                     a.download = `pad_annotation_${data.sample.drug_name}_${Date.now()}.json`;
                     a.click();
-
                     URL.revokeObjectURL(url);
                 }
             }
         }
 
-        // Start new session
         function startNewSession() {
             if (annotations.length > 0 || audioChunks.length > 0) {
                 if (!confirm('This will clear all annotations and audio. Continue?')) {
                     return;
                 }
             }
-
-            // Stop recording if active
             if (isRecording) {
                 mediaRecorder.stop();
                 mediaRecorder.stream.getTracks().forEach(track => track.stop());
                 isRecording = false;
                 clearInterval(audioTimerInterval);
             }
-
-            // Reset everything
             annotations = [];
             audioChunks = [];
             recordingStartTime = null;
-
-            // Reset UI
-            document.getElementById('recordBtn').textContent = 'Start Rec';
+            document.getElementById('recordBtn').textContent = 'Start Recording';
             document.getElementById('recordBtn').classList.remove('recording');
             document.getElementById('audioIndicator').classList.remove('recording');
             document.getElementById('audioTime').textContent = '00:00';
-
             redrawAnnotations();
             updateAnnotationsList();
         }
 
-        // Initialize
-        loadManifest();
+        // Settings modal
+        let defaultSettings = {};
+
+        function openSettings() {
+            document.getElementById('settingsModal').classList.add('open');
+            syncSettingsUI();
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('open');
+            saveSettingsToLocalStorage();
+        }
+
+        function syncSettingsUI() {
+            // Read current CSS values and sync to sliders
+            const root = document.documentElement;
+            const style = getComputedStyle(root);
+
+            const tagSize = parseInt(style.getPropertyValue('--tag-size')) || 60;
+            const tagMargin = parseInt(style.getPropertyValue('--tag-margin')) || 0;
+            const padWidth = parseInt(style.getPropertyValue('--pad-width')) || 730;
+            const padHeight = style.getPropertyValue('--pad-height').trim();
+            const trackedPadding = parseInt(style.getPropertyValue('--tracked-padding')) || 0;
+
+            document.getElementById('tagSize').value = tagSize;
+            document.getElementById('tagSizeValue').textContent = tagSize + 'px';
+
+            document.getElementById('tagMargin').value = tagMargin;
+            document.getElementById('tagMarginValue').textContent = tagMargin + 'px';
+
+            document.getElementById('padWidth').value = padWidth;
+            document.getElementById('padWidthValue').textContent = padWidth + 'px';
+
+            const heightAuto = padHeight === 'auto' || !padHeight;
+            document.getElementById('padHeightAuto').checked = heightAuto;
+            document.getElementById('padHeightRow').style.display = heightAuto ? 'none' : 'flex';
+            if (!heightAuto) {
+                const h = parseInt(padHeight) || 1220;
+                document.getElementById('padHeight').value = h;
+                document.getElementById('padHeightValue').textContent = h + 'px';
+            }
+
+            document.getElementById('trackedPadding').value = trackedPadding;
+            document.getElementById('trackedPaddingValue').textContent = trackedPadding + 'px';
+        }
+
+        function applySettingChange(setting, value) {
+            const root = document.documentElement;
+
+            switch (setting) {
+                case 'tagSize':
+                    const tagMargin = parseInt(document.getElementById('tagMargin').value) || 0;
+                    root.style.setProperty('--tag-size', value + 'px');
+                    root.style.setProperty('--tag-offset', (value + tagMargin) + 'px');
+                    document.getElementById('tagSizeValue').textContent = value + 'px';
+                    break;
+                case 'tagMargin':
+                    const tagSize = parseInt(document.getElementById('tagSize').value) || 60;
+                    root.style.setProperty('--tag-margin', value + 'px');
+                    root.style.setProperty('--tag-offset', (tagSize + value) + 'px');
+                    document.getElementById('tagMarginValue').textContent = value + 'px';
+                    break;
+                case 'padWidth':
+                    root.style.setProperty('--pad-width', value + 'px');
+                    document.getElementById('padWidthValue').textContent = value + 'px';
+                    break;
+                case 'padHeight':
+                    root.style.setProperty('--pad-height', value + 'px');
+                    document.getElementById('padHeightValue').textContent = value + 'px';
+                    break;
+                case 'padHeightAuto':
+                    const autoChecked = document.getElementById('padHeightAuto').checked;
+                    document.getElementById('padHeightRow').style.display = autoChecked ? 'none' : 'flex';
+                    root.style.setProperty('--pad-height', autoChecked ? 'auto' : document.getElementById('padHeight').value + 'px');
+                    break;
+                case 'trackedPadding':
+                    root.style.setProperty('--tracked-padding', value + 'px');
+                    document.getElementById('trackedPaddingValue').textContent = value + 'px';
+                    break;
+            }
+        }
+
+        function resetSettings() {
+            if (confirm('Reset all settings to default values from config.yaml?')) {
+                localStorage.removeItem('padAnnotationSettings');
+                loadConfig().then(() => {
+                    syncSettingsUI();
+                });
+            }
+        }
+
+        function saveSettingsToLocalStorage() {
+            const settings = {
+                tagSize: parseInt(document.getElementById('tagSize').value),
+                tagMargin: parseInt(document.getElementById('tagMargin').value),
+                padWidth: parseInt(document.getElementById('padWidth').value),
+                padHeightAuto: document.getElementById('padHeightAuto').checked,
+                padHeight: parseInt(document.getElementById('padHeight').value),
+                trackedPadding: parseInt(document.getElementById('trackedPadding').value)
+            };
+            localStorage.setItem('padAnnotationSettings', JSON.stringify(settings));
+        }
+
+        function loadSettingsFromLocalStorage() {
+            const saved = localStorage.getItem('padAnnotationSettings');
+            if (saved) {
+                const settings = JSON.parse(saved);
+                const root = document.documentElement;
+
+                if (settings.tagSize) {
+                    root.style.setProperty('--tag-size', settings.tagSize + 'px');
+                }
+                if (settings.tagMargin !== undefined) {
+                    root.style.setProperty('--tag-margin', settings.tagMargin + 'px');
+                }
+                if (settings.tagSize || settings.tagMargin !== undefined) {
+                    const size = settings.tagSize || 60;
+                    const margin = settings.tagMargin || 0;
+                    root.style.setProperty('--tag-offset', (size + margin) + 'px');
+                }
+                if (settings.padWidth) {
+                    root.style.setProperty('--pad-width', settings.padWidth + 'px');
+                }
+                if (settings.padHeightAuto !== undefined) {
+                    root.style.setProperty('--pad-height', settings.padHeightAuto ? 'auto' : (settings.padHeight + 'px'));
+                }
+                if (settings.trackedPadding !== undefined) {
+                    root.style.setProperty('--tracked-padding', settings.trackedPadding + 'px');
+                }
+            }
+        }
+
+        // Bind slider events
+        document.getElementById('tagSize').addEventListener('input', (e) => applySettingChange('tagSize', parseInt(e.target.value)));
+        document.getElementById('tagMargin').addEventListener('input', (e) => applySettingChange('tagMargin', parseInt(e.target.value)));
+        document.getElementById('padWidth').addEventListener('input', (e) => applySettingChange('padWidth', parseInt(e.target.value)));
+        document.getElementById('padHeight').addEventListener('input', (e) => applySettingChange('padHeight', parseInt(e.target.value)));
+        document.getElementById('padHeightAuto').addEventListener('change', () => applySettingChange('padHeightAuto'));
+        document.getElementById('trackedPadding').addEventListener('input', (e) => applySettingChange('trackedPadding', parseInt(e.target.value)));
+
+        // Close modal on overlay click
+        document.getElementById('settingsModal').addEventListener('click', (e) => {
+            if (e.target.id === 'settingsModal') closeSettings();
+        });
+
+        // Initialize app
+        async function init() {
+            await loadConfig();
+            loadSettingsFromLocalStorage(); // Apply saved settings after config
+            await loadManifest();
+        }
+
+        init();
     </script>
 </body>
 </html>

@@ -32,10 +32,10 @@ layout:
 # PAD image settings
 pad_image:
   # Fixed width in pixels (null to use auto/responsive)
-  width_px: 730
+  width_px: null
 
   # Fixed height in pixels (null to use auto based on aspect ratio)
-  height_px: null
+  height_px: 1220
 
   # Maximum height as percentage of viewport height (only used if width_px is null)
   max_height_vh: 85

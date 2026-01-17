@@ -142,8 +142,8 @@ app.mount("/prototype", StaticFiles(directory=BASE_DIR / "prototype", html=True)
 
 @app.get("/")
 async def root():
-    """Serve fullscreen prototype (default)."""
-    return FileResponse(BASE_DIR / "prototype" / "index-fullscreen.html")
+    """Serve annotation prototype."""
+    return FileResponse(BASE_DIR / "prototype" / "index.html")
 
 
 if __name__ == "__main__":
