@@ -8,8 +8,8 @@
         /* CSS Custom Properties - loaded from config.yaml */
         :root {
             --tag-size: 60px;
-            --tag-margin: 10px;
-            --tag-offset: calc(var(--tag-size) + 8px);
+            --tag-margin: 0px;
+            --tag-offset: 60px;
             --sidebar-width: 240px;
             --bg-color: #1a1a2e;
             --sidebar-color: #16213e;
@@ -586,9 +586,11 @@
                 const root = document.documentElement;
 
                 if (config.apriltags) {
-                    root.style.setProperty('--tag-size', `${config.apriltags.size_px}px`);
-                    root.style.setProperty('--tag-margin', `${config.apriltags.margin_px}px`);
-                    root.style.setProperty('--tag-offset', `calc(${config.apriltags.size_px}px + 8px)`);
+                    const tagSize = config.apriltags.size_px || 60;
+                    const tagMargin = config.apriltags.margin_px || 0;
+                    root.style.setProperty('--tag-size', `${tagSize}px`);
+                    root.style.setProperty('--tag-margin', `${tagMargin}px`);
+                    root.style.setProperty('--tag-offset', `${tagSize + tagMargin}px`);
                 }
 
                 if (config.layout) {
