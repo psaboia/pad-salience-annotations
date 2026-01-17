@@ -40,7 +40,8 @@
         .main-layout {
             display: grid;
             grid-template-columns: 1fr var(--sidebar-width);
-            min-height: 100vh;
+            height: 100vh;
+            overflow: hidden;
         }
 
         /* Tracked Area - ONLY tags + PAD image */
@@ -50,7 +51,7 @@
             justify-content: center;
             padding: calc(var(--tag-offset) + var(--tracked-padding)) 10px;
             background: var(--bg-color);
-            overflow: visible;
+            overflow: auto;
         }
 
         .apriltag-container {
@@ -151,7 +152,8 @@
             background: var(--sidebar-color);
             border-left: 1px solid #333;
             padding: 15px;
-            overflow-y: auto;
+            overflow: hidden;
+            height: 100%;
         }
 
         .sidebar-header {
