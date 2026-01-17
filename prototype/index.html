@@ -1196,6 +1196,9 @@
                     <div class="type">${ann.type} - ${ann.lanes.length > 0 ? ann.lanes.join(', ') : 'no lanes'}</div>
                 </div>
             `).join('');
+
+            // Auto-scroll to show most recent annotation
+            list.scrollTop = list.scrollHeight;
         }
 
         function deleteAnnotation(index) {
