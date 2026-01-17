@@ -119,6 +119,94 @@
         gap: 10px;
         margin-top: 20px;
     }
+
+    .specialist-search {
+        margin-bottom: 15px;
+    }
+
+    .specialist-search input {
+        width: 100%;
+        padding: 10px 14px;
+        background: var(--bg-color);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        color: var(--text-color);
+        font-size: 0.9rem;
+    }
+
+    .specialist-search input:focus {
+        outline: none;
+        border-color: var(--primary-color);
+    }
+
+    .specialist-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .specialist-option {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px;
+        border-bottom: 1px solid var(--border-color);
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .specialist-option:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .specialist-option:last-child {
+        border-bottom: none;
+    }
+
+    .specialist-option .info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .specialist-option .name {
+        font-weight: 500;
+    }
+
+    .specialist-option .email {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    .specialist-option .expertise {
+        font-size: 0.75rem;
+        color: var(--primary-color);
+    }
+
+    .specialist-option .add-btn {
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .specialist-option:hover .add-btn {
+        opacity: 1;
+    }
+
+    .empty-search {
+        text-align: center;
+        padding: 30px;
+        color: var(--text-muted);
+    }
+
+    .remove-btn {
+        opacity: 0.5;
+        cursor: pointer;
+        transition: opacity 0.2s;
+    }
+
+    .remove-btn:hover {
+        opacity: 1;
+        color: var(--danger-color);
+    }
 </style>
 {% endblock %}
 
@@ -136,6 +224,18 @@
                         Dashboard
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="/admin/experiments/new" class="nav-link">
+                        <span class="icon">➕</span>
+                        New Experiment
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/users" class="nav-link">
+                        <span class="icon">👥</span>
+                        Users
+                    </a>
+                </li>
             </ul>
         </nav>
     </aside>
@@ -148,25 +248,56 @@
         </div>
     </main>
 </div>
+
+<!-- Add Specialist Modal -->
+<div class="modal-overlay" id="addSpecialistModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>Add Specialist</h2>
+            <button class="modal-close" onclick="closeAddSpecialistModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="specialist-search">
+                <input type="text" id="specialistSearch" placeholder="Search by name or email..." oninput="filterSpecialists()">
+            </div>
+            <div class="specialist-list" id="availableSpecialists">
+                <div class="loading">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
     const experimentId = {{ experiment_id }};
+    let currentExperiment = null;
+    let currentAssignments = [];
+    let allSpecialists = [];
 
     async function loadExperiment() {
         try {
             const experiment = await apiCall(`/api/admin/experiments/${experimentId}`);
             const assignments = await apiCall(`/api/admin/experiments/${experimentId}/assignments`);
 
+            currentExperiment = experiment;
+            currentAssignments = assignments;
             renderExperiment(experiment, assignments);
         } catch (error) {
             showError(error.message);
         }
     }
 
+    function canModifyAssignments(status) {
+        return status === 'draft' || status === 'active';
+    }
+
     function renderExperiment(exp, assignments) {
         const content = document.getElementById('content');
+        const canModify = canModifyAssignments(exp.status);
+
         content.innerHTML = `
             <div class="page-header">
                 <div>
@@ -227,10 +358,14 @@
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">Assigned Specialists (${assignments.length})</h3>
+                    ${canModify ? `
+                        <button class="btn btn-primary btn-sm" onclick="openAddSpecialistModal()">+ Add Specialist</button>
+                    ` : ''}
                 </div>
                 ${assignments.length === 0 ? `
                     <div class="empty-state">
                         <p>No specialists assigned yet</p>
+                        ${canModify ? `<p><a href="#" onclick="openAddSpecialistModal(); return false;">Add specialists</a> to this experiment</p>` : ''}
                     </div>
                 ` : `
                     <table class="table assignment-table">
@@ -238,8 +373,10 @@
                             <tr>
                                 <th>Name</th>
                                 <th>Email</th>
+                                <th>Expertise</th>
                                 <th>Status</th>
                                 <th>Started</th>
+                                ${exp.status === 'draft' ? '<th></th>' : ''}
                             </tr>
                         </thead>
                         <tbody>
@@ -247,8 +384,14 @@
                                 <tr>
                                     <td>${a.specialist_name}</td>
                                     <td>${a.specialist_email}</td>
+                                    <td>${a.expertise_level_snapshot ? formatExpertise(a.expertise_level_snapshot) : '-'}</td>
                                     <td><span class="badge badge-${getAssignmentStatusBadge(a.status)}">${a.status}</span></td>
                                     <td>${a.started_at ? formatDate(a.started_at) : '-'}</td>
+                                    ${exp.status === 'draft' ? `
+                                        <td>
+                                            <span class="remove-btn" onclick="removeSpecialist(${a.specialist_id}, '${a.specialist_name}')" title="Remove">✕</span>
+                                        </td>
+                                    ` : ''}
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -256,6 +399,107 @@
                 `}
             </div>
         `;
+    }
+
+    // Add Specialist Modal functions
+    async function openAddSpecialistModal() {
+        document.getElementById('addSpecialistModal').classList.add('open');
+        document.getElementById('specialistSearch').value = '';
+
+        // Load all specialists
+        try {
+            allSpecialists = await apiCall('/api/admin/specialists');
+            renderAvailableSpecialists();
+        } catch (error) {
+            showError(error.message);
+        }
+    }
+
+    function closeAddSpecialistModal() {
+        document.getElementById('addSpecialistModal').classList.remove('open');
+    }
+
+    function filterSpecialists() {
+        renderAvailableSpecialists();
+    }
+
+    function renderAvailableSpecialists() {
+        const container = document.getElementById('availableSpecialists');
+        const searchTerm = document.getElementById('specialistSearch').value.toLowerCase();
+
+        // Get IDs of already assigned specialists
+        const assignedIds = new Set(currentAssignments.map(a => a.specialist_id));
+
+        // Filter: not assigned and matches search
+        const available = allSpecialists.filter(s => {
+            if (assignedIds.has(s.id)) return false;
+            if (!searchTerm) return true;
+            return s.name.toLowerCase().includes(searchTerm) ||
+                   s.email.toLowerCase().includes(searchTerm);
+        });
+
+        if (available.length === 0) {
+            if (allSpecialists.length === assignedIds.size) {
+                container.innerHTML = `
+                    <div class="empty-search">
+                        <p>All specialists are already assigned</p>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="empty-search">
+                        <p>No specialists found</p>
+                    </div>
+                `;
+            }
+            return;
+        }
+
+        container.innerHTML = available.map(s => `
+            <div class="specialist-option" onclick="addSpecialist(${s.id})">
+                <div class="info">
+                    <span class="name">${s.name}</span>
+                    <span class="email">${s.email}</span>
+                    ${s.expertise_level ? `<span class="expertise">${formatExpertise(s.expertise_level)}</span>` : ''}
+                </div>
+                <button class="btn btn-primary btn-sm add-btn">Add</button>
+            </div>
+        `).join('');
+    }
+
+    function formatExpertise(level) {
+        if (!level) return '';
+        return level.charAt(0).toUpperCase() + level.slice(1);
+    }
+
+    async function addSpecialist(specialistId) {
+        try {
+            await apiCall(`/api/admin/experiments/${experimentId}/assignments`, {
+                method: 'POST',
+                body: JSON.stringify({ specialist_id: specialistId })
+            });
+
+            // Reload assignments and re-render
+            currentAssignments = await apiCall(`/api/admin/experiments/${experimentId}/assignments`);
+            renderExperiment(currentExperiment, currentAssignments);
+            renderAvailableSpecialists();
+        } catch (error) {
+            showError(error.message);
+        }
+    }
+
+    async function removeSpecialist(specialistId, specialistName) {
+        if (!confirm(`Remove ${specialistName} from this experiment?`)) return;
+
+        try {
+            await apiCall(`/api/admin/experiments/${experimentId}/assignments/${specialistId}`, {
+                method: 'DELETE'
+            });
+
+            loadExperiment();
+        } catch (error) {
+            showError(error.message);
+        }
     }
 
     function getStatusBadge(status) {

@@ -92,15 +92,21 @@ async def create_user(
     name: str,
     password_hash: str,
     role: str,
-    expertise_level: Optional[str] = None
+    expertise_level: Optional[str] = None,
+    years_experience: Optional[int] = None,
+    training_date: Optional[str] = None,
+    institution: Optional[str] = None,
+    specializations: Optional[list] = None
 ) -> int:
     """Create a new user and return their ID."""
     cursor = await db.execute(
         """
-        INSERT INTO users (email, name, password_hash, role, expertise_level)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO users (email, name, password_hash, role, expertise_level,
+                          years_experience, training_date, institution, specializations)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (email, name, password_hash, role, expertise_level)
+        (email, name, password_hash, role, expertise_level,
+         years_experience, training_date, institution, json_dumps(specializations))
     )
     await db.commit()
     return cursor.lastrowid
@@ -132,7 +138,113 @@ async def get_specialists(db: aiosqlite.Connection) -> list[dict]:
         "SELECT * FROM users WHERE role = 'specialist' AND is_active = 1 ORDER BY name"
     )
     rows = await cursor.fetchall()
-    return await rows_to_dicts(rows)
+    users = await rows_to_dicts(rows)
+    # Parse specializations JSON for each user
+    for user in users:
+        if user.get('specializations'):
+            user['specializations'] = json_loads(user['specializations'])
+    return users
+
+
+async def get_all_users(db: aiosqlite.Connection, include_inactive: bool = False) -> list[dict]:
+    """Get all users, optionally including inactive ones."""
+    if include_inactive:
+        cursor = await db.execute("SELECT * FROM users ORDER BY name")
+    else:
+        cursor = await db.execute("SELECT * FROM users WHERE is_active = 1 ORDER BY name")
+    rows = await cursor.fetchall()
+    users = await rows_to_dicts(rows)
+    # Parse specializations JSON for each user
+    for user in users:
+        if user.get('specializations'):
+            user['specializations'] = json_loads(user['specializations'])
+    return users
+
+
+async def update_user(
+    db: aiosqlite.Connection,
+    user_id: int,
+    email: Optional[str] = None,
+    name: Optional[str] = None,
+    password_hash: Optional[str] = None,
+    role: Optional[str] = None,
+    expertise_level: Optional[str] = None,
+    years_experience: Optional[int] = None,
+    training_date: Optional[str] = None,
+    institution: Optional[str] = None,
+    specializations: Optional[list] = None,
+    is_active: Optional[bool] = None
+) -> bool:
+    """Update a user. Returns True if user was found and updated."""
+    updates = []
+    params = []
+
+    if email is not None:
+        updates.append("email = ?")
+        params.append(email)
+    if name is not None:
+        updates.append("name = ?")
+        params.append(name)
+    if password_hash is not None:
+        updates.append("password_hash = ?")
+        params.append(password_hash)
+    if role is not None:
+        updates.append("role = ?")
+        params.append(role)
+    if expertise_level is not None:
+        updates.append("expertise_level = ?")
+        params.append(expertise_level)
+    if years_experience is not None:
+        updates.append("years_experience = ?")
+        params.append(years_experience)
+    if training_date is not None:
+        updates.append("training_date = ?")
+        params.append(training_date)
+    if institution is not None:
+        updates.append("institution = ?")
+        params.append(institution)
+    if specializations is not None:
+        updates.append("specializations = ?")
+        params.append(json_dumps(specializations))
+    if is_active is not None:
+        updates.append("is_active = ?")
+        params.append(1 if is_active else 0)
+
+    if not updates:
+        return False
+
+    updates.append("updated_at = datetime('now')")
+    params.append(user_id)
+
+    query = f"UPDATE users SET {', '.join(updates)} WHERE id = ?"
+    cursor = await db.execute(query, params)
+    await db.commit()
+    return cursor.rowcount > 0
+
+
+async def deactivate_user(db: aiosqlite.Connection, user_id: int) -> bool:
+    """Soft delete a user by setting is_active to 0."""
+    cursor = await db.execute(
+        "UPDATE users SET is_active = 0, updated_at = datetime('now') WHERE id = ?",
+        (user_id,)
+    )
+    await db.commit()
+    return cursor.rowcount > 0
+
+
+async def get_user_by_id_include_inactive(db: aiosqlite.Connection, user_id: int) -> Optional[dict]:
+    """Get a user by ID, including inactive users."""
+    cursor = await db.execute(
+        "SELECT * FROM users WHERE id = ?",
+        (user_id,)
+    )
+    row = await cursor.fetchone()
+    if row:
+        user = await row_to_dict(row)
+        if user.get('specializations'):
+            user['specializations'] = json_loads(user['specializations'])
+        return user
+    return None
 
 
 # Sample operations
@@ -266,15 +378,20 @@ async def get_experiment_samples(db: aiosqlite.Connection, experiment_id: int) -
 async def create_assignment(
     db: aiosqlite.Connection,
     experiment_id: int,
-    specialist_id: int
+    specialist_id: int,
+    expertise_level_snapshot: Optional[str] = None,
+    years_experience_snapshot: Optional[int] = None,
+    training_date_snapshot: Optional[str] = None
 ) -> int:
-    """Create an assignment for a specialist to an experiment."""
+    """Create an assignment for a specialist to an experiment with profile snapshot."""
     cursor = await db.execute(
         """
-        INSERT INTO assignments (experiment_id, specialist_id)
-        VALUES (?, ?)
+        INSERT INTO assignments (experiment_id, specialist_id,
+                                expertise_level_snapshot, years_experience_snapshot, training_date_snapshot)
+        VALUES (?, ?, ?, ?, ?)
         """,
-        (experiment_id, specialist_id)
+        (experiment_id, specialist_id,
+         expertise_level_snapshot, years_experience_snapshot, training_date_snapshot)
     )
     await db.commit()
     return cursor.lastrowid
@@ -578,6 +695,14 @@ async def get_experiment_progress(
     experiment_id: int
 ) -> dict:
     """Get overall progress for an experiment."""
+    # First get the total samples in the experiment (for specialists who haven't started)
+    cursor = await db.execute(
+        "SELECT COUNT(*) as count FROM experiment_samples WHERE experiment_id = ?",
+        (experiment_id,)
+    )
+    row = await cursor.fetchone()
+    experiment_sample_count = row["count"]
+
     cursor = await db.execute(
         """
         SELECT
@@ -585,7 +710,7 @@ async def get_experiment_progress(
             u.name as specialist_name,
             a.status,
             a.started_at,
-            (SELECT COUNT(*) FROM specialist_sample_order WHERE assignment_id = a.id) as total_samples,
+            (SELECT COUNT(*) FROM specialist_sample_order WHERE assignment_id = a.id) as started_samples,
             (SELECT COUNT(*) FROM annotation_sessions WHERE assignment_id = a.id AND status = 'completed') as completed_samples
         FROM assignments a
         JOIN users u ON a.specialist_id = u.id
@@ -597,11 +722,16 @@ async def get_experiment_progress(
     rows = await cursor.fetchall()
     specialists = await rows_to_dicts(rows)
 
-    # Add percentage to each
+    # Add percentage to each - use experiment_sample_count for specialists who haven't started
     for spec in specialists:
+        # If specialist hasn't started, use experiment's sample count as total
+        started = spec["started_samples"]
+        spec["total_samples"] = started if started > 0 else experiment_sample_count
         total = spec["total_samples"]
         completed = spec["completed_samples"]
         spec["percentage"] = round((completed / total) * 100, 1) if total > 0 else 0
+        # Remove the intermediate field
+        del spec["started_samples"]
 
     # Overall stats
     total_annotations = sum(s["total_samples"] for s in specialists)

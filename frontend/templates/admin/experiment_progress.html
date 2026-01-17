@@ -63,47 +63,45 @@
     }
 
     .overall-progress {
-        margin-bottom: 30px;
-    }
-
-    .overall-progress .stats {
         display: flex;
-        gap: 30px;
-        margin-bottom: 15px;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 25px;
+        padding: 14px 18px;
+        background: var(--card-color);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
     }
 
-    .overall-progress .stat {
-        text-align: center;
+    .overall-progress .progress-bar-inline {
+        flex: 1;
+        height: 12px;
+        background: var(--border-color);
+        border-radius: 6px;
+        overflow: hidden;
+        max-width: 300px;
     }
 
-    .overall-progress .stat .value {
-        font-size: 2rem;
+    .overall-progress .progress-bar-inline .fill {
+        height: 100%;
+        background: var(--success-color);
+        transition: width 0.3s ease;
+    }
+
+    .overall-progress .stats-inline {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.9rem;
+    }
+
+    .overall-progress .stats-inline .value {
         font-weight: 600;
         color: var(--primary-color);
     }
 
-    .overall-progress .stat .label {
-        font-size: 0.8rem;
+    .overall-progress .stats-inline .separator {
         color: var(--text-muted);
-    }
-
-    .progress-bar-large {
-        height: 24px;
-        background: var(--border-color);
-        border-radius: 12px;
-        overflow: hidden;
-    }
-
-    .progress-bar-large .fill {
-        height: 100%;
-        background: var(--success-color);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #000;
-        font-size: 0.85rem;
-        font-weight: 600;
-        transition: width 0.3s ease;
     }
 
     .specialist-progress {
@@ -177,6 +175,18 @@
                         Dashboard
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="/admin/experiments/new" class="nav-link">
+                        <span class="icon">➕</span>
+                        New Experiment
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/users" class="nav-link">
+                        <span class="icon">👥</span>
+                        Users
+                    </a>
+                </li>
             </ul>
         </nav>
     </aside>
@@ -224,26 +234,16 @@
                 </div>
             </div>
 
-            <div class="card overall-progress">
-                <div class="card-header">
-                    <h3 class="card-title">Overall Progress</h3>
+            <div class="overall-progress">
+                <div class="stats-inline">
+                    <span class="value">${overall}%</span>
+                    <span class="separator">•</span>
+                    <span>${data.completed_annotations} / ${data.total_annotations} annotations</span>
+                    <span class="separator">•</span>
+                    <span>${data.specialists.length} specialist${data.specialists.length !== 1 ? 's' : ''}</span>
                 </div>
-                <div class="stats">
-                    <div class="stat">
-                        <div class="value">${data.completed_annotations}</div>
-                        <div class="label">Completed</div>
-                    </div>
-                    <div class="stat">
-                        <div class="value">${data.total_annotations}</div>
-                        <div class="label">Total</div>
-                    </div>
-                    <div class="stat">
-                        <div class="value">${data.specialists.length}</div>
-                        <div class="label">Specialists</div>
-                    </div>
-                </div>
-                <div class="progress-bar-large">
-                    <div class="fill" style="width: ${overall}%">${overall}%</div>
+                <div class="progress-bar-inline">
+                    <div class="fill" style="width: ${overall}%"></div>
                 </div>
             </div>
 

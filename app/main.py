@@ -239,6 +239,16 @@ async def admin_experiment_progress(request: Request, experiment_id: int):
     )
 
 
+@app.get("/admin/users")
+async def admin_users(request: Request):
+    """Render users management page."""
+    user = await get_current_user_optional(request)
+    if not user or user["role"] != "admin":
+        return RedirectResponse(url="/login", status_code=302)
+
+    return templates.TemplateResponse("admin/users.html", {"request": request, "user": user})
+
+
 @app.get("/specialist")
 async def specialist_dashboard(request: Request):
     """Render specialist dashboard."""

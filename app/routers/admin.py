@@ -1,6 +1,6 @@
 """Admin API router."""
 
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Query
 from typing import List
 
 from ..database import (
@@ -16,6 +16,12 @@ from ..database import (
     create_assignment,
     get_experiment_assignments,
     get_experiment_progress,
+    get_all_users,
+    create_user,
+    update_user,
+    deactivate_user,
+    get_user_by_id_include_inactive,
+    get_user_by_email,
 )
 from ..models import (
     ExperimentCreate,
@@ -27,8 +33,9 @@ from ..models import (
     AssignmentCreate,
     AssignmentResponse,
 )
+from ..models.auth import UserCreate, UserUpdate, UserResponse
 from ..models.experiments import SampleInExperiment, AssignmentProgress
-from ..services.auth import require_admin
+from ..services.auth import require_admin, hash_password
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -272,6 +279,171 @@ async def list_specialists(_: dict = Depends(require_admin)):
         ]
 
 
+# User management endpoints
+@router.get("/users", response_model=List[UserResponse])
+async def list_users(
+    include_inactive: bool = Query(False, description="Include inactive users"),
+    _: dict = Depends(require_admin)
+):
+    """Get all users."""
+    async with get_db_context() as db:
+        users = await get_all_users(db, include_inactive=include_inactive)
+        return [
+            UserResponse(
+                id=u["id"],
+                email=u["email"],
+                name=u["name"],
+                role=u["role"],
+                expertise_level=u.get("expertise_level"),
+                years_experience=u.get("years_experience"),
+                training_date=u.get("training_date"),
+                institution=u.get("institution"),
+                specializations=u.get("specializations"),
+                is_active=bool(u["is_active"]),
+                created_at=u.get("created_at")
+            )
+            for u in users
+        ]
+
+
+@router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def create_new_user(data: UserCreate, _: dict = Depends(require_admin)):
+    """Create a new user."""
+    async with get_db_context() as db:
+        # Check if email already exists
+        existing = await get_user_by_email(db, data.email)
+        if existing:
+            raise HTTPException(
+                status_code=400,
+                detail="User with this email already exists"
+            )
+
+        password_hash = hash_password(data.password)
+
+        user_id = await create_user(
+            db,
+            email=data.email,
+            name=data.name,
+            password_hash=password_hash,
+            role=data.role,
+            expertise_level=data.expertise_level,
+            years_experience=data.years_experience,
+            training_date=data.training_date,
+            institution=data.institution,
+            specializations=data.specializations
+        )
+
+        user = await get_user_by_id_include_inactive(db, user_id)
+        return UserResponse(
+            id=user["id"],
+            email=user["email"],
+            name=user["name"],
+            role=user["role"],
+            expertise_level=user.get("expertise_level"),
+            years_experience=user.get("years_experience"),
+            training_date=user.get("training_date"),
+            institution=user.get("institution"),
+            specializations=user.get("specializations"),
+            is_active=bool(user["is_active"]),
+            created_at=user.get("created_at")
+        )
+
+
+@router.get("/users/{user_id}", response_model=UserResponse)
+async def get_user(user_id: int, _: dict = Depends(require_admin)):
+    """Get a specific user."""
+    async with get_db_context() as db:
+        user = await get_user_by_id_include_inactive(db, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        return UserResponse(
+            id=user["id"],
+            email=user["email"],
+            name=user["name"],
+            role=user["role"],
+            expertise_level=user.get("expertise_level"),
+            years_experience=user.get("years_experience"),
+            training_date=user.get("training_date"),
+            institution=user.get("institution"),
+            specializations=user.get("specializations"),
+            is_active=bool(user["is_active"]),
+            created_at=user.get("created_at")
+        )
+
+
+@router.put("/users/{user_id}", response_model=UserResponse)
+async def update_existing_user(user_id: int, data: UserUpdate, _: dict = Depends(require_admin)):
+    """Update a user."""
+    async with get_db_context() as db:
+        user = await get_user_by_id_include_inactive(db, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Check if email is being changed and already exists
+        if data.email and data.email != user["email"]:
+            existing = await get_user_by_email(db, data.email)
+            if existing:
+                raise HTTPException(
+                    status_code=400,
+                    detail="User with this email already exists"
+                )
+
+        # Hash password if being changed
+        password_hash = None
+        if data.password:
+            password_hash = hash_password(data.password)
+
+        await update_user(
+            db,
+            user_id=user_id,
+            email=data.email,
+            name=data.name,
+            password_hash=password_hash,
+            role=data.role,
+            expertise_level=data.expertise_level,
+            years_experience=data.years_experience,
+            training_date=data.training_date,
+            institution=data.institution,
+            specializations=data.specializations,
+            is_active=data.is_active
+        )
+
+        user = await get_user_by_id_include_inactive(db, user_id)
+        return UserResponse(
+            id=user["id"],
+            email=user["email"],
+            name=user["name"],
+            role=user["role"],
+            expertise_level=user.get("expertise_level"),
+            years_experience=user.get("years_experience"),
+            training_date=user.get("training_date"),
+            institution=user.get("institution"),
+            specializations=user.get("specializations"),
+            is_active=bool(user["is_active"]),
+            created_at=user.get("created_at")
+        )
+
+
+@router.delete("/users/{user_id}")
+async def delete_user(user_id: int, admin: dict = Depends(require_admin)):
+    """Deactivate a user (soft delete)."""
+    if user_id == admin["id"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot deactivate your own account"
+        )
+
+    async with get_db_context() as db:
+        user = await get_user_by_id_include_inactive(db, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        await deactivate_user(db, user_id)
+
+        return {"status": "success", "message": "User deactivated"}
+
+
 # Assignment management
 @router.get("/experiments/{experiment_id}/assignments", response_model=List[AssignmentResponse])
 async def get_assignments(experiment_id: int, _: dict = Depends(require_admin)):
@@ -303,8 +475,20 @@ async def create_new_assignment(
                 detail="Cannot add assignments to this experiment"
             )
 
+        # Fetch specialist profile for snapshot
+        specialist = await get_user_by_id_include_inactive(db, data.specialist_id)
+        if not specialist:
+            raise HTTPException(status_code=404, detail="Specialist not found")
+
         try:
-            assignment_id = await create_assignment(db, experiment_id, data.specialist_id)
+            assignment_id = await create_assignment(
+                db,
+                experiment_id,
+                data.specialist_id,
+                expertise_level_snapshot=specialist.get("expertise_level"),
+                years_experience_snapshot=specialist.get("years_experience"),
+                training_date_snapshot=specialist.get("training_date")
+            )
         except Exception as e:
             if "UNIQUE constraint" in str(e):
                 raise HTTPException(

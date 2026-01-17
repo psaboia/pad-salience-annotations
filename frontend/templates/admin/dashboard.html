@@ -120,8 +120,9 @@
         border-radius: 12px;
         padding: 16px 20px;
         border: 1px solid var(--border-color);
-        display: flex;
-        justify-content: space-between;
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 20px;
         align-items: center;
         transition: all 0.2s;
     }
@@ -140,10 +141,56 @@
         color: var(--text-muted);
     }
 
+    .experiment-progress {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 200px;
+    }
+
+    .experiment-progress .progress-bar {
+        flex: 1;
+        height: 8px;
+        min-width: 80px;
+    }
+
+    .experiment-progress .progress-text {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        white-space: nowrap;
+    }
+
+    .experiment-progress .progress-text strong {
+        color: var(--primary-color);
+    }
+
     .experiment-meta {
         display: flex;
         align-items: center;
-        gap: 15px;
+        gap: 10px;
+    }
+
+    .settings-btn {
+        background: #333;
+        border: 1px solid #555;
+        color: #ccc;
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1.2rem;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+    }
+
+    .settings-btn:hover {
+        background: #444;
+        color: #fff;
+        border-color: #666;
+        text-decoration: none;
     }
 
     .logout-link {
@@ -174,6 +221,12 @@
                     <a href="/admin/experiments/new" class="nav-link">
                         <span class="icon">➕</span>
                         New Experiment
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/users" class="nav-link">
+                        <span class="icon">👥</span>
+                        Users
                     </a>
                 </li>
             </ul>
@@ -245,35 +298,77 @@
             document.getElementById('totalSamples').textContent = samples.length;
             document.getElementById('legacySessions').textContent = stats.total_sessions;
 
+            // Load progress for active/paused experiments
+            const progressMap = {};
+            const activeExperiments = experiments.filter(e =>
+                e.status === 'active' || e.status === 'paused' || e.status === 'completed'
+            );
+
+            await Promise.all(activeExperiments.map(async exp => {
+                try {
+                    const progress = await apiCall(`/api/admin/experiments/${exp.id}/progress`);
+                    progressMap[exp.id] = progress;
+                } catch (e) {
+                    // Ignore errors for individual progress loads
+                }
+            }));
+
             // Render experiments
-            const list = document.getElementById('experimentsList');
-            if (experiments.length === 0) {
-                list.innerHTML = `
-                    <div class="empty-state">
-                        <h3>No experiments yet</h3>
-                        <p>Create your first experiment to get started</p>
-                    </div>
-                `;
-            } else {
-                list.innerHTML = experiments.map(exp => `
-                    <div class="experiment-item">
-                        <div class="experiment-info">
-                            <h3>${exp.name}</h3>
-                            <p>${exp.description || 'No description'}</p>
-                        </div>
-                        <div class="experiment-meta">
-                            <span class="badge badge-${getStatusBadge(exp.status)}">${exp.status}</span>
-                            <a href="/admin/experiments/${exp.id}" class="btn btn-secondary btn-sm">View</a>
-                            ${exp.status === 'active' || exp.status === 'paused' ?
-                                `<a href="/admin/experiments/${exp.id}/progress" class="btn btn-primary btn-sm">Progress</a>` : ''
-                            }
-                        </div>
-                    </div>
-                `).join('');
-            }
+            renderExperiments(experiments, progressMap);
         } catch (error) {
             showError(error.message);
         }
+    }
+
+    function renderExperiments(experiments, progressMap) {
+        const list = document.getElementById('experimentsList');
+
+        if (experiments.length === 0) {
+            list.innerHTML = `
+                <div class="empty-state">
+                    <h3>No experiments yet</h3>
+                    <p>Create your first experiment to get started</p>
+                </div>
+            `;
+            return;
+        }
+
+        list.innerHTML = experiments.map(exp => {
+            const progress = progressMap[exp.id];
+            const hasProgress = progress && progress.specialists.length > 0;
+
+            return `
+                <div class="experiment-item">
+                    <div class="experiment-info">
+                        <h3>${exp.name}</h3>
+                        <p>${exp.description || 'No description'}</p>
+                    </div>
+                    ${hasProgress ? `
+                        <div class="experiment-progress">
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill" style="width: ${progress.overall_percentage}%"></div>
+                            </div>
+                            <div class="progress-text">
+                                <strong>${progress.overall_percentage}%</strong> · ${progress.specialists.length} specialist${progress.specialists.length !== 1 ? 's' : ''}
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="experiment-progress">
+                            <div class="progress-text" style="color: var(--text-muted);">
+                                ${exp.status === 'draft' ? 'Draft' : 'No specialists'}
+                            </div>
+                        </div>
+                    `}
+                    <div class="experiment-meta">
+                        <span class="badge badge-${getStatusBadge(exp.status)}" title="Status: ${exp.status}">${exp.status}</span>
+                        ${exp.status === 'active' || exp.status === 'paused' ?
+                            `<a href="/admin/experiments/${exp.id}/progress" class="btn btn-primary btn-sm" title="Track progress">Track</a>` : ''
+                        }
+                        <a href="/admin/experiments/${exp.id}" class="settings-btn" title="Experiment settings">⚙</a>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 
     function getStatusBadge(status) {

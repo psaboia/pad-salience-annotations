@@ -1,0 +1,580 @@
+{% extends "base.html" %}
+
+{% block title %}Users - PAD Annotation System{% endblock %}
+
+{% block head %}
+<style>
+    .layout {
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        min-height: 100vh;
+    }
+
+    .sidebar {
+        background: var(--sidebar-color);
+        border-right: 1px solid var(--border-color);
+        padding: 20px;
+    }
+
+    .sidebar-header {
+        margin-bottom: 30px;
+    }
+
+    .sidebar-header h1 {
+        font-size: 1.1rem;
+        color: var(--primary-color);
+    }
+
+    .sidebar-header p {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+
+    .nav-menu {
+        list-style: none;
+    }
+
+    .nav-item {
+        margin-bottom: 4px;
+    }
+
+    .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        color: var(--text-color);
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
+
+    .nav-link:hover {
+        background: rgba(255, 255, 255, 0.05);
+        text-decoration: none;
+    }
+
+    .nav-link.active {
+        background: var(--primary-color);
+        color: #000;
+    }
+
+    .nav-link .icon {
+        font-size: 1.1rem;
+    }
+
+    .main-content {
+        padding: 30px;
+        overflow-y: auto;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+
+    .page-header h2 {
+        font-size: 1.5rem;
+    }
+
+    .filters {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+        align-items: center;
+    }
+
+    .filters label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        cursor: pointer;
+    }
+
+    .filters input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+    }
+
+    .user-table {
+        width: 100%;
+    }
+
+    .user-table th {
+        text-align: left;
+        padding: 12px;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .user-table td {
+        padding: 12px;
+        border-bottom: 1px solid var(--border-color);
+        vertical-align: middle;
+    }
+
+    .user-table tr:hover {
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .user-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .user-name {
+        font-weight: 500;
+    }
+
+    .user-email {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    .actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .logout-link {
+        margin-top: auto;
+        padding-top: 20px;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .form-divider {
+        margin: 20px 0;
+        padding-top: 15px;
+        border-top: 1px solid var(--border-color);
+        font-size: 0.85rem;
+        color: var(--text-muted);
+    }
+
+    .specialist-fields {
+        display: none;
+    }
+
+    .specialist-fields.visible {
+        display: block;
+    }
+
+    .badge-inactive {
+        background: #666;
+        color: #ccc;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="layout">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1>PAD Annotation</h1>
+            <p>Admin Panel</p>
+        </div>
+
+        <nav>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="/admin" class="nav-link">
+                        <span class="icon">📊</span>
+                        Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/experiments/new" class="nav-link">
+                        <span class="icon">➕</span>
+                        New Experiment
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/users" class="nav-link active">
+                        <span class="icon">👥</span>
+                        Users
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <div class="logout-link">
+            <a href="#" class="nav-link" onclick="logout()">
+                <span class="icon">🚪</span>
+                Logout
+            </a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="page-header">
+            <h2>Users</h2>
+            <button class="btn btn-primary" onclick="openCreateModal()">
+                + New User
+            </button>
+        </div>
+
+        <div class="filters">
+            <label>
+                <input type="checkbox" id="showInactive" onchange="loadUsers()">
+                Show inactive users
+            </label>
+        </div>
+
+        <div class="card">
+            <table class="user-table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Expertise Level</th>
+                        <th>Institution</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <tr>
+                        <td colspan="6">
+                            <div class="loading">
+                                <div class="spinner"></div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+
+<!-- User Modal -->
+<div class="modal-overlay" id="userModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 id="modalTitle">New User</h2>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="userForm" onsubmit="saveUser(event)">
+                <input type="hidden" id="userId" value="">
+
+                <div class="form-group">
+                    <label for="userName">Name *</label>
+                    <input type="text" id="userName" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="userEmail">Email *</label>
+                    <input type="email" id="userEmail" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="userPassword">Password <span id="passwordHint">(required)</span></label>
+                    <input type="password" id="userPassword" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label for="userRole">Role *</label>
+                    <select id="userRole" class="form-control" required onchange="toggleSpecialistFields()">
+                        <option value="specialist">Specialist</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+
+                <div class="specialist-fields" id="specialistFields">
+                    <div class="form-divider">Specialist Profile</div>
+
+                    <div class="form-group">
+                        <label for="expertiseLevel">Expertise Level</label>
+                        <select id="expertiseLevel" class="form-control">
+                            <option value="">Select...</option>
+                            <option value="novice">Novice</option>
+                            <option value="intermediate">Intermediate</option>
+                            <option value="experienced">Experienced</option>
+                            <option value="expert">Expert</option>
+                            <option value="trainer">Trainer</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="yearsExperience">Years of Experience</label>
+                        <input type="number" id="yearsExperience" class="form-control" min="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="trainingDate">Training Date (PAD)</label>
+                        <input type="date" id="trainingDate" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="institution">Institution</label>
+                        <input type="text" id="institution" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="specializations">Specializations (comma-separated)</label>
+                        <input type="text" id="specializations" class="form-control" placeholder="e.g., antibiotics, tb_drugs">
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <button type="submit" form="userForm" class="btn btn-primary" id="saveBtn">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Deactivate Modal -->
+<div class="modal-overlay" id="confirmModal">
+    <div class="modal" style="width: 400px;">
+        <div class="modal-header">
+            <h2>Confirm Deactivation</h2>
+            <button class="modal-close" onclick="closeConfirmModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to deactivate <strong id="confirmUserName"></strong>?</p>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 10px;">
+                The user will no longer be able to log in or be assigned to experiments.
+            </p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+            <button type="button" class="btn btn-danger" id="confirmDeactivateBtn">Deactivate</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let users = [];
+    let editingUserId = null;
+
+    async function loadUsers() {
+        const includeInactive = document.getElementById('showInactive').checked;
+        const tbody = document.getElementById('usersTableBody');
+
+        try {
+            users = await apiCall(`/api/admin/users?include_inactive=${includeInactive}`);
+            renderUsers();
+        } catch (error) {
+            showError(error.message);
+        }
+    }
+
+    function renderUsers() {
+        const tbody = document.getElementById('usersTableBody');
+
+        if (users.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6">
+                        <div class="empty-state">
+                            <h3>No users found</h3>
+                            <p>Create your first user to get started</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = users.map(user => `
+            <tr>
+                <td>
+                    <div class="user-info">
+                        <span class="user-name">${escapeHtml(user.name)}</span>
+                        <span class="user-email">${escapeHtml(user.email)}</span>
+                    </div>
+                </td>
+                <td>
+                    <span class="badge badge-${user.role === 'admin' ? 'primary' : 'secondary'}">
+                        ${user.role}
+                    </span>
+                </td>
+                <td>${user.role === 'specialist' ? formatExpertise(user.expertise_level) : '-'}</td>
+                <td>${user.institution ? escapeHtml(user.institution) : '-'}</td>
+                <td>
+                    <span class="badge ${user.is_active ? 'badge-success' : 'badge-inactive'}">
+                        ${user.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                </td>
+                <td>
+                    <div class="actions">
+                        <button class="btn btn-secondary btn-sm" onclick="editUser(${user.id})">Edit</button>
+                        ${user.is_active ? `<button class="btn btn-danger btn-sm" onclick="confirmDeactivate(${user.id}, '${escapeHtml(user.name)}')">Deactivate</button>` : ''}
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function formatExpertise(level) {
+        if (!level) return '-';
+        return level.charAt(0).toUpperCase() + level.slice(1);
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>"']/g, char => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[char]));
+    }
+
+    function openCreateModal() {
+        editingUserId = null;
+        document.getElementById('modalTitle').textContent = 'New User';
+        document.getElementById('userForm').reset();
+        document.getElementById('userId').value = '';
+        document.getElementById('passwordHint').textContent = '(required)';
+        document.getElementById('userPassword').required = true;
+        toggleSpecialistFields();
+        document.getElementById('userModal').classList.add('open');
+    }
+
+    function editUser(id) {
+        const user = users.find(u => u.id === id);
+        if (!user) return;
+
+        editingUserId = id;
+        document.getElementById('modalTitle').textContent = 'Edit User';
+        document.getElementById('userId').value = id;
+        document.getElementById('userName').value = user.name;
+        document.getElementById('userEmail').value = user.email;
+        document.getElementById('userPassword').value = '';
+        document.getElementById('passwordHint').textContent = '(leave blank to keep current)';
+        document.getElementById('userPassword').required = false;
+        document.getElementById('userRole').value = user.role;
+
+        // Specialist fields
+        document.getElementById('expertiseLevel').value = user.expertise_level || '';
+        document.getElementById('yearsExperience').value = user.years_experience || '';
+        document.getElementById('trainingDate').value = user.training_date || '';
+        document.getElementById('institution').value = user.institution || '';
+        document.getElementById('specializations').value = (user.specializations || []).join(', ');
+
+        toggleSpecialistFields();
+        document.getElementById('userModal').classList.add('open');
+    }
+
+    function closeModal() {
+        document.getElementById('userModal').classList.remove('open');
+    }
+
+    function toggleSpecialistFields() {
+        const role = document.getElementById('userRole').value;
+        const fields = document.getElementById('specialistFields');
+        if (role === 'specialist') {
+            fields.classList.add('visible');
+        } else {
+            fields.classList.remove('visible');
+        }
+    }
+
+    async function saveUser(event) {
+        event.preventDefault();
+
+        const id = document.getElementById('userId').value;
+        const isEdit = Boolean(id);
+
+        const data = {
+            name: document.getElementById('userName').value,
+            email: document.getElementById('userEmail').value,
+            role: document.getElementById('userRole').value
+        };
+
+        const password = document.getElementById('userPassword').value;
+        if (password) {
+            data.password = password;
+        } else if (!isEdit) {
+            showError('Password is required for new users');
+            return;
+        }
+
+        // Specialist fields
+        if (data.role === 'specialist') {
+            const expertiseLevel = document.getElementById('expertiseLevel').value;
+            const yearsExp = document.getElementById('yearsExperience').value;
+            const trainingDate = document.getElementById('trainingDate').value;
+            const institution = document.getElementById('institution').value;
+            const specializations = document.getElementById('specializations').value;
+
+            if (expertiseLevel) data.expertise_level = expertiseLevel;
+            if (yearsExp) data.years_experience = parseInt(yearsExp);
+            if (trainingDate) data.training_date = trainingDate;
+            if (institution) data.institution = institution;
+            if (specializations) {
+                data.specializations = specializations.split(',').map(s => s.trim()).filter(s => s);
+            }
+        }
+
+        try {
+            if (isEdit) {
+                await apiCall(`/api/admin/users/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(data)
+                });
+            } else {
+                await apiCall('/api/admin/users', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+            }
+
+            closeModal();
+            loadUsers();
+        } catch (error) {
+            showError(error.message);
+        }
+    }
+
+    let userToDeactivate = null;
+
+    function confirmDeactivate(id, name) {
+        userToDeactivate = id;
+        document.getElementById('confirmUserName').textContent = name;
+        document.getElementById('confirmModal').classList.add('open');
+    }
+
+    function closeConfirmModal() {
+        document.getElementById('confirmModal').classList.remove('open');
+        userToDeactivate = null;
+    }
+
+    document.getElementById('confirmDeactivateBtn').onclick = async function() {
+        if (!userToDeactivate) return;
+
+        try {
+            await apiCall(`/api/admin/users/${userToDeactivate}`, {
+                method: 'DELETE'
+            });
+            closeConfirmModal();
+            loadUsers();
+        } catch (error) {
+            showError(error.message);
+        }
+    };
+
+    async function logout() {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        window.location.href = '/login';
+    }
+
+    // Load on page load
+    loadUsers();
+</script>
+{% endblock %}

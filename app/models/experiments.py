@@ -65,6 +65,11 @@ class AssignmentResponse(BaseModel):
     completed_at: Optional[str] = None
     created_at: Optional[str] = None
 
+    # Specialist profile snapshot (captured at assignment time)
+    expertise_level_snapshot: Optional[str] = None
+    years_experience_snapshot: Optional[int] = None
+    training_date_snapshot: Optional[str] = None
+
     # Optional joined data
     experiment_name: Optional[str] = None
     experiment_status: Optional[str] = None
