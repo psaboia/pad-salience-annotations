@@ -15,7 +15,8 @@
             --bg-color: #1a1a2e;
             --sidebar-color: #16213e;
             --pad-max-height: 85vh;
-            --pad-border: 3px;
+            --pad-border: 0px;
+            --pad-border-radius: 0px;
             --pad-border-color: #333333;
         }
 
@@ -97,7 +98,7 @@
             position: relative;
             display: inline-block;
             border: var(--pad-border) solid var(--pad-border-color);
-            border-radius: 8px;
+            border-radius: var(--pad-border-radius);
             overflow: hidden;
         }
 
@@ -613,8 +614,11 @@
                     if (config.pad_image.max_height_vh) {
                         root.style.setProperty('--pad-max-height', `${config.pad_image.max_height_vh}vh`);
                     }
-                    if (config.pad_image.border_px) {
+                    if (config.pad_image.border_px !== undefined) {
                         root.style.setProperty('--pad-border', `${config.pad_image.border_px}px`);
+                    }
+                    if (config.pad_image.border_radius_px !== undefined) {
+                        root.style.setProperty('--pad-border-radius', `${config.pad_image.border_radius_px}px`);
                     }
                     if (config.pad_image.border_color) {
                         root.style.setProperty('--pad-border-color', config.pad_image.border_color);

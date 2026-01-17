@@ -34,8 +34,11 @@ pad_image:
   # Maximum height as percentage of viewport height (0-100)
   max_height_vh: 85
 
-  # Border width in pixels
-  border_px: 3
+  # Border width in pixels (0 to remove)
+  border_px: 0
+
+  # Border radius in pixels (0 for square corners)
+  border_radius_px: 0
 
   # Border color (hex)
   border_color: "#333333"
