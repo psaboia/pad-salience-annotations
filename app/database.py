@@ -289,18 +289,18 @@ async def get_sample_by_id(db: aiosqlite.Connection, sample_id: int) -> Optional
     return await row_to_dict(row) if row else None
 
 
-# Experiment operations
-async def create_experiment(
+# Study operations
+async def create_study(
     db: aiosqlite.Connection,
     name: str,
     created_by: int,
     description: Optional[str] = None,
     instructions: Optional[str] = None
 ) -> int:
-    """Create a new experiment."""
+    """Create a new study."""
     cursor = await db.execute(
         """
-        INSERT INTO experiments (name, description, instructions, created_by)
+        INSERT INTO studies (name, description, instructions, created_by)
         VALUES (?, ?, ?, ?)
         """,
         (name, description, instructions, created_by)
@@ -309,66 +309,66 @@ async def create_experiment(
     return cursor.lastrowid
 
 
-async def get_experiment_by_id(db: aiosqlite.Connection, experiment_id: int) -> Optional[dict]:
-    """Get an experiment by ID."""
+async def get_study_by_id(db: aiosqlite.Connection, study_id: int) -> Optional[dict]:
+    """Get a study by ID."""
     cursor = await db.execute(
-        "SELECT * FROM experiments WHERE id = ?",
-        (experiment_id,)
+        "SELECT * FROM studies WHERE id = ?",
+        (study_id,)
     )
     row = await cursor.fetchone()
     return await row_to_dict(row) if row else None
 
 
-async def get_all_experiments(db: aiosqlite.Connection) -> list[dict]:
-    """Get all experiments."""
+async def get_all_studies(db: aiosqlite.Connection) -> list[dict]:
+    """Get all studies."""
     cursor = await db.execute(
-        "SELECT * FROM experiments ORDER BY created_at DESC"
+        "SELECT * FROM studies ORDER BY created_at DESC"
     )
     rows = await cursor.fetchall()
     return await rows_to_dicts(rows)
 
 
-async def update_experiment_status(
+async def update_study_status(
     db: aiosqlite.Connection,
-    experiment_id: int,
+    study_id: int,
     status: str
 ):
-    """Update experiment status."""
+    """Update study status."""
     await db.execute(
-        "UPDATE experiments SET status = ?, updated_at = datetime('now') WHERE id = ?",
-        (status, experiment_id)
+        "UPDATE studies SET status = ?, updated_at = datetime('now') WHERE id = ?",
+        (status, study_id)
     )
     await db.commit()
 
 
-async def add_samples_to_experiment(
+async def add_samples_to_study(
     db: aiosqlite.Connection,
-    experiment_id: int,
+    study_id: int,
     sample_ids: list[int]
 ):
-    """Add samples to an experiment with display order."""
+    """Add samples to a study with display order."""
     for order, sample_id in enumerate(sample_ids, 1):
         await db.execute(
             """
-            INSERT OR REPLACE INTO experiment_samples (experiment_id, sample_id, display_order)
+            INSERT OR REPLACE INTO study_samples (study_id, sample_id, display_order)
             VALUES (?, ?, ?)
             """,
-            (experiment_id, sample_id, order)
+            (study_id, sample_id, order)
         )
     await db.commit()
 
 
-async def get_experiment_samples(db: aiosqlite.Connection, experiment_id: int) -> list[dict]:
-    """Get samples for an experiment with their order."""
+async def get_study_samples(db: aiosqlite.Connection, study_id: int) -> list[dict]:
+    """Get samples for a study with their order."""
     cursor = await db.execute(
         """
-        SELECT es.id as experiment_sample_id, es.display_order, s.*
-        FROM experiment_samples es
+        SELECT es.id as study_sample_id, es.display_order, s.*
+        FROM study_samples es
         JOIN samples s ON es.sample_id = s.id
-        WHERE es.experiment_id = ?
+        WHERE es.study_id = ?
         ORDER BY es.display_order
         """,
-        (experiment_id,)
+        (study_id,)
     )
     rows = await cursor.fetchall()
     return await rows_to_dicts(rows)
@@ -377,20 +377,20 @@ async def get_experiment_samples(db: aiosqlite.Connection, experiment_id: int) -
 # Assignment operations
 async def create_assignment(
     db: aiosqlite.Connection,
-    experiment_id: int,
+    study_id: int,
     specialist_id: int,
     expertise_level_snapshot: Optional[str] = None,
     years_experience_snapshot: Optional[int] = None,
     training_date_snapshot: Optional[str] = None
 ) -> int:
-    """Create an assignment for a specialist to an experiment with profile snapshot."""
+    """Create an assignment for a specialist to a study with profile snapshot."""
     cursor = await db.execute(
         """
-        INSERT INTO assignments (experiment_id, specialist_id,
+        INSERT INTO assignments (study_id, specialist_id,
                                 expertise_level_snapshot, years_experience_snapshot, training_date_snapshot)
         VALUES (?, ?, ?, ?, ?)
         """,
-        (experiment_id, specialist_id,
+        (study_id, specialist_id,
          expertise_level_snapshot, years_experience_snapshot, training_date_snapshot)
     )
     await db.commit()
@@ -399,16 +399,16 @@ async def create_assignment(
 
 async def get_assignment(
     db: aiosqlite.Connection,
-    experiment_id: int,
+    study_id: int,
     specialist_id: int
 ) -> Optional[dict]:
-    """Get assignment for a specialist in an experiment."""
+    """Get assignment for a specialist in a study."""
     cursor = await db.execute(
         """
         SELECT * FROM assignments
-        WHERE experiment_id = ? AND specialist_id = ?
+        WHERE study_id = ? AND specialist_id = ?
         """,
-        (experiment_id, specialist_id)
+        (study_id, specialist_id)
     )
     row = await cursor.fetchone()
     return await row_to_dict(row) if row else None
@@ -418,12 +418,12 @@ async def get_specialist_assignments(
     db: aiosqlite.Connection,
     specialist_id: int
 ) -> list[dict]:
-    """Get all assignments for a specialist with experiment details."""
+    """Get all assignments for a specialist with study details."""
     cursor = await db.execute(
         """
-        SELECT a.*, e.name as experiment_name, e.description, e.instructions, e.status as experiment_status
+        SELECT a.*, e.name as study_name, e.description, e.instructions, e.status as study_status
         FROM assignments a
-        JOIN experiments e ON a.experiment_id = e.id
+        JOIN studies e ON a.study_id = e.id
         WHERE a.specialist_id = ? AND e.status IN ('active', 'paused')
         ORDER BY a.created_at DESC
         """,
@@ -433,20 +433,20 @@ async def get_specialist_assignments(
     return await rows_to_dicts(rows)
 
 
-async def get_experiment_assignments(
+async def get_study_assignments(
     db: aiosqlite.Connection,
-    experiment_id: int
+    study_id: int
 ) -> list[dict]:
-    """Get all assignments for an experiment with specialist details."""
+    """Get all assignments for a study with specialist details."""
     cursor = await db.execute(
         """
         SELECT a.*, u.name as specialist_name, u.email as specialist_email
         FROM assignments a
         JOIN users u ON a.specialist_id = u.id
-        WHERE a.experiment_id = ?
+        WHERE a.study_id = ?
         ORDER BY u.name
         """,
-        (experiment_id,)
+        (study_id,)
     )
     rows = await cursor.fetchall()
     return await rows_to_dicts(rows)
@@ -479,19 +479,19 @@ async def generate_specialist_order(
 
     # Get assignment details
     cursor = await db.execute(
-        "SELECT experiment_id FROM assignments WHERE id = ?",
+        "SELECT study_id FROM assignments WHERE id = ?",
         (assignment_id,)
     )
     row = await cursor.fetchone()
     if not row:
         return
 
-    experiment_id = row["experiment_id"]
+    study_id = row["study_id"]
 
-    # Get experiment samples
+    # Get study samples
     cursor = await db.execute(
-        "SELECT id FROM experiment_samples WHERE experiment_id = ? ORDER BY display_order",
-        (experiment_id,)
+        "SELECT id FROM study_samples WHERE study_id = ? ORDER BY display_order",
+        (study_id,)
     )
     sample_rows = await cursor.fetchall()
     sample_ids = [row["id"] for row in sample_rows]
@@ -501,13 +501,13 @@ async def generate_specialist_order(
     random.shuffle(sample_ids)
 
     # Insert randomized order
-    for order, exp_sample_id in enumerate(sample_ids, 1):
+    for order, study_sample_id in enumerate(sample_ids, 1):
         await db.execute(
             """
-            INSERT INTO specialist_sample_order (assignment_id, experiment_sample_id, specialist_order)
+            INSERT INTO specialist_sample_order (assignment_id, study_sample_id, specialist_order)
             VALUES (?, ?, ?)
             """,
-            (assignment_id, exp_sample_id, order)
+            (assignment_id, study_sample_id, order)
         )
     await db.commit()
 
@@ -519,9 +519,9 @@ async def get_specialist_sample_order(
     """Get the randomized sample order for a specialist."""
     cursor = await db.execute(
         """
-        SELECT sso.specialist_order, sso.experiment_sample_id, es.sample_id, s.*
+        SELECT sso.specialist_order, sso.study_sample_id, es.sample_id, s.*
         FROM specialist_sample_order sso
-        JOIN experiment_samples es ON sso.experiment_sample_id = es.id
+        JOIN study_samples es ON sso.study_sample_id = es.id
         JOIN samples s ON es.sample_id = s.id
         WHERE sso.assignment_id = ?
         ORDER BY sso.specialist_order
@@ -536,16 +536,16 @@ async def get_specialist_sample_order(
 async def create_annotation_session(
     db: aiosqlite.Connection,
     assignment_id: int,
-    experiment_sample_id: int,
+    study_sample_id: int,
     session_uuid: str
 ) -> int:
     """Create a new annotation session."""
     cursor = await db.execute(
         """
-        INSERT INTO annotation_sessions (assignment_id, experiment_sample_id, session_uuid)
+        INSERT INTO annotation_sessions (assignment_id, study_sample_id, session_uuid)
         VALUES (?, ?, ?)
         """,
-        (assignment_id, experiment_sample_id, session_uuid)
+        (assignment_id, study_sample_id, session_uuid)
     )
     await db.commit()
     return cursor.lastrowid
@@ -573,7 +573,7 @@ async def get_current_session_for_assignment(
             ans.session_uuid,
             ans.status as session_status,
             sso.specialist_order,
-            sso.experiment_sample_id,
+            sso.study_sample_id,
             s.id as sample_id,
             s.drug_name,
             s.drug_name_display,
@@ -581,10 +581,10 @@ async def get_current_session_for_assignment(
             s.filename,
             s.image_path
         FROM specialist_sample_order sso
-        JOIN experiment_samples es ON sso.experiment_sample_id = es.id
+        JOIN study_samples es ON sso.study_sample_id = es.id
         JOIN samples s ON es.sample_id = s.id
         LEFT JOIN annotation_sessions ans ON ans.assignment_id = sso.assignment_id
-            AND ans.experiment_sample_id = sso.experiment_sample_id
+            AND ans.study_sample_id = sso.study_sample_id
         WHERE sso.assignment_id = ?
             AND (ans.status IS NULL OR ans.status != 'completed')
         ORDER BY sso.specialist_order
@@ -690,18 +690,18 @@ async def get_assignment_progress(
     }
 
 
-async def get_experiment_progress(
+async def get_study_progress(
     db: aiosqlite.Connection,
-    experiment_id: int
+    study_id: int
 ) -> dict:
-    """Get overall progress for an experiment."""
-    # First get the total samples in the experiment (for specialists who haven't started)
+    """Get overall progress for a study."""
+    # First get the total samples in the study (for specialists who haven't started)
     cursor = await db.execute(
-        "SELECT COUNT(*) as count FROM experiment_samples WHERE experiment_id = ?",
-        (experiment_id,)
+        "SELECT COUNT(*) as count FROM study_samples WHERE study_id = ?",
+        (study_id,)
     )
     row = await cursor.fetchone()
-    experiment_sample_count = row["count"]
+    study_sample_count = row["count"]
 
     cursor = await db.execute(
         """
@@ -714,19 +714,19 @@ async def get_experiment_progress(
             (SELECT COUNT(*) FROM annotation_sessions WHERE assignment_id = a.id AND status = 'completed') as completed_samples
         FROM assignments a
         JOIN users u ON a.specialist_id = u.id
-        WHERE a.experiment_id = ?
+        WHERE a.study_id = ?
         ORDER BY u.name
         """,
-        (experiment_id,)
+        (study_id,)
     )
     rows = await cursor.fetchall()
     specialists = await rows_to_dicts(rows)
 
-    # Add percentage to each - use experiment_sample_count for specialists who haven't started
+    # Add percentage to each - use study_sample_count for specialists who haven't started
     for spec in specialists:
-        # If specialist hasn't started, use experiment's sample count as total
+        # If specialist hasn't started, use study's sample count as total
         started = spec["started_samples"]
-        spec["total_samples"] = started if started > 0 else experiment_sample_count
+        spec["total_samples"] = started if started > 0 else study_sample_count
         total = spec["total_samples"]
         completed = spec["completed_samples"]
         spec["percentage"] = round((completed / total) * 100, 1) if total > 0 else 0

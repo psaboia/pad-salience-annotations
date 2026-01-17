@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PAD Annotation - Experiment Mode</title>
+    <title>PAD Annotation - Study Mode</title>
     <style>
         /* CSS Custom Properties - loaded from config.yaml */
         :root {
@@ -1046,8 +1046,8 @@
     </div>
 
     <script>
-        // Experiment state
-        const experimentId = {{ experiment_id }};
+        // Study state
+        const studyId = {{ study_id }};
         let sessionData = null;
         let currentSample = null;
 
@@ -1161,7 +1161,7 @@
         // Load current session data from API
         async function loadCurrentSession() {
             try {
-                const response = await fetch(`/api/specialist/experiments/${experimentId}/current`);
+                const response = await fetch(`/api/specialist/studies/${studyId}/current`);
                 if (!response.ok) {
                     const error = await response.json();
                     throw new Error(error.detail || 'Failed to load session');
@@ -1263,8 +1263,8 @@
             wrapper.innerHTML = `
                 <div class="complete-message">
                     <div class="icon">🎉</div>
-                    <h2>Experiment Complete!</h2>
-                    <p>You have completed all samples in this experiment.</p>
+                    <h2>Study Complete!</h2>
+                    <p>You have completed all samples in this study.</p>
                     <button class="done-btn" onclick="goBack()">Back to Dashboard</button>
                 </div>
             `;
@@ -1663,7 +1663,7 @@
 
             if (isComplete) {
                 document.getElementById('nextSampleInfo').style.display = 'none';
-                document.getElementById('continueBtn').textContent = 'Finish Experiment';
+                document.getElementById('continueBtn').textContent = 'Finish Study';
             } else if (sessionData.next_sample) {
                 document.getElementById('nextSampleInfo').style.display = 'block';
                 document.getElementById('nextSampleName').textContent = sessionData.next_sample.drug_name_display;

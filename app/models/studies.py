@@ -1,26 +1,26 @@
-"""Experiment models."""
+"""Study models."""
 
 from pydantic import BaseModel
 from typing import Optional, List
 
 
-class ExperimentCreate(BaseModel):
-    """Request model for creating an experiment."""
+class StudyCreate(BaseModel):
+    """Request model for creating a study."""
     name: str
     description: Optional[str] = None
     instructions: Optional[str] = None
 
 
-class ExperimentUpdate(BaseModel):
-    """Request model for updating an experiment."""
+class StudyUpdate(BaseModel):
+    """Request model for updating a study."""
     name: Optional[str] = None
     description: Optional[str] = None
     instructions: Optional[str] = None
     status: Optional[str] = None
 
 
-class ExperimentResponse(BaseModel):
-    """Response model for experiment data."""
+class StudyResponse(BaseModel):
+    """Response model for study data."""
     id: int
     name: str
     description: Optional[str] = None
@@ -31,9 +31,9 @@ class ExperimentResponse(BaseModel):
     updated_at: Optional[str] = None
 
 
-class SampleInExperiment(BaseModel):
-    """Sample within an experiment context."""
-    experiment_sample_id: int
+class SampleInStudy(BaseModel):
+    """Sample within a study context."""
+    study_sample_id: int
     display_order: int
     id: int  # sample id
     drug_name: str
@@ -43,9 +43,9 @@ class SampleInExperiment(BaseModel):
     image_path: str
 
 
-class ExperimentWithSamples(ExperimentResponse):
-    """Experiment with its samples."""
-    samples: List[SampleInExperiment] = []
+class StudyWithSamples(StudyResponse):
+    """Study with its samples."""
+    samples: List[SampleInStudy] = []
     sample_count: int = 0
 
 
@@ -57,7 +57,7 @@ class AssignmentCreate(BaseModel):
 class AssignmentResponse(BaseModel):
     """Response model for assignment data."""
     id: int
-    experiment_id: int
+    study_id: int
     specialist_id: int
     status: str
     randomization_seed: Optional[int] = None
@@ -71,8 +71,8 @@ class AssignmentResponse(BaseModel):
     training_date_snapshot: Optional[str] = None
 
     # Optional joined data
-    experiment_name: Optional[str] = None
-    experiment_status: Optional[str] = None
+    study_name: Optional[str] = None
+    study_status: Optional[str] = None
     description: Optional[str] = None
     instructions: Optional[str] = None
     specialist_name: Optional[str] = None

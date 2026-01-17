@@ -170,15 +170,15 @@ These are specific design decisions we need feedback on:
 
 ## For Administrators / Researchers
 
-### Experiment Management
+### Study Management
 
-14. **How many specialists do you expect to participate in a typical experiment?**
+14. **How many specialists do you expect to participate in a typical study?**
     - [ ] 1-3
     - [ ] 3-10
     - [ ] 10-20
     - [ ] More than 20
 
-15. **How many images would a typical experiment include?**
+15. **How many images would a typical study include?**
     - [ ] 10-50 images
     - [ ] 50-100 images
     - [ ] 100-500 images
@@ -187,9 +187,9 @@ These are specific design decisions we need feedback on:
 16. **Do you need multiple specialists to annotate the same images?**
     - [ ] Yes, for inter-annotator agreement
     - [ ] No, one annotation per image is enough
-    - [ ] Depends on the experiment
+    - [ ] Depends on the study
 
-17. **How would you like to select images for an experiment?**
+17. **How would you like to select images for an study?**
     - [ ] By drug type
     - [ ] By concentration level
     - [ ] By difficulty (easy/hard cases)

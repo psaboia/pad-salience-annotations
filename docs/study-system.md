@@ -1,12 +1,12 @@
-# Experiment System Design
+# Study System Design
 
 ## Overview
 
 A structured data collection system where:
-- Administrators define **experiments** with pre-selected image sets
-- **Specialists** are assigned to experiments
+- Administrators define **studies** with pre-selected image sets
+- **Specialists** are assigned to studies
 - Each specialist sees the **same images** in the same order
-- Progress is tracked per user per experiment
+- Progress is tracked per user per study
 - All data is stored in a SQLite database for integrity
 
 ---
@@ -16,15 +16,15 @@ A structured data collection system where:
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                     Administrator                            │
-│  - Creates experiments                                       │
+│  - Creates studies                                       │
 │  - Defines image sets                                        │
-│  - Assigns specialists to experiments                        │
+│  - Assigns specialists to studies                        │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                     SQLite Database                          │
-│  - experiments, specialists, images, annotations             │
+│  - studies, specialists, images, annotations             │
 │  - Progress tracking                                         │
 │  - Data integrity (transactions)                             │
 └─────────────────────────────────────────────────────────────┘
@@ -32,7 +32,7 @@ A structured data collection system where:
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                     Specialist Interface                     │
-│  - Sees assigned experiment                                  │
+│  - Sees assigned study                                  │
 │  - Images presented in order                                 │
 │  - Cannot skip, must complete each                           │
 │  - Progress saved automatically                              │
@@ -67,29 +67,29 @@ Stores specialist/user information.
 | `created_at` | TIMESTAMP | When account was created |
 | `metadata` | JSON | Additional profile data |
 
-#### 2. `experiments`
-Defines data collection experiments/studies.
+#### 2. `studies`
+Defines data collection studies/studies.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | TEXT (UUID) | Primary key |
-| `name` | TEXT | Experiment name |
+| `name` | TEXT | Study name |
 | `description` | TEXT | Purpose and instructions |
 | `pad_configuration` | TEXT | PAD type (e.g., "FHI2020", "ChemoPAD") |
 | `status` | TEXT | draft, active, completed, archived |
 | `created_by` | TEXT | Admin who created it |
 | `created_at` | TIMESTAMP | Creation date |
-| `started_at` | TIMESTAMP | When experiment was activated |
-| `completed_at` | TIMESTAMP | When experiment was finished |
+| `started_at` | TIMESTAMP | When study was activated |
+| `completed_at` | TIMESTAMP | When study was finished |
 | `config` | JSON | Additional settings |
 
-#### 3. `experiment_images`
-Images included in each experiment (ordered).
+#### 3. `study_images`
+Images included in each study (ordered).
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | TEXT (UUID) | Primary key |
-| `experiment_id` | TEXT | FK to experiments |
+| `study_id` | TEXT | FK to studies |
 | `image_order` | INTEGER | Presentation order (1, 2, 3...) |
 | `drug_name` | TEXT | Normalized drug name |
 | `drug_name_display` | TEXT | Display name |
@@ -98,13 +98,13 @@ Images included in each experiment (ordered).
 | `quantity` | INTEGER | Drug concentration % |
 | `metadata` | JSON | Additional image data |
 
-#### 4. `experiment_assignments`
-Links specialists to experiments.
+#### 4. `study_assignments`
+Links specialists to studies.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | TEXT (UUID) | Primary key |
-| `experiment_id` | TEXT | FK to experiments |
+| `study_id` | TEXT | FK to studies |
 | `specialist_id` | TEXT | FK to specialists |
 | `assigned_at` | TIMESTAMP | When assigned |
 | `started_at` | TIMESTAMP | When specialist started |
@@ -117,9 +117,9 @@ One session per specialist per image.
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | TEXT (UUID) | Primary key |
-| `experiment_id` | TEXT | FK to experiments |
+| `study_id` | TEXT | FK to studies |
 | `specialist_id` | TEXT | FK to specialists |
-| `image_id` | TEXT | FK to experiment_images |
+| `image_id` | TEXT | FK to study_images |
 | `started_at` | TIMESTAMP | When session began |
 | `completed_at` | TIMESTAMP | When session was saved |
 | `audio_filename` | TEXT | Audio file path |
@@ -151,11 +151,11 @@ Individual region annotations within a session.
 ## Entity Relationships
 
 ```
-specialists (1) ─────────────────────── (N) experiment_assignments
+specialists (1) ─────────────────────── (N) study_assignments
                                               │
-experiments (1) ─────────────────────── (N) ──┘
+studies (1) ─────────────────────── (N) ──┘
      │
-     └── (1) ─────────────────────── (N) experiment_images
+     └── (1) ─────────────────────── (N) study_images
                                               │
 annotation_sessions (N) ──────────────────────┘
      │
@@ -168,9 +168,9 @@ annotation_sessions (N) ──────────────────�
 
 ### Admin Workflow
 
-1. **Create Experiment**
+1. **Create Study**
    ```
-   POST /api/experiments
+   POST /api/studies
    {
      "name": "TB Drugs Study Q1 2026",
      "description": "Annotate TB drug samples for training",
@@ -178,9 +178,9 @@ annotation_sessions (N) ──────────────────�
    }
    ```
 
-2. **Add Images to Experiment**
+2. **Add Images to Study**
    ```
-   POST /api/experiments/{id}/images
+   POST /api/studies/{id}/images
    {
      "images": [
        {"drug_name": "isoniazid", "card_id": 17776},
@@ -192,22 +192,22 @@ annotation_sessions (N) ──────────────────�
 
 3. **Assign Specialists**
    ```
-   POST /api/experiments/{id}/assignments
+   POST /api/studies/{id}/assignments
    {
      "specialist_ids": ["uuid-1", "uuid-2", "uuid-3"]
    }
    ```
 
-4. **Activate Experiment**
+4. **Activate Study**
    ```
-   POST /api/experiments/{id}/activate
+   POST /api/studies/{id}/activate
    ```
 
 ### Specialist Workflow
 
 1. **Login / Identify**
    - Select name from list or enter credentials
-   - System loads their assigned experiment(s)
+   - System loads their assigned study(s)
 
 2. **Start Session**
    - System presents first uncompleted image
@@ -222,7 +222,7 @@ annotation_sessions (N) ──────────────────�
    - Moves to next image in sequence
    - Cannot go back (prevents bias)
 
-5. **Complete Experiment**
+5. **Complete Study**
    - When all images done, show completion message
    - Can view summary of their annotations
 
@@ -230,29 +230,29 @@ annotation_sessions (N) ──────────────────�
 
 ## API Endpoints
 
-### Experiments
+### Studys
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/experiments` | List all experiments |
-| POST | `/api/experiments` | Create new experiment |
-| GET | `/api/experiments/{id}` | Get experiment details |
-| PUT | `/api/experiments/{id}` | Update experiment |
-| POST | `/api/experiments/{id}/activate` | Activate experiment |
-| POST | `/api/experiments/{id}/complete` | Mark as completed |
+| GET | `/api/studies` | List all studies |
+| POST | `/api/studies` | Create new study |
+| GET | `/api/studies/{id}` | Get study details |
+| PUT | `/api/studies/{id}` | Update study |
+| POST | `/api/studies/{id}/activate` | Activate study |
+| POST | `/api/studies/{id}/complete` | Mark as completed |
 
 ### Images
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/experiments/{id}/images` | List images in experiment |
-| POST | `/api/experiments/{id}/images` | Add images to experiment |
-| DELETE | `/api/experiments/{id}/images/{img_id}` | Remove image |
+| GET | `/api/studies/{id}/images` | List images in study |
+| POST | `/api/studies/{id}/images` | Add images to study |
+| DELETE | `/api/studies/{id}/images/{img_id}` | Remove image |
 
 ### Assignments
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/experiments/{id}/assignments` | List assigned specialists |
-| POST | `/api/experiments/{id}/assignments` | Assign specialists |
-| DELETE | `/api/experiments/{id}/assignments/{specialist_id}` | Remove assignment |
+| GET | `/api/studies/{id}/assignments` | List assigned specialists |
+| POST | `/api/studies/{id}/assignments` | Assign specialists |
+| DELETE | `/api/studies/{id}/assignments/{specialist_id}` | Remove assignment |
 
 ### Specialists
 | Method | Endpoint | Description |
@@ -274,7 +274,7 @@ annotation_sessions (N) ──────────────────�
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/export/jsonl` | Export all data as JSONL |
-| GET | `/api/export/experiment/{id}` | Export specific experiment |
+| GET | `/api/export/study/{id}` | Export specific study |
 | GET | `/api/export/huggingface/{id}` | Export in HuggingFace format |
 
 ---
@@ -285,7 +285,7 @@ annotation_sessions (N) ──────────────────�
 ```json
 {
   "specialist_id": "uuid-123",
-  "experiment_id": "uuid-456",
+  "study_id": "uuid-456",
   "total_images": 26,
   "completed_images": 12,
   "current_image_order": 13,
@@ -294,10 +294,10 @@ annotation_sessions (N) ──────────────────�
 }
 ```
 
-### Per Experiment (Admin View)
+### Per Study (Admin View)
 ```json
 {
-  "experiment_id": "uuid-456",
+  "study_id": "uuid-456",
   "total_images": 26,
   "total_specialists": 5,
   "progress": [
@@ -319,7 +319,7 @@ Each line is one annotation session:
 ```json
 {
   "session_id": "uuid",
-  "experiment": {"id": "uuid", "name": "TB Drugs Study"},
+  "study": {"id": "uuid", "name": "TB Drugs Study"},
   "specialist": {"id": "uuid", "expertise_level": "expert"},
   "image": {
     "drug_name": "isoniazid",
@@ -355,7 +355,7 @@ data/
 ├── audio/                   # Audio recordings
 │   └── {session_id}.webm
 ├── exports/                 # Generated exports
-│   └── {experiment_id}/
+│   └── {study_id}/
 │       ├── annotations.jsonl
 │       └── metadata.json
 └── backups/                 # Database backups
@@ -387,9 +387,9 @@ data/
 - [x] JSONL storage
 - [ ] SQLite database
 
-### Phase 2: Experiment System
+### Phase 2: Study System
 - [ ] Database schema implementation
-- [ ] Experiment CRUD API
+- [ ] Study CRUD API
 - [ ] Specialist management
 - [ ] Progress tracking
 
@@ -407,7 +407,7 @@ data/
 - No server setup required
 - Single file - easy to backup and transfer
 - Works offline
-- Sufficient for expected scale (hundreds of experiments, thousands of annotations)
+- Sufficient for expected scale (hundreds of studies, thousands of annotations)
 - Can migrate to PostgreSQL later if needed
 
 **Why database over JSONL files:**

@@ -1,7 +1,7 @@
 """
 PAD Salience Annotation Server - Main Application
 
-This is the main entry point for the FastAPI application with experiment management.
+This is the main entry point for the FastAPI application with study management.
 """
 
 import json
@@ -78,7 +78,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="PAD Salience Annotation Server",
-    description="Experiment management system for PAD image annotations",
+    description="Study management system for PAD image annotations",
     version="2.0.0",
     lifespan=lifespan
 )
@@ -203,39 +203,39 @@ async def admin_dashboard(request: Request):
     return templates.TemplateResponse("admin/dashboard.html", {"request": request, "user": user})
 
 
-@app.get("/admin/experiments/new")
-async def admin_new_experiment(request: Request):
-    """Render new experiment page."""
+@app.get("/admin/studies/new")
+async def admin_new_study(request: Request):
+    """Render new study page."""
     user = await get_current_user_optional(request)
     if not user or user["role"] != "admin":
         return RedirectResponse(url="/login", status_code=302)
 
-    return templates.TemplateResponse("admin/experiment_new.html", {"request": request, "user": user})
+    return templates.TemplateResponse("admin/study_new.html", {"request": request, "user": user})
 
 
-@app.get("/admin/experiments/{experiment_id}")
-async def admin_experiment_detail(request: Request, experiment_id: int):
-    """Render experiment detail page."""
+@app.get("/admin/studies/{study_id}")
+async def admin_study_detail(request: Request, study_id: int):
+    """Render study detail page."""
     user = await get_current_user_optional(request)
     if not user or user["role"] != "admin":
         return RedirectResponse(url="/login", status_code=302)
 
     return templates.TemplateResponse(
-        "admin/experiment_detail.html",
-        {"request": request, "user": user, "experiment_id": experiment_id}
+        "admin/study_detail.html",
+        {"request": request, "user": user, "study_id": study_id}
     )
 
 
-@app.get("/admin/experiments/{experiment_id}/progress")
-async def admin_experiment_progress(request: Request, experiment_id: int):
-    """Render experiment progress page."""
+@app.get("/admin/studies/{study_id}/progress")
+async def admin_study_progress(request: Request, study_id: int):
+    """Render study progress page."""
     user = await get_current_user_optional(request)
     if not user or user["role"] != "admin":
         return RedirectResponse(url="/login", status_code=302)
 
     return templates.TemplateResponse(
-        "admin/experiment_progress.html",
-        {"request": request, "user": user, "experiment_id": experiment_id}
+        "admin/study_progress.html",
+        {"request": request, "user": user, "study_id": study_id}
     )
 
 
@@ -259,16 +259,16 @@ async def specialist_dashboard(request: Request):
     return templates.TemplateResponse("specialist/dashboard.html", {"request": request, "user": user})
 
 
-@app.get("/annotate/{experiment_id}")
-async def annotate_page(request: Request, experiment_id: int):
-    """Render annotation interface for an experiment."""
+@app.get("/annotate/{study_id}")
+async def annotate_page(request: Request, study_id: int):
+    """Render annotation interface for a study."""
     user = await get_current_user_optional(request)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
 
     return templates.TemplateResponse(
         "specialist/annotate.html",
-        {"request": request, "user": user, "experiment_id": experiment_id}
+        {"request": request, "user": user, "study_id": study_id}
     )
 
 

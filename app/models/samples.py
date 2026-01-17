@@ -18,5 +18,5 @@ class SampleResponse(BaseModel):
 
 
 class SampleSelectionRequest(BaseModel):
-    """Request model for selecting samples for an experiment."""
+    """Request model for selecting samples for a study."""
     sample_ids: List[int]
