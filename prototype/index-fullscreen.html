@@ -450,6 +450,194 @@
             text-align: center;
             padding: 15px 10px;
         }
+
+        /* Settings button */
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .settings-btn {
+            background: none;
+            border: 1px solid #444;
+            color: #888;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .settings-btn:hover {
+            background: #333;
+            color: #fff;
+            border-color: #555;
+        }
+
+        /* Modal styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal {
+            background: #1e1e3f;
+            border-radius: 12px;
+            width: 400px;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: #16213e;
+            border-bottom: 1px solid #333;
+        }
+
+        .modal-header h2 {
+            font-size: 1.1rem;
+            color: #00d4ff;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 60vh;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 20px;
+            background: #16213e;
+            border-top: 1px solid #333;
+        }
+
+        .settings-section {
+            margin-bottom: 20px;
+        }
+
+        .settings-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .settings-section h3 {
+            font-size: 0.85rem;
+            color: #00d4ff;
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #333;
+        }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .setting-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .setting-row label {
+            font-size: 0.8rem;
+            color: #aaa;
+            min-width: 80px;
+        }
+
+        .setting-row input[type="range"] {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #333;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .setting-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00d4ff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .setting-row input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #00d4ff;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .setting-value {
+            font-size: 0.8rem;
+            color: #00d4ff;
+            min-width: 50px;
+            text-align: right;
+            font-family: monospace;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-row input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .checkbox-row label {
+            font-size: 0.8rem;
+            color: #aaa;
+            min-width: auto;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -485,7 +673,10 @@
         <!-- Right Sidebar - All controls -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <h1>PAD Annotation</h1>
+                <div class="header-row">
+                    <h1>PAD Annotation</h1>
+                    <button class="settings-btn" onclick="openSettings()" title="Settings">⚙</button>
+                </div>
                 <span class="eyetracking-badge"><span class="dot"></span>Eye-tracking</span>
             </div>
 
@@ -545,6 +736,65 @@
                 </button>
             </div>
         </aside>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="modal-close" onclick="closeSettings()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h3>AprilTags</h3>
+                    <div class="setting-row">
+                        <label>Size</label>
+                        <input type="range" id="tagSize" min="30" max="120" value="60">
+                        <span class="setting-value" id="tagSizeValue">60px</span>
+                    </div>
+                    <div class="setting-row">
+                        <label>Margin</label>
+                        <input type="range" id="tagMargin" min="0" max="30" value="0">
+                        <span class="setting-value" id="tagMarginValue">0px</span>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>PAD Image</h3>
+                    <div class="setting-row">
+                        <label>Width</label>
+                        <input type="range" id="padWidth" min="400" max="1200" value="730">
+                        <span class="setting-value" id="padWidthValue">730px</span>
+                    </div>
+                    <div class="setting-row">
+                        <label>Height</label>
+                        <div class="checkbox-row">
+                            <input type="checkbox" id="padHeightAuto" checked>
+                            <label for="padHeightAuto">Auto (keep aspect ratio)</label>
+                        </div>
+                    </div>
+                    <div class="setting-row" id="padHeightRow" style="display: none;">
+                        <label>Height</label>
+                        <input type="range" id="padHeight" min="400" max="1500" value="1220">
+                        <span class="setting-value" id="padHeightValue">1220px</span>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Layout</h3>
+                    <div class="setting-row">
+                        <label>Tracked Area Padding</label>
+                        <input type="range" id="trackedPadding" min="0" max="50" value="0">
+                        <span class="setting-value" id="trackedPaddingValue">0px</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="tool-btn secondary" onclick="resetSettings()">Reset to Default</button>
+                <button class="tool-btn primary" onclick="closeSettings()">Done</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -1086,9 +1336,155 @@
             updateAnnotationsList();
         }
 
+        // Settings modal
+        let defaultSettings = {};
+
+        function openSettings() {
+            document.getElementById('settingsModal').classList.add('open');
+            syncSettingsUI();
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('open');
+            saveSettingsToLocalStorage();
+        }
+
+        function syncSettingsUI() {
+            // Read current CSS values and sync to sliders
+            const root = document.documentElement;
+            const style = getComputedStyle(root);
+
+            const tagSize = parseInt(style.getPropertyValue('--tag-size')) || 60;
+            const tagMargin = parseInt(style.getPropertyValue('--tag-margin')) || 0;
+            const padWidth = parseInt(style.getPropertyValue('--pad-width')) || 730;
+            const padHeight = style.getPropertyValue('--pad-height').trim();
+            const trackedPadding = parseInt(style.getPropertyValue('--tracked-padding')) || 0;
+
+            document.getElementById('tagSize').value = tagSize;
+            document.getElementById('tagSizeValue').textContent = tagSize + 'px';
+
+            document.getElementById('tagMargin').value = tagMargin;
+            document.getElementById('tagMarginValue').textContent = tagMargin + 'px';
+
+            document.getElementById('padWidth').value = padWidth;
+            document.getElementById('padWidthValue').textContent = padWidth + 'px';
+
+            const heightAuto = padHeight === 'auto' || !padHeight;
+            document.getElementById('padHeightAuto').checked = heightAuto;
+            document.getElementById('padHeightRow').style.display = heightAuto ? 'none' : 'flex';
+            if (!heightAuto) {
+                const h = parseInt(padHeight) || 1220;
+                document.getElementById('padHeight').value = h;
+                document.getElementById('padHeightValue').textContent = h + 'px';
+            }
+
+            document.getElementById('trackedPadding').value = trackedPadding;
+            document.getElementById('trackedPaddingValue').textContent = trackedPadding + 'px';
+        }
+
+        function applySettingChange(setting, value) {
+            const root = document.documentElement;
+
+            switch (setting) {
+                case 'tagSize':
+                    const tagMargin = parseInt(document.getElementById('tagMargin').value) || 0;
+                    root.style.setProperty('--tag-size', value + 'px');
+                    root.style.setProperty('--tag-offset', (value + tagMargin) + 'px');
+                    document.getElementById('tagSizeValue').textContent = value + 'px';
+                    break;
+                case 'tagMargin':
+                    const tagSize = parseInt(document.getElementById('tagSize').value) || 60;
+                    root.style.setProperty('--tag-margin', value + 'px');
+                    root.style.setProperty('--tag-offset', (tagSize + value) + 'px');
+                    document.getElementById('tagMarginValue').textContent = value + 'px';
+                    break;
+                case 'padWidth':
+                    root.style.setProperty('--pad-width', value + 'px');
+                    document.getElementById('padWidthValue').textContent = value + 'px';
+                    break;
+                case 'padHeight':
+                    root.style.setProperty('--pad-height', value + 'px');
+                    document.getElementById('padHeightValue').textContent = value + 'px';
+                    break;
+                case 'padHeightAuto':
+                    const autoChecked = document.getElementById('padHeightAuto').checked;
+                    document.getElementById('padHeightRow').style.display = autoChecked ? 'none' : 'flex';
+                    root.style.setProperty('--pad-height', autoChecked ? 'auto' : document.getElementById('padHeight').value + 'px');
+                    break;
+                case 'trackedPadding':
+                    root.style.setProperty('--tracked-padding', value + 'px');
+                    document.getElementById('trackedPaddingValue').textContent = value + 'px';
+                    break;
+            }
+        }
+
+        function resetSettings() {
+            if (confirm('Reset all settings to default values from config.yaml?')) {
+                localStorage.removeItem('padAnnotationSettings');
+                loadConfig().then(() => {
+                    syncSettingsUI();
+                });
+            }
+        }
+
+        function saveSettingsToLocalStorage() {
+            const settings = {
+                tagSize: parseInt(document.getElementById('tagSize').value),
+                tagMargin: parseInt(document.getElementById('tagMargin').value),
+                padWidth: parseInt(document.getElementById('padWidth').value),
+                padHeightAuto: document.getElementById('padHeightAuto').checked,
+                padHeight: parseInt(document.getElementById('padHeight').value),
+                trackedPadding: parseInt(document.getElementById('trackedPadding').value)
+            };
+            localStorage.setItem('padAnnotationSettings', JSON.stringify(settings));
+        }
+
+        function loadSettingsFromLocalStorage() {
+            const saved = localStorage.getItem('padAnnotationSettings');
+            if (saved) {
+                const settings = JSON.parse(saved);
+                const root = document.documentElement;
+
+                if (settings.tagSize) {
+                    root.style.setProperty('--tag-size', settings.tagSize + 'px');
+                }
+                if (settings.tagMargin !== undefined) {
+                    root.style.setProperty('--tag-margin', settings.tagMargin + 'px');
+                }
+                if (settings.tagSize || settings.tagMargin !== undefined) {
+                    const size = settings.tagSize || 60;
+                    const margin = settings.tagMargin || 0;
+                    root.style.setProperty('--tag-offset', (size + margin) + 'px');
+                }
+                if (settings.padWidth) {
+                    root.style.setProperty('--pad-width', settings.padWidth + 'px');
+                }
+                if (settings.padHeightAuto !== undefined) {
+                    root.style.setProperty('--pad-height', settings.padHeightAuto ? 'auto' : (settings.padHeight + 'px'));
+                }
+                if (settings.trackedPadding !== undefined) {
+                    root.style.setProperty('--tracked-padding', settings.trackedPadding + 'px');
+                }
+            }
+        }
+
+        // Bind slider events
+        document.getElementById('tagSize').addEventListener('input', (e) => applySettingChange('tagSize', parseInt(e.target.value)));
+        document.getElementById('tagMargin').addEventListener('input', (e) => applySettingChange('tagMargin', parseInt(e.target.value)));
+        document.getElementById('padWidth').addEventListener('input', (e) => applySettingChange('padWidth', parseInt(e.target.value)));
+        document.getElementById('padHeight').addEventListener('input', (e) => applySettingChange('padHeight', parseInt(e.target.value)));
+        document.getElementById('padHeightAuto').addEventListener('change', () => applySettingChange('padHeightAuto'));
+        document.getElementById('trackedPadding').addEventListener('input', (e) => applySettingChange('trackedPadding', parseInt(e.target.value)));
+
+        // Close modal on overlay click
+        document.getElementById('settingsModal').addEventListener('click', (e) => {
+            if (e.target.id === 'settingsModal') closeSettings();
+        });
+
         // Initialize app
         async function init() {
             await loadConfig();
+            loadSettingsFromLocalStorage(); // Apply saved settings after config
             await loadManifest();
         }
 
