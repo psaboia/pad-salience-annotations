@@ -23,19 +23,23 @@ This project builds a structured annotation system where:
 ## Features
 
 ### Current
+- **Experiment Management System** with SQLite database
+  - Admin interface for creating and managing experiments
+  - Specialist dashboard with assignment tracking
+  - Randomized sample order per specialist
+  - Progress tracking and statistics
+- **Authentication System** with JWT tokens and bcrypt password hashing
 - Web-based annotation interface with two layout options
 - Rectangle and polygon drawing tools
 - Automatic lane detection (A-L)
 - Continuous audio recording with timestamps
 - **Eye-tracking support** with AprilTag markers for Pupil Labs surface tracking
+- **Unique AprilTag identification** per sample for automatic image correlation with gaze data
 - YAML configuration file for easy customization
 - Export to JSONL format
 - 26 drug samples from FHI2020 project
 
 ### Planned
-- SQLite database for data integrity
-- Experiment management system
-- Specialist progress tracking
 - Audio transcription integration (OpenAI API)
 - Export pipeline for HuggingFace/Ollama
 - Live gaze overlay from eye-tracker
@@ -50,23 +54,30 @@ cd pad-salience-annotations
 # Install dependencies (requires uv)
 uv sync
 
+# Create admin user
+uv run python scripts/create_admin.py --email admin@example.com --password yourpassword
+
 # Run the server
-./run_prototype.sh
+uv run uvicorn app.main:app --reload --port 8765
 
 # Open in browser
 # http://localhost:8765
 ```
 
-## Layout Options
+## System Architecture
 
-Two interface layouts are available:
+### Admin Workflow
+1. Admin logs in at `/login`
+2. Creates experiment from `/admin/experiments`
+3. Selects samples and assigns specialists
+4. Monitors progress from dashboard
 
-| Layout | URL | Description |
-|--------|-----|-------------|
-| With Header | `http://localhost:8765` | Toolbar in header, sidebar for recording/annotations |
-| Fullscreen | `http://localhost:8765/prototype/index-fullscreen.html` | All controls in sidebar, maximizes tracked area |
-
-Both layouts include 4 AprilTags (tag36h11 family) positioned around the PAD image for Pupil Labs eye-tracking surface detection.
+### Specialist Workflow
+1. Specialist logs in at `/login`
+2. Views assigned experiments at `/specialist`
+3. Starts experiment (samples randomized)
+4. Annotates each sample sequentially (no skipping/going back)
+5. Progress automatically tracked
 
 ## Configuration
 
@@ -78,7 +89,7 @@ apriltags:
   size_px: 60          # Tag size in pixels (recommended: 60-80)
   margin_px: 10        # Margin between tags and PAD image
   family: "tag36h11"
-  ids: [0, 3, 7, 4]
+  ids: [0, 3, 7, 4]    # Default tags (overridden per sample)
 
 # Layout settings
 layout:
@@ -99,22 +110,21 @@ lanes:
   labels: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"]
 ```
 
-Changes take effect after restarting the server and reloading the page.
-
 ## Eye-Tracking Setup
 
 For Pupil Labs integration, see [Eye-Tracking Integration](docs/eye-tracking-integration.md).
+
+**AprilTag Identification System:**
+- Each sample has 4 unique AprilTags (tag36h11 family, 587 tags available)
+- Minimum distance of 2 between any pair of samples
+- Enables automatic correlation of gaze data with the correct image
+- Supports 1000+ unique samples
+- See [AprilTag Identification System](docs/apriltag-identification-system.md) for details
 
 **AprilTag size recommendations:**
 - Minimum detectable: ~32 pixels (white border to white border)
 - Recommended: 60-80 pixels for reliable detection at 50-70cm distance
 - Tags at corners should be larger if detection issues occur at angles
-
-Generate a reference image showing the tracked area layout:
-
-```bash
-python generate_eyetracking_layout.py --output reference.png
-```
 
 ## Documentation
 
@@ -124,44 +134,75 @@ python generate_eyetracking_layout.py --output reference.png
 | [Experiment System](docs/experiment-system.md) | Database schema and experiment workflow design |
 | [Prototype Specs](docs/prototype-specifications.md) | Current prototype implementation details |
 | [Eye-Tracking Integration](docs/eye-tracking-integration.md) | Pupil Labs setup and AprilTag configuration |
+| [AprilTag Identification](docs/apriltag-identification-system.md) | Unique tag allocation for automatic sample identification |
 | [Feedback Questionnaire](docs/feedback-questionnaire.md) | Questions for users and specialists |
 
 ## Project Structure
 
 ```
 pad-salience-annotations/
-├── prototype/
-│   ├── index.html              # Annotation interface (with header)
-│   └── index-fullscreen.html   # Fullscreen layout (all controls in sidebar)
+├── app/                           # FastAPI backend
+│   ├── main.py                    # Application entry point
+│   ├── database.py                # SQLite helpers
+│   ├── models/                    # Pydantic models
+│   ├── routers/                   # API endpoints
+│   │   ├── auth.py               # Authentication
+│   │   ├── admin.py              # Admin endpoints
+│   │   └── specialist.py         # Specialist endpoints
+│   └── services/                  # Business logic
+├── frontend/                      # HTML templates
+│   ├── static/                    # CSS and JS
+│   └── templates/                 # Jinja2 templates
+│       ├── login.html
+│       ├── admin/                 # Admin pages
+│       └── specialist/            # Specialist pages
+├── migrations/                    # SQL migrations
+├── scripts/                       # Utility scripts
+│   ├── create_admin.py           # Create users
+│   ├── allocate_tags.py          # Allocate unique AprilTags
+│   └── generate_apriltags.py     # Generate tag images
 ├── sample_images/
-│   ├── manifest.json           # Image metadata
-│   └── *.png                   # PAD card images
+│   ├── manifest.json             # Image metadata
+│   └── *.png                     # PAD card images
 ├── assets/
-│   ├── apriltags/              # AprilTag markers for eye-tracking
-│   └── eyetracking_layout.png  # Generated layout reference
+│   └── apriltags/                # AprilTag markers (587 tags)
 ├── data/
-│   ├── annotations.jsonl       # Saved annotations
-│   └── audio/                  # Audio recordings
-├── docs/                       # Documentation
-├── config.yaml                 # Configuration file
-├── server.py                   # FastAPI backend
-├── generate_eyetracking_layout.py  # Layout image generator
-├── run_prototype.sh            # Server launcher
-└── pyproject.toml              # Python dependencies
+│   ├── pad_annotations.db        # SQLite database
+│   └── audio/                    # Audio recordings
+├── docs/                         # Documentation
+├── config.yaml                   # Configuration file
+└── pyproject.toml                # Python dependencies
 ```
 
 ## API Endpoints
 
+### Authentication
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/` | GET | Serve annotation interface |
-| `/api/config` | GET | Get configuration from config.yaml |
-| `/api/save-annotation` | POST | Save annotation session |
-| `/api/stats` | GET | Get annotation statistics |
+| `/api/auth/login` | POST | Login with email/password |
+| `/api/auth/logout` | POST | Logout |
+| `/api/auth/me` | GET | Get current user |
+
+### Admin
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/admin/experiments` | GET/POST | List/Create experiments |
+| `/api/admin/experiments/{id}` | GET/PUT/DELETE | CRUD operations |
+| `/api/admin/experiments/{id}/samples` | GET/POST | Manage samples |
+| `/api/admin/experiments/{id}/assignments` | GET/POST/DELETE | Manage assignments |
+| `/api/admin/users` | GET/POST | Manage users |
+
+### Specialist
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/specialist/experiments` | GET | List assigned experiments |
+| `/api/specialist/experiments/{id}/start` | POST | Start experiment |
+| `/api/specialist/experiments/{id}/current` | GET | Get current sample |
+| `/api/specialist/sessions/{uuid}/complete` | POST | Complete annotation |
 
 ## Data Format
 
-Annotations are saved in JSONL format with normalized coordinates (0-999) compatible with DeepSeek-OCR style grounding:
+Annotations are saved in SQLite database with normalized coordinates (0-999) compatible with DeepSeek-OCR style grounding:
 
 ```json
 {
@@ -184,8 +225,12 @@ Annotations are saved in JSONL format with normalized coordinates (0-999) compat
 
 - Python 3.12+
 - [uv](https://github.com/astral-sh/uv) - Package manager
+- [FastAPI](https://fastapi.tiangolo.com/) - Web framework
+- [aiosqlite](https://aiosqlite.omnilib.dev/) - Async SQLite
+- [python-jose](https://python-jose.readthedocs.io/) - JWT tokens
+- [passlib](https://passlib.readthedocs.io/) - Password hashing
 - [pad-analytics](https://github.com/PaperAnalyticalDeviceND/pad-analytics) - PAD database API
-- [Pillow](https://pillow.readthedocs.io/) - Image processing (for layout generator)
+- [Pillow](https://pillow.readthedocs.io/) - Image processing
 - [PyYAML](https://pyyaml.org/) - Configuration file parsing
 
 ## Contributing

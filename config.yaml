@@ -1,6 +1,13 @@
 # PAD Annotation Tool Configuration
 # ---------------------------------
 
+# Authentication settings
+auth:
+  # JWT secret key (change this in production!)
+  jwt_secret_key: "pad-salience-annotations-secret-change-me"
+  # Token expiration in hours
+  token_expire_hours: 24
+
 # AprilTag settings for eye-tracking surface detection
 apriltags:
   # Enable/disable AprilTag markers (false for non-eye-tracking sessions)

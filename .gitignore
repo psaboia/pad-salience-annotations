@@ -19,3 +19,10 @@ Thumbs.db
 
 # UV lock file (optional - can be committed for reproducibility)
 # uv.lock
+
+# Runtime data (database and recordings)
+data/pad_annotations.db
+data/audio/*.webm
+
+# Plan files
+*.md.plan

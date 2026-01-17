@@ -1,12 +1,17 @@
 [project]
 name = "pad-salience-annotations"
 version = "0.1.0"
-description = "Add your description here"
+description = "PAD Salience Annotation System with Experiment Management"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "aiosqlite>=0.19.0",
+    "bcrypt>=4.0.0",
+    "email-validator>=2.0.0",
     "fastapi>=0.128.0",
+    "jinja2>=3.1.0",
     "pad-analytics",
+    "python-jose[cryptography]>=3.3.0",
     "python-multipart>=0.0.21",
     "pyyaml>=6.0",
     "uvicorn>=0.40.0",

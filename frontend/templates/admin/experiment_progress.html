@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block title %}Experiment Progress - PAD Annotation System{% endblock %}
+
+{% block head %}
+<style>
+    .layout {
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        min-height: 100vh;
+    }
+
+    .sidebar {
+        background: var(--sidebar-color);
+        border-right: 1px solid var(--border-color);
+        padding: 20px;
+    }
+
+    .sidebar-header h1 {
+        font-size: 1.1rem;
+        color: var(--primary-color);
+    }
+
+    .nav-menu {
+        list-style: none;
+        margin-top: 30px;
+    }
+
+    .nav-item {
+        margin-bottom: 4px;
+    }
+
+    .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        color: var(--text-color);
+        text-decoration: none;
+        font-size: 0.9rem;
+    }
+
+    .nav-link:hover {
+        background: rgba(255, 255, 255, 0.05);
+        text-decoration: none;
+    }
+
+    .main-content {
+        padding: 30px;
+        overflow-y: auto;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+
+    .page-header h2 {
+        font-size: 1.5rem;
+    }
+
+    .overall-progress {
+        margin-bottom: 30px;
+    }
+
+    .overall-progress .stats {
+        display: flex;
+        gap: 30px;
+        margin-bottom: 15px;
+    }
+
+    .overall-progress .stat {
+        text-align: center;
+    }
+
+    .overall-progress .stat .value {
+        font-size: 2rem;
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+
+    .overall-progress .stat .label {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    .progress-bar-large {
+        height: 24px;
+        background: var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .progress-bar-large .fill {
+        height: 100%;
+        background: var(--success-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #000;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: width 0.3s ease;
+    }
+
+    .specialist-progress {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .specialist-row {
+        display: grid;
+        grid-template-columns: 200px 1fr 100px;
+        gap: 20px;
+        align-items: center;
+        padding: 16px 20px;
+        background: var(--card-color);
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+    }
+
+    .specialist-row .name {
+        font-weight: 500;
+    }
+
+    .specialist-row .status {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    .specialist-row .progress-container {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .specialist-row .progress-bar {
+        flex: 1;
+        height: 10px;
+    }
+
+    .specialist-row .progress-text {
+        min-width: 80px;
+        text-align: right;
+        font-size: 0.85rem;
+    }
+
+    .refresh-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .refresh-btn.loading .spinner {
+        width: 16px;
+        height: 16px;
+        border-width: 2px;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="layout">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1>PAD Annotation</h1>
+        </div>
+        <nav>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="/admin" class="nav-link">
+                        <span class="icon">📊</span>
+                        Dashboard
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <div id="content">
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const experimentId = {{ experiment_id }};
+    let refreshInterval = null;
+
+    async function loadProgress() {
+        try {
+            const progress = await apiCall(`/api/admin/experiments/${experimentId}/progress`);
+            renderProgress(progress);
+        } catch (error) {
+            showError(error.message);
+        }
+    }
+
+    function renderProgress(data) {
+        const content = document.getElementById('content');
+        const exp = data.experiment;
+        const overall = data.overall_percentage;
+
+        content.innerHTML = `
+            <div class="page-header">
+                <div>
+                    <h2>${exp.name}</h2>
+                    <span class="badge badge-${getStatusBadge(exp.status)}">${exp.status.toUpperCase()}</span>
+                </div>
+                <div>
+                    <a href="/admin/experiments/${experimentId}" class="btn btn-secondary">View Details</a>
+                    <button class="btn btn-primary refresh-btn" onclick="loadProgress()" id="refreshBtn">
+                        Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div class="card overall-progress">
+                <div class="card-header">
+                    <h3 class="card-title">Overall Progress</h3>
+                </div>
+                <div class="stats">
+                    <div class="stat">
+                        <div class="value">${data.completed_annotations}</div>
+                        <div class="label">Completed</div>
+                    </div>
+                    <div class="stat">
+                        <div class="value">${data.total_annotations}</div>
+                        <div class="label">Total</div>
+                    </div>
+                    <div class="stat">
+                        <div class="value">${data.specialists.length}</div>
+                        <div class="label">Specialists</div>
+                    </div>
+                </div>
+                <div class="progress-bar-large">
+                    <div class="fill" style="width: ${overall}%">${overall}%</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Specialist Progress</h3>
+                </div>
+                <div class="specialist-progress">
+                    ${data.specialists.length === 0 ? `
+                        <div class="empty-state">
+                            <p>No specialists assigned</p>
+                        </div>
+                    ` : data.specialists.map(s => `
+                        <div class="specialist-row">
+                            <div>
+                                <div class="name">${s.specialist_name}</div>
+                                <div class="status">
+                                    <span class="badge badge-${getAssignmentStatusBadge(s.status)}">${s.status}</span>
+                                    ${s.started_at ? ` - Started ${formatDate(s.started_at)}` : ''}
+                                </div>
+                            </div>
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-bar-fill" style="width: ${s.percentage}%"></div>
+                                </div>
+                                <div class="progress-text">${s.completed_samples} / ${s.total_samples}</div>
+                            </div>
+                            <div>
+                                <strong>${s.percentage}%</strong>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    function getStatusBadge(status) {
+        const badges = {
+            'draft': 'secondary',
+            'active': 'success',
+            'paused': 'warning',
+            'completed': 'primary'
+        };
+        return badges[status] || 'secondary';
+    }
+
+    function getAssignmentStatusBadge(status) {
+        const badges = {
+            'pending': 'secondary',
+            'in_progress': 'primary',
+            'completed': 'success',
+            'paused': 'warning'
+        };
+        return badges[status] || 'secondary';
+    }
+
+    // Auto-refresh every 30 seconds
+    loadProgress();
+    refreshInterval = setInterval(loadProgress, 30000);
+
+    // Clear interval when leaving page
+    window.addEventListener('beforeunload', () => {
+        if (refreshInterval) clearInterval(refreshInterval);
+    });
+</script>
+{% endblock %}

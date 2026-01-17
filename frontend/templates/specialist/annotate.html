@@ -1,0 +1,1862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PAD Annotation - Experiment Mode</title>
+    <style>
+        /* CSS Custom Properties - loaded from config.yaml */
+        :root {
+            --tag-size: 60px;
+            --tag-margin: 0px;
+            --tag-offset: 60px;
+            --tracked-padding: 0px;
+            --sidebar-width: 280px;
+            --bg-color: #1a1a2e;
+            --sidebar-color: #16213e;
+            --pad-width: 730px;
+            --pad-height: auto;
+            --pad-border: 0px;
+            --pad-border-radius: 0px;
+            --pad-border-color: #333333;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-color);
+            color: #eee;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Main Layout - 2 columns only: tracked area + sidebar */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr var(--sidebar-width);
+            height: 100vh;
+        }
+
+        /* Tracked Area - ONLY tags + PAD image */
+        .tracked-area {
+            display: flex;
+            align-items: safe center;
+            justify-content: safe center;
+            padding: var(--tracked-padding);
+            background: var(--bg-color);
+            overflow: auto;
+            min-height: 0;
+        }
+
+        .apriltag-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin: var(--tag-offset);
+        }
+
+        .apriltag {
+            position: absolute;
+            width: var(--tag-size);
+            height: var(--tag-size);
+            background: white;
+            padding: 4px;
+            z-index: 100;
+        }
+
+        .apriltag img {
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        .apriltag.top-left {
+            top: calc(-1 * var(--tag-offset));
+            left: calc(-1 * var(--tag-offset));
+        }
+
+        .apriltag.top-right {
+            top: calc(-1 * var(--tag-offset));
+            right: calc(-1 * var(--tag-offset));
+        }
+
+        .apriltag.bottom-left {
+            bottom: calc(-1 * var(--tag-offset));
+            left: calc(-1 * var(--tag-offset));
+        }
+
+        .apriltag.bottom-right {
+            bottom: calc(-1 * var(--tag-offset));
+            right: calc(-1 * var(--tag-offset));
+        }
+
+        /* Hide tags and badge when eye-tracking is disabled */
+        .eyetracking-disabled .apriltag {
+            display: none;
+        }
+
+        .eyetracking-disabled .apriltag-container {
+            margin: 10px;
+        }
+
+        .eyetracking-disabled .eyetracking-badge {
+            display: none;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            display: inline-block;
+            border: var(--pad-border) solid var(--pad-border-color);
+            border-radius: var(--pad-border-radius);
+            overflow: hidden;
+        }
+
+        #padImage {
+            display: block;
+            width: var(--pad-width);
+            height: var(--pad-height);
+        }
+
+        #annotationCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+        }
+
+        .no-image {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 800px;
+            height: 450px;
+            background: #252550;
+            border-radius: 8px;
+            color: #666;
+            font-size: 1.1rem;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Right Sidebar - contains everything */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            background: var(--sidebar-color);
+            border-left: 1px solid #333;
+            padding: 15px;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        .sidebar-header {
+            margin-bottom: 15px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #333;
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.1rem;
+            color: #00d4ff;
+            margin-bottom: 8px;
+        }
+
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .settings-btn {
+            background: #333;
+            border: 1px solid #555;
+            color: #ccc;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .settings-btn:hover {
+            background: #444;
+            color: #fff;
+            border-color: #666;
+        }
+
+        .progress-badge {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: #1a1a2e;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+
+        .progress-badge .percentage {
+            font-weight: 600;
+            color: #00d4ff;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: #2ed573;
+            transition: width 0.3s ease;
+        }
+
+        .sample-info {
+            padding: 10px 12px;
+            background: #1a1a2e;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 3px solid #00d4ff;
+        }
+
+        .sample-info .drug-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .sample-info .card-id {
+            font-size: 0.75rem;
+            color: #888;
+        }
+
+        .eyetracking-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: #2ed573;
+            color: #000;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .eyetracking-badge .dot {
+            width: 6px;
+            height: 6px;
+            background: #fff;
+            border-radius: 50%;
+        }
+
+        .sidebar h3 {
+            font-size: 0.8rem;
+            color: #00d4ff;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #333;
+        }
+
+        /* Tools Section */
+        .tools-section {
+            margin-bottom: 15px;
+        }
+
+        .tool-buttons {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .tool-btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .tool-btn.icon-btn {
+            padding: 6px;
+            width: 28px;
+            height: 28px;
+            font-size: 0.95rem;
+        }
+
+        .tool-btn.rec-btn {
+            padding: 4px 10px;
+            font-size: 0.7rem;
+        }
+
+        .tool-btn.secondary {
+            background: #333;
+            color: #eee;
+        }
+
+        .tool-btn.secondary:hover {
+            background: #444;
+        }
+
+        .tool-btn.secondary.active {
+            background: #00d4ff;
+            color: #000;
+        }
+
+        .tool-btn.danger {
+            background: #ff4757;
+            color: #fff;
+        }
+
+        .tool-btn.danger:hover {
+            background: #ff3344;
+        }
+
+        .tool-btn.primary {
+            background: #00d4ff;
+            color: #000;
+        }
+
+        .tool-btn.primary:hover {
+            background: #00b8e6;
+        }
+
+        .tool-btn.recording {
+            background: #ff4757;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .color-picker {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .color-picker-label {
+            font-size: 0.7rem;
+            color: #888;
+            margin-right: 4px;
+        }
+
+        .color-option {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .color-option:hover, .color-option.active {
+            border-color: #fff;
+            transform: scale(1.1);
+        }
+
+        /* Audio Section */
+        .audio-section {
+            margin-bottom: 15px;
+        }
+
+        .audio-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #1a1a2e;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .audio-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #666;
+            flex-shrink: 0;
+        }
+
+        .audio-indicator.recording {
+            background: #ff4757;
+            animation: pulse 1s infinite;
+        }
+
+        .audio-time {
+            font-family: monospace;
+            font-size: 1.1rem;
+        }
+
+        .divider {
+            height: 1px;
+            background: #333;
+            margin: 12px 0;
+        }
+
+        /* Annotations Section */
+        .annotations-section {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .annotations-list {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 80px;
+        }
+
+        .annotation-item {
+            padding: 8px;
+            background: #1a1a2e;
+            border-radius: 6px;
+            margin-bottom: 5px;
+            border-left: 3px solid #00d4ff;
+            font-size: 0.75rem;
+        }
+
+        .annotation-item .time {
+            font-size: 0.65rem;
+            color: #00d4ff;
+            margin-bottom: 2px;
+        }
+
+        .annotation-item .type {
+            font-size: 0.7rem;
+            color: #888;
+        }
+
+        .annotation-item .delete-btn {
+            float: right;
+            background: none;
+            border: none;
+            color: #ff4757;
+            cursor: pointer;
+            font-size: 0.85rem;
+            padding: 0;
+            line-height: 1;
+        }
+
+        /* Done Section */
+        .done-section {
+            margin-top: auto;
+            padding-top: 12px;
+        }
+
+        .done-btn {
+            width: 100%;
+            padding: 12px;
+            background: #2ed573;
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .done-btn:hover {
+            background: #26c066;
+        }
+
+        .done-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .back-btn {
+            width: 100%;
+            padding: 8px;
+            margin-top: 8px;
+            background: #333;
+            color: #eee;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: #444;
+        }
+
+        /* Lane tooltip */
+        .lane-tooltip {
+            position: fixed;
+            padding: 6px 12px;
+            background: rgba(0, 212, 255, 0.95);
+            color: #000;
+            font-weight: bold;
+            font-size: 1rem;
+            border-radius: 6px;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            transform: translate(-50%, -150%);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .lane-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: rgba(0, 212, 255, 0.95);
+        }
+
+        .lane-tooltip.outside {
+            background: rgba(100, 100, 100, 0.9);
+            color: #fff;
+        }
+
+        .lane-tooltip.outside::after {
+            border-top-color: rgba(100, 100, 100, 0.9);
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a2e;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #444;
+        }
+
+        .empty-state {
+            color: #666;
+            font-size: 0.75rem;
+            text-align: center;
+            padding: 15px 10px;
+        }
+
+        /* Modal styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal {
+            background: #1e1e3f;
+            border-radius: 12px;
+            width: 420px;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: #16213e;
+            border-bottom: 1px solid #333;
+        }
+
+        .modal-header h2 {
+            font-size: 1.1rem;
+            color: #00d4ff;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 60vh;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 20px;
+            background: #16213e;
+            border-top: 1px solid #333;
+        }
+
+        .settings-section {
+            margin-bottom: 20px;
+        }
+
+        .settings-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .settings-section h3 {
+            font-size: 0.85rem;
+            color: #00d4ff;
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #333;
+        }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .setting-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .setting-row label {
+            font-size: 0.8rem;
+            color: #aaa;
+            min-width: 80px;
+        }
+
+        .setting-row input[type="range"] {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #333;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .setting-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00d4ff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .setting-value {
+            font-size: 0.8rem;
+            color: #00d4ff;
+            min-width: 50px;
+            text-align: right;
+            font-family: monospace;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-row input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .checkbox-row label {
+            font-size: 0.8rem;
+            color: #aaa;
+            min-width: auto;
+            cursor: pointer;
+        }
+
+        /* Confirmation Modal */
+        .confirmation-modal .modal-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .confirmation-modal .check-icon {
+            width: 40px;
+            height: 40px;
+            background: #2ed573;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .confirmation-modal .modal-header h2 {
+            color: #2ed573;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 0.9rem;
+        }
+
+        .summary-item .label { color: #888; }
+
+        .modal-progress {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .modal-progress .text {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+
+        .modal-progress .progress-bar { height: 12px; }
+
+        .next-sample {
+            margin-top: 15px;
+            padding: 12px;
+            background: #16213e;
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .next-sample .label {
+            color: #888;
+            margin-bottom: 4px;
+        }
+
+        .next-sample .name {
+            font-weight: 600;
+            color: #00d4ff;
+        }
+
+        .btn-continue {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            background: #00d4ff;
+            color: #000;
+        }
+
+        .btn-continue:hover { background: #00b8e6; }
+
+        .complete-message {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .complete-message .icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .complete-message h2 {
+            color: #2ed573;
+            margin-bottom: 10px;
+        }
+
+        .complete-message p {
+            color: #888;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="lane-tooltip" id="laneTooltip">Lane A</div>
+
+    <div class="main-layout">
+        <!-- Tracked Area - ONLY AprilTags + PAD Image -->
+        <div class="tracked-area">
+            <div class="apriltag-container" id="apriltagContainer">
+                <div class="apriltag top-left" id="tagTopLeft">
+                    <img src="/assets/apriltags/tag36h11_0.png" alt="AprilTag">
+                </div>
+                <div class="apriltag top-right" id="tagTopRight">
+                    <img src="/assets/apriltags/tag36h11_0.png" alt="AprilTag">
+                </div>
+                <div class="apriltag bottom-left" id="tagBottomLeft">
+                    <img src="/assets/apriltags/tag36h11_0.png" alt="AprilTag">
+                </div>
+                <div class="apriltag bottom-right" id="tagBottomRight">
+                    <img src="/assets/apriltags/tag36h11_0.png" alt="AprilTag">
+                </div>
+
+                <div class="canvas-wrapper" id="canvasWrapper">
+                    <div class="no-image" id="noImagePlaceholder">
+                        Loading PAD image...
+                    </div>
+                    <img id="padImage" style="display: none;" />
+                    <canvas id="annotationCanvas" style="display: none;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar - All controls -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="header-row">
+                    <h1>PAD Annotation</h1>
+                    <button class="settings-btn" onclick="openSettings()" title="Settings">⚙</button>
+                </div>
+                <div class="progress-badge">
+                    <span>Sample <span id="currentPosition">-</span> of <span id="totalSamples">-</span></span>
+                    <span class="percentage" id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-bar-fill" id="progressBarFill" style="width: 0%"></div>
+                </div>
+                <div class="sample-info">
+                    <div class="drug-name" id="drugName">Loading...</div>
+                    <div class="card-id" id="cardId">-</div>
+                </div>
+                <span class="eyetracking-badge"><span class="dot"></span>Eye-tracking</span>
+            </div>
+
+            <div class="tools-section">
+                <h3>Tools</h3>
+                <div class="tool-buttons">
+                    <button class="tool-btn icon-btn secondary active" id="rectTool" onclick="setTool('rectangle')" title="Rectangle">
+                        ▢
+                    </button>
+                    <button class="tool-btn icon-btn secondary" id="freeTool" onclick="setTool('polygon')" title="Polygon">
+                        ⬠
+                    </button>
+                    <button class="tool-btn icon-btn secondary" onclick="undoLast()" title="Undo">
+                        ↩
+                    </button>
+                    <button class="tool-btn icon-btn danger" onclick="clearAnnotations()" title="Clear All">
+                        ✕
+                    </button>
+                </div>
+                <div class="color-picker">
+                    <span class="color-picker-label">Color:</span>
+                    <div class="color-option active" style="background: #00d4ff;" onclick="setColor('#00d4ff')" title="Cyan"></div>
+                    <div class="color-option" style="background: #ff4757;" onclick="setColor('#ff4757')" title="Red"></div>
+                    <div class="color-option" style="background: #2ed573;" onclick="setColor('#2ed573')" title="Green"></div>
+                    <div class="color-option" style="background: #ffa502;" onclick="setColor('#ffa502')" title="Orange"></div>
+                    <div class="color-option" style="background: #a55eea;" onclick="setColor('#a55eea')" title="Purple"></div>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="audio-section">
+                <h3>Recording</h3>
+                <div class="audio-status">
+                    <div class="audio-indicator" id="audioIndicator"></div>
+                    <span class="audio-time" id="audioTime">00:00</span>
+                    <button class="tool-btn primary rec-btn" id="recordBtn" onclick="toggleRecording()" title="Start/Stop Recording">
+                        ● Rec
+                    </button>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="annotations-section">
+                <h3>Annotations (<span id="annotationCount">0</span>)</h3>
+                <div class="annotations-list" id="annotationsList">
+                    <p class="empty-state">Draw on the image to create annotations</p>
+                </div>
+            </div>
+
+            <div class="done-section">
+                <button class="done-btn" id="doneBtn" onclick="completeSession()">
+                    DONE
+                </button>
+                <button class="back-btn" onclick="goBack()">
+                    ← Back to Dashboard
+                </button>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="modal-close" onclick="closeSettings()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h3>Eye-Tracking</h3>
+                    <div class="setting-row">
+                        <div class="checkbox-row">
+                            <input type="checkbox" id="eyetrackingEnabled" checked>
+                            <label for="eyetrackingEnabled">Enable AprilTag markers</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section" id="apriltagSettings">
+                    <h3>AprilTags</h3>
+                    <div class="setting-row">
+                        <label>Size</label>
+                        <input type="range" id="tagSize" min="30" max="120" value="60">
+                        <span class="setting-value" id="tagSizeValue">60px</span>
+                    </div>
+                    <div class="setting-row">
+                        <label>Margin</label>
+                        <input type="range" id="tagMargin" min="0" max="30" value="0">
+                        <span class="setting-value" id="tagMarginValue">0px</span>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>PAD Image</h3>
+                    <div class="setting-row">
+                        <label>Width</label>
+                        <input type="range" id="padWidth" min="400" max="1200" value="730">
+                        <span class="setting-value" id="padWidthValue">730px</span>
+                    </div>
+                    <div class="setting-row">
+                        <label>Height</label>
+                        <div class="checkbox-row">
+                            <input type="checkbox" id="padHeightAuto" checked>
+                            <label for="padHeightAuto">Auto (keep aspect ratio)</label>
+                        </div>
+                    </div>
+                    <div class="setting-row" id="padHeightRow" style="display: none;">
+                        <label>Height</label>
+                        <input type="range" id="padHeight" min="400" max="1500" value="800">
+                        <span class="setting-value" id="padHeightValue">800px</span>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Layout</h3>
+                    <div class="setting-row">
+                        <label>Tracked Area Padding</label>
+                        <input type="range" id="trackedPadding" min="0" max="50" value="0">
+                        <span class="setting-value" id="trackedPaddingValue">0px</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="tool-btn secondary" onclick="resetSettings()">Reset to Default</button>
+                <button class="tool-btn primary" onclick="closeSettings()">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal-overlay" id="confirmationModal">
+        <div class="modal confirmation-modal">
+            <div class="modal-header">
+                <div class="check-icon">✓</div>
+                <h2>Sample Saved</h2>
+            </div>
+            <div class="modal-body">
+                <div class="summary-item">
+                    <span class="label">Drug</span>
+                    <span id="summaryDrug">-</span>
+                </div>
+                <div class="summary-item">
+                    <span class="label">Card ID</span>
+                    <span id="summaryCardId">-</span>
+                </div>
+                <div class="summary-item">
+                    <span class="label">Annotations</span>
+                    <span id="summaryAnnotations">-</span>
+                </div>
+                <div class="summary-item">
+                    <span class="label">Audio Duration</span>
+                    <span id="summaryAudio">-</span>
+                </div>
+                <div class="summary-item">
+                    <span class="label">Lanes Covered</span>
+                    <span id="summaryLanes">-</span>
+                </div>
+
+                <div class="modal-progress">
+                    <div class="text">
+                        <span>Progress</span>
+                        <span id="modalProgress">0/0</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-bar-fill" id="modalProgressBar" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="next-sample" id="nextSampleInfo">
+                    <div class="label">Next:</div>
+                    <div class="name" id="nextSampleName">-</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-continue" id="continueBtn" onclick="loadNextSample()">Continue to Next Sample</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Experiment state
+        const experimentId = {{ experiment_id }};
+        let sessionData = null;
+        let currentSample = null;
+
+        // Annotation state
+        let currentTool = 'rectangle';
+        let currentColor = '#00d4ff';
+        let annotations = [];
+        let isDrawing = false;
+        let startX, startY;
+        let polygonPoints = [];
+
+        // Audio state
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
+        let recordingStartTime = null;
+        let audioTimerInterval = null;
+
+        // Canvas elements
+        const canvas = document.getElementById('annotationCanvas');
+        const ctx = canvas.getContext('2d');
+        const padImage = document.getElementById('padImage');
+
+        // Drawing timestamp tracking
+        let drawingStartTime = null;
+
+        // Lane detection configuration
+        let LANE_CONFIG = {
+            startPercent: 0.082,
+            endPercent: 0.986,
+            lanes: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
+        };
+
+        // Load configuration from server
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                const config = await response.json();
+
+                const root = document.documentElement;
+
+                if (config.apriltags) {
+                    const tagSize = config.apriltags.size_px || 60;
+                    const tagMargin = config.apriltags.margin_px || 0;
+                    root.style.setProperty('--tag-size', `${tagSize}px`);
+                    root.style.setProperty('--tag-margin', `${tagMargin}px`);
+                    root.style.setProperty('--tag-offset', `${tagSize + tagMargin}px`);
+
+                    if (config.apriltags.enabled === false) {
+                        document.body.classList.add('eyetracking-disabled');
+                    }
+                }
+
+                if (config.layout) {
+                    if (config.layout.sidebar_width_px) {
+                        root.style.setProperty('--sidebar-width', `${config.layout.sidebar_width_px}px`);
+                    }
+                    if (config.layout.tracked_padding_px !== undefined) {
+                        root.style.setProperty('--tracked-padding', `${config.layout.tracked_padding_px}px`);
+                    }
+                }
+
+                if (config.pad_image) {
+                    if (config.pad_image.width_px) {
+                        root.style.setProperty('--pad-width', `${config.pad_image.width_px}px`);
+                    } else {
+                        root.style.setProperty('--pad-width', 'auto');
+                    }
+                    // Always use auto height with max-height constraint for better fit
+                    root.style.setProperty('--pad-height', 'auto');
+                    if (config.pad_image.max_height_vh) {
+                        root.style.setProperty('--pad-max-height', `${config.pad_image.max_height_vh}vh`);
+                    }
+                }
+
+                if (config.lanes) {
+                    LANE_CONFIG = {
+                        startPercent: config.lanes.start_percent || LANE_CONFIG.startPercent,
+                        endPercent: config.lanes.end_percent || LANE_CONFIG.endPercent,
+                        lanes: config.lanes.labels || LANE_CONFIG.lanes
+                    };
+                }
+            } catch (error) {
+                console.warn('Could not load config, using defaults:', error);
+            }
+        }
+
+        function getLaneBoundaries() {
+            if (!canvas.width) return [];
+            const startX = canvas.width * LANE_CONFIG.startPercent;
+            const endX = canvas.width * LANE_CONFIG.endPercent;
+            const laneWidth = (endX - startX) / LANE_CONFIG.lanes.length;
+            return LANE_CONFIG.lanes.map((lane, index) => ({
+                lane: lane,
+                x1: startX + (index * laneWidth),
+                x2: startX + ((index + 1) * laneWidth)
+            }));
+        }
+
+        function detectLanes(x1, x2) {
+            const boundaries = getLaneBoundaries();
+            const detectedLanes = [];
+            for (const boundary of boundaries) {
+                if (x2 >= boundary.x1 && x1 <= boundary.x2) {
+                    detectedLanes.push(boundary.lane);
+                }
+            }
+            return detectedLanes;
+        }
+
+        // Load current session data from API
+        async function loadCurrentSession() {
+            try {
+                const response = await fetch(`/api/specialist/experiments/${experimentId}/current`);
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to load session');
+                }
+                sessionData = await response.json();
+
+                if (sessionData.is_complete) {
+                    showComplete();
+                    return;
+                }
+
+                currentSample = sessionData.sample;
+                loadSampleImage();
+                updateProgress();
+            } catch (error) {
+                console.error('Error loading session:', error);
+                document.getElementById('noImagePlaceholder').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        function loadSampleImage() {
+            if (!currentSample) return;
+
+            document.getElementById('noImagePlaceholder').style.display = 'none';
+            padImage.style.display = 'block';
+            canvas.style.display = 'block';
+
+            document.getElementById('drugName').textContent = currentSample.drug_name_display;
+            document.getElementById('cardId').textContent = `Card #${currentSample.card_id}`;
+
+            // Update AprilTags based on sample tags
+            updateAprilTags(currentSample.tags);
+
+            padImage.onload = () => {
+                canvas.width = padImage.naturalWidth;
+                canvas.height = padImage.naturalHeight;
+                canvas.style.width = padImage.width + 'px';
+                canvas.style.height = padImage.height + 'px';
+                redrawAnnotations();
+            };
+
+            padImage.src = `/${currentSample.image_path}`;
+
+            // Reset state
+            annotations = [];
+            audioChunks = [];
+            updateAnnotationsList();
+        }
+
+        function updateAprilTags(tags) {
+            // Update AprilTag images based on sample-specific tags
+            // If no tags assigned, hide the tags
+            if (!tags) {
+                document.querySelectorAll('.apriltag').forEach(tag => tag.style.visibility = 'hidden');
+                return;
+            }
+
+            document.querySelectorAll('.apriltag').forEach(tag => tag.style.visibility = 'visible');
+
+            const tagElements = {
+                'top-left': document.querySelector('#tagTopLeft img'),
+                'top-right': document.querySelector('#tagTopRight img'),
+                'bottom-left': document.querySelector('#tagBottomLeft img'),
+                'bottom-right': document.querySelector('#tagBottomRight img')
+            };
+
+            const tagMapping = {
+                'top-left': tags.top_left,
+                'top-right': tags.top_right,
+                'bottom-left': tags.bottom_left,
+                'bottom-right': tags.bottom_right
+            };
+
+            for (const [position, tagId] of Object.entries(tagMapping)) {
+                const imgElement = tagElements[position];
+                if (imgElement && tagId !== null && tagId !== undefined) {
+                    imgElement.src = `/assets/apriltags/tag36h11_${tagId}.png`;
+                    imgElement.alt = `AprilTag ${tagId}`;
+                }
+            }
+        }
+
+        function updateProgress() {
+            if (!sessionData) return;
+            document.getElementById('currentPosition').textContent = sessionData.current_position;
+            document.getElementById('totalSamples').textContent = sessionData.total_samples;
+            document.getElementById('progressPercent').textContent = `${sessionData.percentage}%`;
+            document.getElementById('progressBarFill').style.width = `${sessionData.percentage}%`;
+        }
+
+        function showComplete() {
+            // Clear annotations since everything is saved
+            annotations = [];
+
+            // Hide AprilTags
+            document.querySelectorAll('.apriltag').forEach(tag => tag.style.display = 'none');
+
+            const wrapper = document.querySelector('.canvas-wrapper');
+            wrapper.innerHTML = `
+                <div class="complete-message">
+                    <div class="icon">🎉</div>
+                    <h2>Experiment Complete!</h2>
+                    <p>You have completed all samples in this experiment.</p>
+                    <button class="done-btn" onclick="goBack()">Back to Dashboard</button>
+                </div>
+            `;
+            document.getElementById('doneBtn').style.display = 'none';
+        }
+
+        function setTool(tool) {
+            currentTool = tool;
+            document.getElementById('rectTool').classList.toggle('active', tool === 'rectangle');
+            document.getElementById('freeTool').classList.toggle('active', tool === 'polygon');
+        }
+
+        function setColor(color) {
+            currentColor = color;
+            document.querySelectorAll('.color-option').forEach(el => {
+                el.classList.toggle('active', el.style.background === color);
+            });
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (!currentSample) return;
+            isDrawing = true;
+            drawingStartTime = isRecording ? (Date.now() - recordingStartTime) : null;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            startX = (e.clientX - rect.left) * scaleX;
+            startY = (e.clientY - rect.top) * scaleY;
+            if (currentTool === 'polygon') {
+                polygonPoints = [{x: startX, y: startY}];
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!currentSample) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const x = (e.clientX - rect.left) * scaleX;
+            const lanes = detectLanes(x, x);
+            showLaneTooltip(e.clientX, e.clientY, lanes);
+
+            if (!isDrawing) return;
+            const scaleY = canvas.height / rect.height;
+            const currentX = (e.clientX - rect.left) * scaleX;
+            const currentY = (e.clientY - rect.top) * scaleY;
+            redrawAnnotations();
+            ctx.strokeStyle = currentColor;
+            ctx.lineWidth = 3;
+
+            if (currentTool === 'rectangle') {
+                ctx.setLineDash([5, 5]);
+                ctx.strokeRect(startX, startY, currentX - startX, currentY - startY);
+                ctx.setLineDash([]);
+            } else {
+                polygonPoints.push({x: currentX, y: currentY});
+                ctx.beginPath();
+                ctx.moveTo(polygonPoints[0].x, polygonPoints[0].y);
+                for (let point of polygonPoints) {
+                    ctx.lineTo(point.x, point.y);
+                }
+                ctx.closePath();
+                ctx.stroke();
+            }
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (!isDrawing) return;
+            isDrawing = false;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const endX = (e.clientX - rect.left) * scaleX;
+            const endY = (e.clientY - rect.top) * scaleY;
+            const timestampEnd = isRecording ? (Date.now() - recordingStartTime) : null;
+
+            let autoDetectedLanes;
+            if (currentTool === 'rectangle') {
+                autoDetectedLanes = detectLanes(Math.min(startX, endX), Math.max(startX, endX));
+            } else {
+                const xCoords = polygonPoints.map(p => p.x);
+                autoDetectedLanes = detectLanes(Math.min(...xCoords), Math.max(...xCoords));
+            }
+
+            let annotation;
+            if (currentTool === 'rectangle') {
+                annotation = {
+                    id: Date.now(),
+                    type: 'rectangle',
+                    color: currentColor,
+                    lanes: autoDetectedLanes,
+                    timestamp_start_ms: drawingStartTime,
+                    timestamp_end_ms: timestampEnd,
+                    bbox: {
+                        x: Math.min(startX, endX),
+                        y: Math.min(startY, endY),
+                        width: Math.abs(endX - startX),
+                        height: Math.abs(endY - startY)
+                    },
+                    bbox_normalized: {
+                        x1: Math.round(Math.min(startX, endX) / canvas.width * 999),
+                        y1: Math.round(Math.min(startY, endY) / canvas.height * 999),
+                        x2: Math.round(Math.max(startX, endX) / canvas.width * 999),
+                        y2: Math.round(Math.max(startY, endY) / canvas.height * 999)
+                    }
+                };
+            } else {
+                annotation = {
+                    id: Date.now(),
+                    type: 'polygon',
+                    color: currentColor,
+                    lanes: autoDetectedLanes,
+                    timestamp_start_ms: drawingStartTime,
+                    timestamp_end_ms: timestampEnd,
+                    points: polygonPoints,
+                    points_normalized: polygonPoints.map(p => ({
+                        x: Math.round(p.x / canvas.width * 999),
+                        y: Math.round(p.y / canvas.height * 999)
+                    }))
+                };
+            }
+
+            if (currentTool === 'rectangle' && annotation.bbox.width > 10 && annotation.bbox.height > 10) {
+                annotations.push(annotation);
+            } else if (currentTool === 'polygon' && polygonPoints.length > 5) {
+                annotations.push(annotation);
+            }
+
+            drawingStartTime = null;
+            redrawAnnotations();
+            updateAnnotationsList();
+            polygonPoints = [];
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            if (isDrawing) {
+                isDrawing = false;
+                polygonPoints = [];
+                redrawAnnotations();
+            }
+            hideLaneTooltip();
+        });
+
+        function showLaneTooltip(mouseX, mouseY, lanes) {
+            const tooltip = document.getElementById('laneTooltip');
+            if (lanes.length > 0) {
+                tooltip.textContent = `Lane ${lanes.join(', ')}`;
+                tooltip.classList.remove('outside');
+            } else {
+                tooltip.textContent = 'Outside';
+                tooltip.classList.add('outside');
+            }
+            tooltip.style.left = mouseX + 'px';
+            tooltip.style.top = mouseY + 'px';
+            tooltip.style.display = 'block';
+        }
+
+        function hideLaneTooltip() {
+            document.getElementById('laneTooltip').style.display = 'none';
+        }
+
+        function redrawAnnotations() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let ann of annotations) {
+                ctx.strokeStyle = ann.color;
+                ctx.lineWidth = 3;
+                if (ann.type === 'rectangle') {
+                    ctx.strokeRect(ann.bbox.x, ann.bbox.y, ann.bbox.width, ann.bbox.height);
+                } else {
+                    ctx.beginPath();
+                    ctx.moveTo(ann.points[0].x, ann.points[0].y);
+                    for (let point of ann.points) {
+                        ctx.lineTo(point.x, point.y);
+                    }
+                    ctx.closePath();
+                    ctx.stroke();
+                }
+            }
+        }
+
+        function updateAnnotationsList() {
+            const list = document.getElementById('annotationsList');
+            document.getElementById('annotationCount').textContent = annotations.length;
+            if (annotations.length === 0) {
+                list.innerHTML = '<p class="empty-state">Draw on the image to create annotations</p>';
+                return;
+            }
+            list.innerHTML = annotations.map((ann, index) => `
+                <div class="annotation-item">
+                    <button class="delete-btn" onclick="deleteAnnotation(${index})">x</button>
+                    <div class="time">${formatTimeRange(ann.timestamp_start_ms, ann.timestamp_end_ms)}</div>
+                    <div class="type">${ann.type} - ${ann.lanes.length > 0 ? ann.lanes.join(', ') : 'no lanes'}</div>
+                </div>
+            `).join('');
+            list.scrollTop = list.scrollHeight;
+        }
+
+        function deleteAnnotation(index) {
+            annotations.splice(index, 1);
+            redrawAnnotations();
+            updateAnnotationsList();
+        }
+
+        function undoLast() {
+            if (annotations.length > 0) {
+                annotations.pop();
+                redrawAnnotations();
+                updateAnnotationsList();
+            }
+        }
+
+        function clearAnnotations() {
+            if (annotations.length === 0) return;
+            if (confirm('Clear all annotations?')) {
+                annotations = [];
+                redrawAnnotations();
+                updateAnnotationsList();
+            }
+        }
+
+        async function toggleRecording() {
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+                    mediaRecorder.ondataavailable = (e) => {
+                        audioChunks.push(e.data);
+                    };
+                    mediaRecorder.start();
+                    isRecording = true;
+                    recordingStartTime = Date.now();
+                    document.getElementById('recordBtn').textContent = '■ Stop';
+                    document.getElementById('recordBtn').classList.add('recording');
+                    document.getElementById('audioIndicator').classList.add('recording');
+                    audioTimerInterval = setInterval(updateAudioTimer, 1000);
+                } catch (error) {
+                    alert('Could not access microphone: ' + error.message);
+                }
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                clearInterval(audioTimerInterval);
+                document.getElementById('recordBtn').textContent = '● Rec';
+                document.getElementById('recordBtn').classList.remove('recording');
+                document.getElementById('audioIndicator').classList.remove('recording');
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        function updateAudioTimer() {
+            if (!recordingStartTime) return;
+            const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+            const seconds = (elapsed % 60).toString().padStart(2, '0');
+            document.getElementById('audioTime').textContent = `${minutes}:${seconds}`;
+        }
+
+        function formatTime(ms) {
+            const seconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function formatTimeRange(startMs, endMs) {
+            if (startMs === null || endMs === null) {
+                return 'No timestamp';
+            }
+            return `${formatTime(startMs)} → ${formatTime(endMs)}`;
+        }
+
+        async function completeSession() {
+            if (!currentSample) return;
+            if (annotations.length === 0) {
+                alert('Please add at least one annotation.');
+                return;
+            }
+
+            const doneBtn = document.getElementById('doneBtn');
+            doneBtn.disabled = true;
+            doneBtn.textContent = 'Saving...';
+
+            try {
+                let audioDuration = null;
+                if (isRecording) {
+                    audioDuration = Date.now() - recordingStartTime;
+                    await stopRecordingForExport();
+                }
+
+                const root = document.documentElement;
+                const style = getComputedStyle(root);
+                const layoutSettings = {
+                    eyetracking_enabled: !document.body.classList.contains('eyetracking-disabled'),
+                    apriltags: {
+                        enabled: !document.body.classList.contains('eyetracking-disabled'),
+                        size_px: parseInt(style.getPropertyValue('--tag-size')) || 60,
+                        margin_px: parseInt(style.getPropertyValue('--tag-margin')) || 0
+                    },
+                    pad_image: {
+                        width_px: parseInt(style.getPropertyValue('--pad-width')) || null
+                    },
+                    layout: {
+                        tracked_padding_px: parseInt(style.getPropertyValue('--tracked-padding')) || 0
+                    }
+                };
+
+                const payload = {
+                    annotations: annotations.map(a => ({
+                        type: a.type,
+                        color: a.color,
+                        lanes: a.lanes,
+                        bbox_normalized: a.bbox_normalized,
+                        points_normalized: a.points_normalized,
+                        timestamp_start_ms: a.timestamp_start_ms,
+                        timestamp_end_ms: a.timestamp_end_ms
+                    })),
+                    image_dimensions: { width: canvas.width, height: canvas.height },
+                    layout_settings: layoutSettings,
+                    audio: null
+                };
+
+                if (audioChunks.length > 0) {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const base64 = await blobToBase64(audioBlob);
+                    payload.audio = {
+                        format: 'webm',
+                        data_base64: base64,
+                        duration_ms: audioDuration
+                    };
+                }
+
+                const response = await fetch(`/api/specialist/sessions/${sessionData.session_uuid}/complete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to save');
+                }
+
+                const result = await response.json();
+                showConfirmationModal(result);
+
+            } catch (error) {
+                alert('Error saving: ' + error.message);
+                doneBtn.disabled = false;
+                doneBtn.textContent = 'DONE';
+            }
+        }
+
+        function stopRecordingForExport() {
+            return new Promise((resolve) => {
+                if (!isRecording || !mediaRecorder) {
+                    resolve();
+                    return;
+                }
+                mediaRecorder.onstop = () => {
+                    isRecording = false;
+                    clearInterval(audioTimerInterval);
+                    document.getElementById('recordBtn').textContent = '● Rec';
+                    document.getElementById('recordBtn').classList.remove('recording');
+                    document.getElementById('audioIndicator').classList.remove('recording');
+                    resolve();
+                };
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            });
+        }
+
+        function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        function showConfirmationModal(result) {
+            const progress = result.progress;
+            const allLanes = [...new Set(annotations.flatMap(a => a.lanes))].sort();
+            const audioTime = document.getElementById('audioTime').textContent;
+
+            document.getElementById('summaryDrug').textContent = currentSample.drug_name_display;
+            document.getElementById('summaryCardId').textContent = `#${currentSample.card_id}`;
+            document.getElementById('summaryAnnotations').textContent = annotations.length;
+            document.getElementById('summaryAudio').textContent = audioChunks.length > 0 ? audioTime : 'None';
+            document.getElementById('summaryLanes').textContent = allLanes.length > 0 ? allLanes.join(', ') : 'None';
+
+            document.getElementById('modalProgress').textContent = `${progress.completed}/${progress.total}`;
+            document.getElementById('modalProgressBar').style.width = `${progress.percentage}%`;
+
+            const isComplete = progress.remaining === 0;
+
+            if (isComplete) {
+                document.getElementById('nextSampleInfo').style.display = 'none';
+                document.getElementById('continueBtn').textContent = 'Finish Experiment';
+            } else if (sessionData.next_sample) {
+                document.getElementById('nextSampleInfo').style.display = 'block';
+                document.getElementById('nextSampleName').textContent = sessionData.next_sample.drug_name_display;
+            }
+
+            document.getElementById('confirmationModal').classList.add('open');
+        }
+
+        async function loadNextSample() {
+            document.getElementById('confirmationModal').classList.remove('open');
+            document.getElementById('doneBtn').disabled = false;
+            document.getElementById('doneBtn').textContent = 'DONE';
+            document.getElementById('audioTime').textContent = '00:00';
+            recordingStartTime = null;
+            audioChunks = [];
+            annotations = [];  // Clear saved annotations
+
+            await loadCurrentSession();
+        }
+
+        function goBack() {
+            if (annotations.length > 0 && !confirm('You have unsaved annotations. Leave anyway?')) {
+                return;
+            }
+            window.location.href = '/specialist';
+        }
+
+        // Settings modal
+        function openSettings() {
+            document.getElementById('settingsModal').classList.add('open');
+            syncSettingsUI();
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('open');
+            saveSettingsToLocalStorage();
+        }
+
+        function syncSettingsUI() {
+            const root = document.documentElement;
+            const style = getComputedStyle(root);
+
+            const eyetrackingEnabled = !document.body.classList.contains('eyetracking-disabled');
+            document.getElementById('eyetrackingEnabled').checked = eyetrackingEnabled;
+            document.getElementById('apriltagSettings').style.display = eyetrackingEnabled ? 'block' : 'none';
+
+            const tagSize = parseInt(style.getPropertyValue('--tag-size')) || 60;
+            const tagMargin = parseInt(style.getPropertyValue('--tag-margin')) || 0;
+            const padWidth = parseInt(style.getPropertyValue('--pad-width')) || 730;
+            const padHeight = style.getPropertyValue('--pad-height').trim();
+            const trackedPadding = parseInt(style.getPropertyValue('--tracked-padding')) || 0;
+
+            document.getElementById('tagSize').value = tagSize;
+            document.getElementById('tagSizeValue').textContent = tagSize + 'px';
+
+            document.getElementById('tagMargin').value = tagMargin;
+            document.getElementById('tagMarginValue').textContent = tagMargin + 'px';
+
+            document.getElementById('padWidth').value = padWidth;
+            document.getElementById('padWidthValue').textContent = padWidth + 'px';
+
+            const heightAuto = padHeight === 'auto' || !padHeight;
+            document.getElementById('padHeightAuto').checked = heightAuto;
+            document.getElementById('padHeightRow').style.display = heightAuto ? 'none' : 'flex';
+
+            document.getElementById('trackedPadding').value = trackedPadding;
+            document.getElementById('trackedPaddingValue').textContent = trackedPadding + 'px';
+        }
+
+        function applySettingChange(setting, value) {
+            const root = document.documentElement;
+
+            switch (setting) {
+                case 'tagSize':
+                    const tagMargin = parseInt(document.getElementById('tagMargin').value) || 0;
+                    root.style.setProperty('--tag-size', value + 'px');
+                    root.style.setProperty('--tag-offset', (value + tagMargin) + 'px');
+                    document.getElementById('tagSizeValue').textContent = value + 'px';
+                    break;
+                case 'tagMargin':
+                    const tagSize = parseInt(document.getElementById('tagSize').value) || 60;
+                    root.style.setProperty('--tag-margin', value + 'px');
+                    root.style.setProperty('--tag-offset', (tagSize + value) + 'px');
+                    document.getElementById('tagMarginValue').textContent = value + 'px';
+                    break;
+                case 'padWidth':
+                    root.style.setProperty('--pad-width', value + 'px');
+                    document.getElementById('padWidthValue').textContent = value + 'px';
+                    break;
+                case 'padHeight':
+                    root.style.setProperty('--pad-height', value + 'px');
+                    document.getElementById('padHeightValue').textContent = value + 'px';
+                    break;
+                case 'padHeightAuto':
+                    const autoChecked = document.getElementById('padHeightAuto').checked;
+                    document.getElementById('padHeightRow').style.display = autoChecked ? 'none' : 'flex';
+                    root.style.setProperty('--pad-height', autoChecked ? 'auto' : document.getElementById('padHeight').value + 'px');
+                    break;
+                case 'trackedPadding':
+                    root.style.setProperty('--tracked-padding', value + 'px');
+                    document.getElementById('trackedPaddingValue').textContent = value + 'px';
+                    break;
+                case 'eyetrackingEnabled':
+                    const enabled = document.getElementById('eyetrackingEnabled').checked;
+                    if (enabled) {
+                        document.body.classList.remove('eyetracking-disabled');
+                    } else {
+                        document.body.classList.add('eyetracking-disabled');
+                    }
+                    document.getElementById('apriltagSettings').style.display = enabled ? 'block' : 'none';
+                    break;
+            }
+        }
+
+        function resetSettings() {
+            if (confirm('Reset all settings to default?')) {
+                localStorage.removeItem('padAnnotationSettings');
+                location.reload();
+            }
+        }
+
+        function saveSettingsToLocalStorage() {
+            const settings = {
+                eyetrackingEnabled: document.getElementById('eyetrackingEnabled').checked,
+                tagSize: parseInt(document.getElementById('tagSize').value),
+                tagMargin: parseInt(document.getElementById('tagMargin').value),
+                padWidth: parseInt(document.getElementById('padWidth').value),
+                padHeightAuto: document.getElementById('padHeightAuto').checked,
+                padHeight: parseInt(document.getElementById('padHeight').value),
+                trackedPadding: parseInt(document.getElementById('trackedPadding').value)
+            };
+            localStorage.setItem('padAnnotationSettings', JSON.stringify(settings));
+        }
+
+        function loadSettingsFromLocalStorage() {
+            const saved = localStorage.getItem('padAnnotationSettings');
+            if (saved) {
+                const settings = JSON.parse(saved);
+                const root = document.documentElement;
+
+                if (settings.eyetrackingEnabled !== undefined) {
+                    if (settings.eyetrackingEnabled) {
+                        document.body.classList.remove('eyetracking-disabled');
+                    } else {
+                        document.body.classList.add('eyetracking-disabled');
+                    }
+                }
+
+                if (settings.tagSize) {
+                    root.style.setProperty('--tag-size', settings.tagSize + 'px');
+                }
+                if (settings.tagMargin !== undefined) {
+                    root.style.setProperty('--tag-margin', settings.tagMargin + 'px');
+                }
+                if (settings.tagSize || settings.tagMargin !== undefined) {
+                    const size = settings.tagSize || 60;
+                    const margin = settings.tagMargin || 0;
+                    root.style.setProperty('--tag-offset', (size + margin) + 'px');
+                }
+                if (settings.padWidth) {
+                    root.style.setProperty('--pad-width', settings.padWidth + 'px');
+                }
+                if (settings.padHeightAuto !== undefined) {
+                    root.style.setProperty('--pad-height', settings.padHeightAuto ? 'auto' : (settings.padHeight + 'px'));
+                }
+                if (settings.trackedPadding !== undefined) {
+                    root.style.setProperty('--tracked-padding', settings.trackedPadding + 'px');
+                }
+            }
+        }
+
+        // Bind slider events
+        document.getElementById('eyetrackingEnabled').addEventListener('change', () => applySettingChange('eyetrackingEnabled'));
+        document.getElementById('tagSize').addEventListener('input', (e) => applySettingChange('tagSize', parseInt(e.target.value)));
+        document.getElementById('tagMargin').addEventListener('input', (e) => applySettingChange('tagMargin', parseInt(e.target.value)));
+        document.getElementById('padWidth').addEventListener('input', (e) => applySettingChange('padWidth', parseInt(e.target.value)));
+        document.getElementById('padHeight').addEventListener('input', (e) => applySettingChange('padHeight', parseInt(e.target.value)));
+        document.getElementById('padHeightAuto').addEventListener('change', () => applySettingChange('padHeightAuto'));
+        document.getElementById('trackedPadding').addEventListener('input', (e) => applySettingChange('trackedPadding', parseInt(e.target.value)));
+
+        // Close modal on overlay click
+        document.getElementById('settingsModal').addEventListener('click', (e) => {
+            if (e.target.id === 'settingsModal') closeSettings();
+        });
+
+        // Initialize app
+        async function init() {
+            await loadConfig();
+            loadSettingsFromLocalStorage();
+            await loadCurrentSession();
+        }
+
+        init();
+    </script>
+</body>
+</html>

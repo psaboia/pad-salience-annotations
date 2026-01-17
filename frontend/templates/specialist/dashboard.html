@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+
+{% block title %}Specialist Dashboard - PAD Annotation System{% endblock %}
+
+{% block head %}
+<style>
+    .layout {
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        min-height: 100vh;
+    }
+
+    .sidebar {
+        background: var(--sidebar-color);
+        border-right: 1px solid var(--border-color);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .sidebar-header {
+        margin-bottom: 30px;
+    }
+
+    .sidebar-header h1 {
+        font-size: 1.1rem;
+        color: var(--primary-color);
+    }
+
+    .sidebar-header p {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+
+    .user-info {
+        padding: 12px;
+        background: var(--bg-color);
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .user-info .name {
+        font-weight: 500;
+    }
+
+    .user-info .email {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    .logout-link {
+        margin-top: auto;
+        padding-top: 20px;
+    }
+
+    .logout-link a {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        color: var(--text-color);
+        text-decoration: none;
+        font-size: 0.9rem;
+    }
+
+    .logout-link a:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .main-content {
+        padding: 30px;
+        overflow-y: auto;
+    }
+
+    .page-header {
+        margin-bottom: 30px;
+    }
+
+    .page-header h2 {
+        font-size: 1.5rem;
+    }
+
+    .experiment-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .experiment-card {
+        background: var(--card-color);
+        border-radius: 12px;
+        padding: 24px;
+        border: 1px solid var(--border-color);
+    }
+
+    .experiment-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 16px;
+    }
+
+    .experiment-card h3 {
+        font-size: 1.2rem;
+        margin-bottom: 8px;
+    }
+
+    .experiment-card .description {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-bottom: 16px;
+    }
+
+    .experiment-card .instructions {
+        padding: 12px 16px;
+        background: var(--bg-color);
+        border-radius: 8px;
+        font-size: 0.85rem;
+        margin-bottom: 16px;
+        border-left: 3px solid var(--primary-color);
+    }
+
+    .experiment-card .progress-section {
+        margin-bottom: 16px;
+    }
+
+    .experiment-card .progress-info {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        font-size: 0.85rem;
+    }
+
+    .experiment-card .progress-bar {
+        height: 12px;
+    }
+
+    .experiment-card-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="layout">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1>PAD Annotation</h1>
+            <p>Specialist Portal</p>
+        </div>
+
+        <div class="user-info">
+            <div class="name">{{ user.name }}</div>
+            <div class="email">{{ user.email }}</div>
+        </div>
+
+        <div class="logout-link">
+            <a href="#" onclick="logout()">
+                <span class="icon">🚪</span>
+                Logout
+            </a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="page-header">
+            <h2>My Experiments</h2>
+        </div>
+
+        <div id="experimentsList" class="experiment-cards">
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function loadExperiments() {
+        try {
+            const experiments = await apiCall('/api/specialist/experiments');
+            renderExperiments(experiments);
+        } catch (error) {
+            showError(error.message);
+        }
+    }
+
+    function renderExperiments(experiments) {
+        const list = document.getElementById('experimentsList');
+
+        if (experiments.length === 0) {
+            list.innerHTML = `
+                <div class="empty-state">
+                    <h3>No experiments assigned</h3>
+                    <p>You don't have any experiments assigned to you yet.</p>
+                </div>
+            `;
+            return;
+        }
+
+        list.innerHTML = experiments.map(item => {
+            const a = item.assignment;
+            const p = item.progress;
+            const hasProgress = p && p.total > 0;
+            const isCompleted = a.status === 'completed' || (hasProgress && p.remaining === 0);
+            const isStarted = a.status === 'in_progress';
+
+            return `
+                <div class="experiment-card">
+                    <div class="experiment-card-header">
+                        <div>
+                            <h3>${a.experiment_name}</h3>
+                            <span class="badge badge-${getStatusBadge(a.experiment_status)}">${a.experiment_status}</span>
+                        </div>
+                    </div>
+
+                    ${a.description ? `<p class="description">${a.description}</p>` : ''}
+
+                    ${a.instructions ? `
+                        <div class="instructions">
+                            <strong>Instructions:</strong><br>
+                            ${a.instructions}
+                        </div>
+                    ` : ''}
+
+                    ${hasProgress ? `
+                        <div class="progress-section">
+                            <div class="progress-info">
+                                <span>${p.completed} of ${p.total} samples completed</span>
+                                <span>${p.percentage}%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill" style="width: ${p.percentage}%"></div>
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <div class="experiment-card-footer">
+                        ${isCompleted ? `
+                            <span class="badge badge-success">Completed</span>
+                        ` : a.experiment_status === 'paused' ? `
+                            <span class="badge badge-warning">Experiment Paused</span>
+                        ` : isStarted ? `
+                            <a href="/annotate/${a.experiment_id}" class="btn btn-primary">Continue Annotating</a>
+                        ` : `
+                            <button class="btn btn-success" onclick="startExperiment(${a.experiment_id})">Start Experiment</button>
+                        `}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function getStatusBadge(status) {
+        const badges = {
+            'active': 'success',
+            'paused': 'warning',
+            'completed': 'primary'
+        };
+        return badges[status] || 'secondary';
+    }
+
+    async function startExperiment(experimentId) {
+        try {
+            await apiCall(`/api/specialist/experiments/${experimentId}/start`, { method: 'POST' });
+            window.location.href = `/annotate/${experimentId}`;
+        } catch (error) {
+            showError(error.message);
+        }
+    }
+
+    async function logout() {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        window.location.href = '/login';
+    }
+
+    loadExperiments();
+</script>
+{% endblock %}
