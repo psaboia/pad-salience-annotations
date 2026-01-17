@@ -268,13 +268,19 @@
 
         .color-picker {
             display: flex;
-            gap: 6px;
-            justify-content: center;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .color-picker-label {
+            font-size: 0.7rem;
+            color: #888;
+            margin-right: 4px;
         }
 
         .color-option {
-            width: 22px;
-            height: 22px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
             cursor: pointer;
             border: 2px solid transparent;
@@ -716,11 +722,12 @@
                     </button>
                 </div>
                 <div class="color-picker">
-                    <div class="color-option active" style="background: #00d4ff;" onclick="setColor('#00d4ff')"></div>
-                    <div class="color-option" style="background: #ff4757;" onclick="setColor('#ff4757')"></div>
-                    <div class="color-option" style="background: #2ed573;" onclick="setColor('#2ed573')"></div>
-                    <div class="color-option" style="background: #ffa502;" onclick="setColor('#ffa502')"></div>
-                    <div class="color-option" style="background: #a55eea;" onclick="setColor('#a55eea')"></div>
+                    <span class="color-picker-label">Color:</span>
+                    <div class="color-option active" style="background: #00d4ff;" onclick="setColor('#00d4ff')" title="Cyan"></div>
+                    <div class="color-option" style="background: #ff4757;" onclick="setColor('#ff4757')" title="Red"></div>
+                    <div class="color-option" style="background: #2ed573;" onclick="setColor('#2ed573')" title="Green"></div>
+                    <div class="color-option" style="background: #ffa502;" onclick="setColor('#ffa502')" title="Orange"></div>
+                    <div class="color-option" style="background: #a55eea;" onclick="setColor('#a55eea')" title="Purple"></div>
                 </div>
             </div>
 
