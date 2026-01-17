@@ -96,6 +96,15 @@
             right: calc(-1 * var(--tag-offset));
         }
 
+        /* Hide tags when eye-tracking is disabled */
+        .eyetracking-disabled .apriltag {
+            display: none;
+        }
+
+        .eyetracking-disabled .tracked-area {
+            padding: 10px;
+        }
+
         .canvas-wrapper {
             position: relative;
             display: inline-block;
@@ -747,6 +756,16 @@
             </div>
             <div class="modal-body">
                 <div class="settings-section">
+                    <h3>Eye-Tracking</h3>
+                    <div class="setting-row">
+                        <div class="checkbox-row">
+                            <input type="checkbox" id="eyetrackingEnabled" checked>
+                            <label for="eyetrackingEnabled">Enable AprilTag markers</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section" id="apriltagSettings">
                     <h3>AprilTags</h3>
                     <div class="setting-row">
                         <label>Size</label>
@@ -844,6 +863,13 @@
                     root.style.setProperty('--tag-size', `${tagSize}px`);
                     root.style.setProperty('--tag-margin', `${tagMargin}px`);
                     root.style.setProperty('--tag-offset', `${tagSize + tagMargin}px`);
+
+                    // Enable/disable eye-tracking mode
+                    if (config.apriltags.enabled === false) {
+                        document.body.classList.add('eyetracking-disabled');
+                    } else {
+                        document.body.classList.remove('eyetracking-disabled');
+                    }
                 }
 
                 if (config.layout) {
@@ -1238,8 +1264,11 @@
             // Capture current layout settings for reconstruction
             const root = document.documentElement;
             const style = getComputedStyle(root);
+            const eyetrackingEnabled = !document.body.classList.contains('eyetracking-disabled');
             const layoutSettings = {
+                eyetracking_enabled: eyetrackingEnabled,
                 apriltags: {
+                    enabled: eyetrackingEnabled,
                     size_px: parseInt(style.getPropertyValue('--tag-size')) || 60,
                     margin_px: parseInt(style.getPropertyValue('--tag-margin')) || 0
                 },
@@ -1372,6 +1401,11 @@
             const root = document.documentElement;
             const style = getComputedStyle(root);
 
+            // Eye-tracking enabled
+            const eyetrackingEnabled = !document.body.classList.contains('eyetracking-disabled');
+            document.getElementById('eyetrackingEnabled').checked = eyetrackingEnabled;
+            document.getElementById('apriltagSettings').style.display = eyetrackingEnabled ? 'block' : 'none';
+
             const tagSize = parseInt(style.getPropertyValue('--tag-size')) || 60;
             const tagMargin = parseInt(style.getPropertyValue('--tag-margin')) || 0;
             const padWidth = parseInt(style.getPropertyValue('--pad-width')) || 730;
@@ -1433,6 +1467,15 @@
                     root.style.setProperty('--tracked-padding', value + 'px');
                     document.getElementById('trackedPaddingValue').textContent = value + 'px';
                     break;
+                case 'eyetrackingEnabled':
+                    const enabled = document.getElementById('eyetrackingEnabled').checked;
+                    if (enabled) {
+                        document.body.classList.remove('eyetracking-disabled');
+                    } else {
+                        document.body.classList.add('eyetracking-disabled');
+                    }
+                    document.getElementById('apriltagSettings').style.display = enabled ? 'block' : 'none';
+                    break;
             }
         }
 
@@ -1447,6 +1490,7 @@
 
         function saveSettingsToLocalStorage() {
             const settings = {
+                eyetrackingEnabled: document.getElementById('eyetrackingEnabled').checked,
                 tagSize: parseInt(document.getElementById('tagSize').value),
                 tagMargin: parseInt(document.getElementById('tagMargin').value),
                 padWidth: parseInt(document.getElementById('padWidth').value),
@@ -1462,6 +1506,15 @@
             if (saved) {
                 const settings = JSON.parse(saved);
                 const root = document.documentElement;
+
+                // Eye-tracking enabled/disabled
+                if (settings.eyetrackingEnabled !== undefined) {
+                    if (settings.eyetrackingEnabled) {
+                        document.body.classList.remove('eyetracking-disabled');
+                    } else {
+                        document.body.classList.add('eyetracking-disabled');
+                    }
+                }
 
                 if (settings.tagSize) {
                     root.style.setProperty('--tag-size', settings.tagSize + 'px');
@@ -1487,6 +1540,7 @@
         }
 
         // Bind slider events
+        document.getElementById('eyetrackingEnabled').addEventListener('change', () => applySettingChange('eyetrackingEnabled'));
         document.getElementById('tagSize').addEventListener('input', (e) => applySettingChange('tagSize', parseInt(e.target.value)));
         document.getElementById('tagMargin').addEventListener('input', (e) => applySettingChange('tagMargin', parseInt(e.target.value)));
         document.getElementById('padWidth').addEventListener('input', (e) => applySettingChange('padWidth', parseInt(e.target.value)));

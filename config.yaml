@@ -3,6 +3,9 @@
 
 # AprilTag settings for eye-tracking surface detection
 apriltags:
+  # Enable/disable AprilTag markers (false for non-eye-tracking sessions)
+  enabled: true
+
   # Tag size in pixels (recommended: 60-80 for reliable detection at 50-70cm)
   size_px: 60
 
