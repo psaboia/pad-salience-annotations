@@ -14,6 +14,8 @@
             --sidebar-width: 240px;
             --bg-color: #1a1a2e;
             --sidebar-color: #16213e;
+            --pad-width: 730px;
+            --pad-height: auto;
             --pad-max-height: 85vh;
             --pad-border: 0px;
             --pad-border-radius: 0px;
@@ -104,9 +106,8 @@
 
         #padImage {
             display: block;
-            max-width: 100%;
-            max-height: var(--pad-max-height);
-            height: auto;
+            width: var(--pad-width);
+            height: var(--pad-height);
         }
 
         #annotationCanvas {
@@ -611,6 +612,16 @@
                 }
 
                 if (config.pad_image) {
+                    if (config.pad_image.width_px) {
+                        root.style.setProperty('--pad-width', `${config.pad_image.width_px}px`);
+                    } else {
+                        root.style.setProperty('--pad-width', 'auto');
+                    }
+                    if (config.pad_image.height_px) {
+                        root.style.setProperty('--pad-height', `${config.pad_image.height_px}px`);
+                    } else {
+                        root.style.setProperty('--pad-height', 'auto');
+                    }
                     if (config.pad_image.max_height_vh) {
                         root.style.setProperty('--pad-max-height', `${config.pad_image.max_height_vh}vh`);
                     }
