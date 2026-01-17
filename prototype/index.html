@@ -96,13 +96,17 @@
             right: calc(-1 * var(--tag-offset));
         }
 
-        /* Hide tags when eye-tracking is disabled */
+        /* Hide tags and badge when eye-tracking is disabled */
         .eyetracking-disabled .apriltag {
             display: none;
         }
 
         .eyetracking-disabled .tracked-area {
             padding: 10px;
+        }
+
+        .eyetracking-disabled .eyetracking-badge {
+            display: none;
         }
 
         .canvas-wrapper {
