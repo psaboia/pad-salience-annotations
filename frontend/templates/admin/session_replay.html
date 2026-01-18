@@ -83,6 +83,12 @@
         font-size: 1.1rem;
     }
 
+    .header-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
     .content-header .back-link {
         font-size: 0.85rem;
     }
@@ -471,7 +477,7 @@
 
     <main class="main-content">
         <div class="content-header">
-            <div>
+            <div class="header-title">
                 <h2 id="pageTitle">Session Replay</h2>
                 <span class="badge badge-secondary" id="sampleBadge">Loading...</span>
             </div>
@@ -596,8 +602,8 @@
 
     function setupReplay() {
         // Update page info
-        document.getElementById('pageTitle').textContent = `Replay - ${replayData.sample.drug_name_display} 'Card #${replayData.sample.card_id}'`;
-        document.getElementById('sampleBadge').style.display = 'none';
+        document.getElementById('pageTitle').textContent = `Replay - ${replayData.sample.drug_name_display}`;
+        document.getElementById('sampleBadge').textContent = `Card #${replayData.sample.card_id}`;
 
         // Update session info
         document.getElementById('specialistName').textContent = replayData.specialist.name;
