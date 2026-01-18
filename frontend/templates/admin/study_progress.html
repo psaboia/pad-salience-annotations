@@ -212,39 +212,145 @@
     }
 
     .specialist-row {
-        display: grid;
-        grid-template-columns: 200px 1fr 100px;
-        gap: 20px;
-        align-items: center;
-        padding: 16px 20px;
         background: var(--card-color);
         border-radius: 8px;
         border: 1px solid var(--border-color);
+        overflow: hidden;
     }
 
-    .specialist-row .name {
+    .specialist-header {
+        display: grid;
+        grid-template-columns: 200px 1fr 100px 40px;
+        gap: 20px;
+        align-items: center;
+        padding: 16px 20px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .specialist-header:hover {
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .specialist-header .name {
         font-weight: 500;
     }
 
-    .specialist-row .status {
+    .specialist-header .status {
         font-size: 0.8rem;
         color: var(--text-muted);
     }
 
-    .specialist-row .progress-container {
+    .specialist-header .progress-container {
         display: flex;
         align-items: center;
         gap: 15px;
     }
 
-    .specialist-row .progress-bar {
+    .specialist-header .progress-bar {
         flex: 1;
         height: 10px;
     }
 
-    .specialist-row .progress-text {
+    .specialist-header .progress-text {
         min-width: 80px;
         text-align: right;
+        font-size: 0.85rem;
+    }
+
+    .specialist-header .expand-icon {
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        transition: transform 0.2s;
+    }
+
+    .specialist-row.expanded .expand-icon {
+        transform: rotate(180deg);
+    }
+
+    .specialist-sessions {
+        display: none;
+        background: rgba(0, 0, 0, 0.2);
+        border-top: 1px solid var(--border-color);
+    }
+
+    .specialist-row.expanded .specialist-sessions {
+        display: block;
+    }
+
+    .sessions-list {
+        padding: 10px 20px;
+    }
+
+    .sessions-list-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 8px;
+    }
+
+    .session-item {
+        display: grid;
+        grid-template-columns: 1fr 120px 80px 80px;
+        gap: 15px;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        font-size: 0.85rem;
+    }
+
+    .session-item:last-child {
+        border-bottom: none;
+    }
+
+    .session-item .sample-name {
+        font-weight: 500;
+    }
+
+    .session-item .completed-time {
+        color: var(--text-muted);
+        font-size: 0.75rem;
+    }
+
+    .session-item .audio-badge {
+        font-size: 0.7rem;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: rgba(46, 213, 115, 0.2);
+        color: var(--success-color);
+    }
+
+    .session-item .audio-badge.no-audio {
+        background: rgba(136, 136, 136, 0.2);
+        color: var(--text-muted);
+    }
+
+    .replay-btn {
+        padding: 4px 10px;
+        background: var(--primary-color);
+        color: #000;
+        border: none;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: background 0.2s;
+    }
+
+    .replay-btn:hover {
+        background: #00b8e6;
+        text-decoration: none;
+    }
+
+    .no-sessions {
+        padding: 15px;
+        text-align: center;
+        color: var(--text-muted);
         font-size: 0.85rem;
     }
 
@@ -376,10 +482,15 @@
 <script>
     const studyId = {{ study_id }};
     let refreshInterval = null;
+    let completedSessions = [];
 
     async function loadProgress() {
         try {
-            const progress = await apiCall(`/api/admin/studies/${studyId}/progress`);
+            const [progress, sessions] = await Promise.all([
+                apiCall(`/api/admin/studies/${studyId}/progress`),
+                apiCall(`/api/admin/studies/${studyId}/completed-sessions`)
+            ]);
+            completedSessions = sessions;
             renderProgress(progress);
         } catch (error) {
             showError(error.message);
@@ -393,6 +504,35 @@
             setTimeout(() => icon.classList.remove('spinning'), 600);
         }
         await loadProgress();
+    }
+
+    function getSpecialistSessions(specialistId) {
+        return completedSessions.filter(s => s.specialist_id === specialistId);
+    }
+
+    function toggleSpecialistRow(specialistId) {
+        const row = document.getElementById(`specialist-row-${specialistId}`);
+        if (row) {
+            row.classList.toggle('expanded');
+        }
+    }
+
+    function formatShortDate(dateStr) {
+        if (!dateStr) return '-';
+        return new Date(dateStr).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    function formatDuration(ms) {
+        if (!ms) return '-';
+        const totalSeconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
     }
 
     function renderProgress(data) {
@@ -429,32 +569,74 @@
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">Specialist Progress</h3>
+                    <span style="font-size: 0.8rem; color: var(--text-muted);">Click to expand and view sessions</span>
                 </div>
                 <div class="specialist-progress">
                     ${data.specialists.length === 0 ? `
                         <div class="empty-state">
                             <p>No specialists assigned</p>
                         </div>
-                    ` : data.specialists.map(s => `
-                        <div class="specialist-row">
-                            <div>
-                                <div class="name">${s.specialist_name}</div>
-                                <div class="status">
-                                    <span class="badge badge-${getAssignmentStatusBadge(s.status)}">${s.status}</span>
-                                    ${s.started_at ? ` - Started ${formatDate(s.started_at)}` : ''}
-                                </div>
-                            </div>
-                            <div class="progress-container">
-                                <div class="progress-bar">
-                                    <div class="progress-bar-fill" style="width: ${s.percentage}%"></div>
-                                </div>
-                                <div class="progress-text">${s.completed_samples} / ${s.total_samples}</div>
-                            </div>
-                            <div>
-                                <strong>${s.percentage}%</strong>
-                            </div>
+                    ` : data.specialists.map(s => renderSpecialistRow(s)).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderSpecialistRow(s) {
+        const sessions = getSpecialistSessions(s.assignment_id ? null : null);
+        // We need specialist_id from the assignment, let's get sessions by name for now
+        const specialistSessions = completedSessions.filter(sess => sess.specialist_name === s.specialist_name);
+
+        return `
+            <div class="specialist-row" id="specialist-row-${s.assignment_id}">
+                <div class="specialist-header" onclick="toggleSpecialistRow(${s.assignment_id})">
+                    <div>
+                        <div class="name">${s.specialist_name}</div>
+                        <div class="status">
+                            <span class="badge badge-${getAssignmentStatusBadge(s.status)}">${s.status}</span>
+                            ${s.started_at ? ` - Started ${formatDate(s.started_at)}` : ''}
                         </div>
-                    `).join('')}
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-bar-fill" style="width: ${s.percentage}%"></div>
+                        </div>
+                        <div class="progress-text">${s.completed_samples} / ${s.total_samples}</div>
+                    </div>
+                    <div>
+                        <strong>${s.percentage}%</strong>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="specialist-sessions">
+                    ${specialistSessions.length === 0 ? `
+                        <div class="no-sessions">No completed sessions yet</div>
+                    ` : `
+                        <div class="sessions-list">
+                            <div class="sessions-list-header">
+                                <span>Completed Sessions (${specialistSessions.length})</span>
+                            </div>
+                            ${specialistSessions.map(sess => `
+                                <div class="session-item">
+                                    <div>
+                                        <div class="sample-name">${sess.drug_name_display}</div>
+                                        <div class="completed-time">Card #${sess.card_id}</div>
+                                    </div>
+                                    <div class="completed-time">${formatShortDate(sess.completed_at)}</div>
+                                    <div>
+                                        <span class="audio-badge ${sess.has_audio ? '' : 'no-audio'}">
+                                            ${sess.has_audio ? formatDuration(sess.audio_duration_ms) : 'No audio'}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <a href="/admin/studies/${studyId}/sessions/${sess.session_id}/replay" class="replay-btn">
+                                            ▶ Replay
+                                        </a>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `}
                 </div>
             </div>
         `;

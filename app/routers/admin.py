@@ -658,6 +658,182 @@ async def get_progress(study_id: int, _: dict = Depends(require_admin)):
         return progress
 
 
+# Replay endpoints
+@router.get("/studies/{study_id}/completed-sessions")
+async def get_completed_sessions(study_id: int, _: dict = Depends(require_admin)):
+    """Get all completed annotation sessions for a study."""
+    async with get_db_context() as db:
+        cursor = await db.execute(
+            """
+            SELECT
+                ans.id as session_id,
+                ans.session_uuid,
+                ans.audio_filename,
+                ans.audio_duration_ms,
+                ans.completed_at,
+                a.specialist_id,
+                u.name as specialist_name,
+                s.drug_name_display,
+                s.card_id
+            FROM annotation_sessions ans
+            JOIN assignments a ON ans.assignment_id = a.id
+            JOIN users u ON a.specialist_id = u.id
+            JOIN study_samples ss ON ans.study_sample_id = ss.id
+            JOIN samples s ON ss.sample_id = s.id
+            WHERE a.study_id = ? AND ans.status = 'completed'
+            ORDER BY ans.completed_at DESC
+            """,
+            (study_id,)
+        )
+        rows = await cursor.fetchall()
+
+        return [
+            {
+                "session_id": row["session_id"],
+                "session_uuid": row["session_uuid"],
+                "has_audio": row["audio_filename"] is not None,
+                "audio_duration_ms": row["audio_duration_ms"],
+                "completed_at": row["completed_at"],
+                "specialist_id": row["specialist_id"],
+                "specialist_name": row["specialist_name"],
+                "drug_name_display": row["drug_name_display"],
+                "card_id": row["card_id"]
+            }
+            for row in rows
+        ]
+
+
+@router.get("/sessions/{session_id}/replay-data")
+async def get_session_replay_data(session_id: int, _: dict = Depends(require_admin)):
+    """Get all data needed to replay an annotation session."""
+    async with get_db_context() as db:
+        # Get session with assignment, specialist, and sample info
+        cursor = await db.execute(
+            """
+            SELECT
+                ans.id as session_id,
+                ans.session_uuid,
+                ans.status as session_status,
+                ans.audio_filename,
+                ans.audio_duration_ms,
+                ans.image_dimensions_json,
+                ans.layout_settings_json,
+                ans.completed_at,
+                a.id as assignment_id,
+                a.study_id,
+                u.id as specialist_id,
+                u.name as specialist_name,
+                u.email as specialist_email,
+                s.drug_name,
+                s.drug_name_display,
+                s.card_id,
+                s.image_path
+            FROM annotation_sessions ans
+            JOIN assignments a ON ans.assignment_id = a.id
+            JOIN users u ON a.specialist_id = u.id
+            JOIN study_samples ss ON ans.study_sample_id = ss.id
+            JOIN samples s ON ss.sample_id = s.id
+            WHERE ans.id = ?
+            """,
+            (session_id,)
+        )
+        row = await cursor.fetchone()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        session = dict(row)
+
+        # Parse JSON fields
+        import json
+        if session.get('image_dimensions_json'):
+            session['image_dimensions'] = json.loads(session['image_dimensions_json'])
+        else:
+            session['image_dimensions'] = None
+        del session['image_dimensions_json']
+
+        if session.get('layout_settings_json'):
+            session['layout_settings'] = json.loads(session['layout_settings_json'])
+        else:
+            session['layout_settings'] = None
+        del session['layout_settings_json']
+
+        # Get annotations for this session
+        cursor = await db.execute(
+            """
+            SELECT
+                id,
+                annotation_type as type,
+                color,
+                lanes_json,
+                bbox_normalized_json,
+                points_normalized_json,
+                timestamp_start_ms,
+                timestamp_end_ms
+            FROM annotations
+            WHERE session_id = ?
+            ORDER BY timestamp_start_ms, id
+            """,
+            (session_id,)
+        )
+        rows = await cursor.fetchall()
+
+        annotations = []
+        for ann_row in rows:
+            ann = dict(ann_row)
+            # Parse JSON fields
+            if ann.get('lanes_json'):
+                ann['lanes'] = json.loads(ann['lanes_json'])
+            else:
+                ann['lanes'] = []
+            del ann['lanes_json']
+
+            if ann.get('bbox_normalized_json'):
+                ann['bbox_normalized'] = json.loads(ann['bbox_normalized_json'])
+            else:
+                ann['bbox_normalized'] = None
+            del ann['bbox_normalized_json']
+
+            if ann.get('points_normalized_json'):
+                ann['points_normalized'] = json.loads(ann['points_normalized_json'])
+            else:
+                ann['points_normalized'] = None
+            del ann['points_normalized_json']
+
+            annotations.append(ann)
+
+        # Build audio URL if available
+        audio_url = None
+        if session.get('audio_filename'):
+            audio_url = f"/data/audio/{session['audio_filename']}"
+
+        return {
+            "session": {
+                "id": session['session_id'],
+                "uuid": session['session_uuid'],
+                "status": session['session_status'],
+                "completed_at": session['completed_at'],
+                "audio_duration_ms": session['audio_duration_ms'],
+                "image_dimensions": session['image_dimensions'],
+                "layout_settings": session['layout_settings']
+            },
+            "specialist": {
+                "id": session['specialist_id'],
+                "name": session['specialist_name'],
+                "email": session['specialist_email']
+            },
+            "sample": {
+                "drug_name": session['drug_name'],
+                "drug_name_display": session['drug_name_display'],
+                "card_id": session['card_id'],
+                "image_path": session['image_path']
+            },
+            "study_id": session['study_id'],
+            "annotations": annotations,
+            "audio_url": audio_url
+        }
+
+
 # Dashboard endpoints
 @router.get("/dashboard/activity")
 async def get_recent_activity(_: dict = Depends(require_admin)):
