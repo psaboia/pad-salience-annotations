@@ -133,9 +133,14 @@ async def get_user_by_id(db: aiosqlite.Connection, user_id: int) -> Optional[dic
 
 
 async def get_specialists(db: aiosqlite.Connection) -> list[dict]:
-    """Get all active specialists."""
+    """Get all active users who have the specialist role."""
     cursor = await db.execute(
-        "SELECT * FROM users WHERE role = 'specialist' AND is_active = 1 ORDER BY name"
+        """
+        SELECT DISTINCT u.* FROM users u
+        JOIN user_roles ur ON u.id = ur.user_id
+        WHERE ur.role = 'specialist' AND u.is_active = 1
+        ORDER BY u.name
+        """
     )
     rows = await cursor.fetchall()
     users = await rows_to_dicts(rows)
@@ -245,6 +250,73 @@ async def get_user_by_id_include_inactive(db: aiosqlite.Connection, user_id: int
             user['specializations'] = json_loads(user['specializations'])
         return user
     return None
+
+
+# User role operations
+async def get_user_roles(db: aiosqlite.Connection, user_id: int) -> list[str]:
+    """Get all roles for a user."""
+    cursor = await db.execute(
+        "SELECT role FROM user_roles WHERE user_id = ? ORDER BY role",
+        (user_id,)
+    )
+    rows = await cursor.fetchall()
+    return [row["role"] for row in rows]
+
+
+async def add_user_role(db: aiosqlite.Connection, user_id: int, role: str) -> bool:
+    """Add a role to a user. Returns True if role was added."""
+    try:
+        await db.execute(
+            "INSERT INTO user_roles (user_id, role) VALUES (?, ?)",
+            (user_id, role)
+        )
+        await db.commit()
+        return True
+    except aiosqlite.IntegrityError:
+        # Role already exists for this user
+        return False
+
+
+async def remove_user_role(db: aiosqlite.Connection, user_id: int, role: str) -> bool:
+    """Remove a role from a user. Returns True if role was removed."""
+    cursor = await db.execute(
+        "DELETE FROM user_roles WHERE user_id = ? AND role = ?",
+        (user_id, role)
+    )
+    await db.commit()
+    return cursor.rowcount > 0
+
+
+async def user_has_role(db: aiosqlite.Connection, user_id: int, role: str) -> bool:
+    """Check if user has a specific role."""
+    cursor = await db.execute(
+        "SELECT 1 FROM user_roles WHERE user_id = ? AND role = ?",
+        (user_id, role)
+    )
+    row = await cursor.fetchone()
+    return row is not None
+
+
+async def set_user_roles(db: aiosqlite.Connection, user_id: int, roles: list[str]) -> None:
+    """Set all roles for a user (replaces existing roles)."""
+    # Remove all existing roles
+    await db.execute("DELETE FROM user_roles WHERE user_id = ?", (user_id,))
+
+    # Add new roles
+    for role in roles:
+        await db.execute(
+            "INSERT INTO user_roles (user_id, role) VALUES (?, ?)",
+            (user_id, role)
+        )
+
+    # Update the primary role in users table (first role or 'specialist' as default)
+    primary_role = roles[0] if roles else 'specialist'
+    await db.execute(
+        "UPDATE users SET role = ?, updated_at = datetime('now') WHERE id = ?",
+        (primary_role, user_id)
+    )
+
+    await db.commit()
 
 
 # Sample operations

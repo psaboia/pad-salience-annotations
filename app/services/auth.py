@@ -9,7 +9,7 @@ from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 
-from ..database import get_db_context, get_user_by_id
+from ..database import get_db_context, get_user_by_id, get_user_roles
 
 # JWT settings
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "pad-salience-annotations-secret-key-change-in-production")
@@ -69,6 +69,25 @@ async def get_current_user_from_token(token: str) -> Optional[dict]:
 
     async with get_db_context() as db:
         user = await get_user_by_id(db, int(user_id))
+        if not user:
+            return None
+
+        # Get roles from database
+        roles = await get_user_roles(db, int(user_id))
+
+        # Fallback: if user_roles table is empty, use the role from users table
+        if not roles:
+            roles = [user["role"]]
+
+        user["roles"] = roles
+
+        # Get active_role from token, default to first role or user's role
+        active_role = payload.get("active_role")
+        if not active_role or active_role not in roles:
+            active_role = roles[0] if roles else user["role"]
+
+        user["active_role"] = active_role
+
         return user
 
 
@@ -129,8 +148,8 @@ async def get_current_user(
 
 
 async def require_admin(user: dict = Depends(get_current_user)) -> dict:
-    """Require the current user to be an admin."""
-    if user.get("role") != "admin":
+    """Require the current user to be acting as admin."""
+    if user.get("active_role") != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
@@ -139,10 +158,19 @@ async def require_admin(user: dict = Depends(get_current_user)) -> dict:
 
 
 async def require_specialist(user: dict = Depends(get_current_user)) -> dict:
-    """Require the current user to be a specialist (or admin)."""
-    if user.get("role") not in ("specialist", "admin"):
+    """Require the current user to be acting as a specialist (or admin)."""
+    if user.get("active_role") not in ("specialist", "admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Specialist access required"
         )
     return user
+
+
+def create_token_with_role(user_id: int, roles: list[str], active_role: str) -> str:
+    """Create a JWT token with roles and active role."""
+    return create_access_token({
+        "sub": str(user_id),
+        "roles": roles,
+        "active_role": active_role
+    })

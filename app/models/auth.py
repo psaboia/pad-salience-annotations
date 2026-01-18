@@ -42,7 +42,9 @@ class UserResponse(BaseModel):
     id: int
     email: str
     name: str
-    role: str
+    role: str  # Primary role (for backward compatibility)
+    roles: List[str] = []  # All roles the user has
+    active_role: Optional[str] = None  # Currently active role
     expertise_level: Optional[str] = None
     years_experience: Optional[int] = None
     training_date: Optional[str] = None
@@ -50,6 +52,11 @@ class UserResponse(BaseModel):
     specializations: Optional[List[str]] = None
     is_active: bool = True
     created_at: Optional[str] = None
+
+
+class SwitchRoleRequest(BaseModel):
+    """Request model for switching active role."""
+    role: str
 
 
 class Token(BaseModel):

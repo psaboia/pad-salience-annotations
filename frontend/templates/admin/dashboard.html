@@ -202,6 +202,93 @@
         font-size: 0.85rem;
         color: var(--text-muted);
     }
+
+    /* Role Switcher */
+    .role-switcher {
+        position: relative;
+        margin-bottom: 20px;
+    }
+
+    .role-switcher-btn {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 10px 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        color: var(--text-color);
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .role-switcher-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: var(--primary-color);
+    }
+
+    .role-switcher-btn .current-role {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .role-switcher-btn .role-icon {
+        font-size: 1rem;
+    }
+
+    .role-switcher-btn .arrow {
+        font-size: 0.7rem;
+        transition: transform 0.2s;
+    }
+
+    .role-switcher.open .arrow {
+        transform: rotate(180deg);
+    }
+
+    .role-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        margin-top: 4px;
+        background: var(--card-color);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        overflow: hidden;
+        display: none;
+        z-index: 100;
+    }
+
+    .role-switcher.open .role-dropdown {
+        display: block;
+    }
+
+    .role-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        color: var(--text-color);
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .role-option:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .role-option.active {
+        background: var(--primary-color);
+        color: #000;
+    }
+
+    .role-option .check {
+        margin-left: auto;
+    }
 </style>
 {% endblock %}
 
@@ -212,6 +299,30 @@
             <h1>PAD Annotation</h1>
             <p>Admin Panel</p>
         </div>
+
+        {% if user.roles and user.roles|length > 1 %}
+        <div class="role-switcher" id="roleSwitcher">
+            <button class="role-switcher-btn" onclick="toggleRoleSwitcher()">
+                <span class="current-role">
+                    <span class="role-icon">{{ '👔' if user.active_role == 'admin' else '🔬' }}</span>
+                    <span>{{ 'Admin' if user.active_role == 'admin' else 'Specialist' }}</span>
+                </span>
+                <span class="arrow">▼</span>
+            </button>
+            <div class="role-dropdown">
+                {% for role in user.roles %}
+                <div class="role-option {{ 'active' if role == user.active_role else '' }}"
+                     onclick="switchRole('{{ role }}')">
+                    <span class="role-icon">{{ '👔' if role == 'admin' else '🔬' }}</span>
+                    <span>{{ 'Admin' if role == 'admin' else 'Specialist' }}</span>
+                    {% if role == user.active_role %}
+                    <span class="check">✓</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
 
         <nav>
             <ul class="nav-menu">
@@ -369,10 +480,17 @@
         return badges[status] || 'secondary';
     }
 
-    async function logout() {
-        await fetch('/api/auth/logout', { method: 'POST' });
-        window.location.href = '/login';
+    function toggleRoleSwitcher() {
+        document.getElementById('roleSwitcher').classList.toggle('open');
     }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        const switcher = document.getElementById('roleSwitcher');
+        if (switcher && !switcher.contains(e.target)) {
+            switcher.classList.remove('open');
+        }
+    });
 
     // Load on page load
     loadDashboard();

@@ -22,6 +22,8 @@ from ..database import (
     deactivate_user,
     get_user_by_id_include_inactive,
     get_user_by_email,
+    get_user_roles,
+    set_user_roles,
 )
 from ..models import (
     StudyCreate,
@@ -288,12 +290,18 @@ async def list_users(
     """Get all users."""
     async with get_db_context() as db:
         users = await get_all_users(db, include_inactive=include_inactive)
-        return [
-            UserResponse(
+        result = []
+        for u in users:
+            roles = await get_user_roles(db, u["id"])
+            # Fallback if user_roles is empty
+            if not roles:
+                roles = [u["role"]]
+            result.append(UserResponse(
                 id=u["id"],
                 email=u["email"],
                 name=u["name"],
                 role=u["role"],
+                roles=roles,
                 expertise_level=u.get("expertise_level"),
                 years_experience=u.get("years_experience"),
                 training_date=u.get("training_date"),
@@ -301,9 +309,8 @@ async def list_users(
                 specializations=u.get("specializations"),
                 is_active=bool(u["is_active"]),
                 created_at=u.get("created_at")
-            )
-            for u in users
-        ]
+            ))
+        return result
 
 
 @router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -409,6 +416,14 @@ async def update_existing_user(user_id: int, data: UserUpdate, _: dict = Depends
             is_active=data.is_active
         )
 
+        # Sync user_roles table if role was changed
+        if data.role:
+            current_roles = await get_user_roles(db, user_id)
+            if data.role not in current_roles:
+                # Add new role while keeping existing ones
+                new_roles = list(set(current_roles + [data.role]))
+                await set_user_roles(db, user_id, new_roles)
+
         user = await get_user_by_id_include_inactive(db, user_id)
         return UserResponse(
             id=user["id"],
@@ -438,6 +453,27 @@ async def delete_user(user_id: int, admin: dict = Depends(require_admin)):
         user = await get_user_by_id_include_inactive(db, user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
+
+        # Check if user is an admin
+        user_roles = await get_user_roles(db, user_id)
+        if "admin" in user_roles:
+            # Count active admins
+            cursor = await db.execute(
+                """
+                SELECT COUNT(DISTINCT u.id) as count
+                FROM users u
+                JOIN user_roles ur ON u.id = ur.user_id
+                WHERE ur.role = 'admin' AND u.is_active = 1
+                """
+            )
+            row = await cursor.fetchone()
+            active_admin_count = row[0] if row else 0
+
+            if active_admin_count <= 1:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Cannot deactivate the last active admin"
+                )
 
         await deactivate_user(db, user_id)
 

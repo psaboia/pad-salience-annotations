@@ -5,6 +5,8 @@ from .auth import (
     UserLogin,
     UserResponse,
     Token,
+    SwitchRoleRequest,
+    UserUpdate,
 )
 from .studies import (
     StudyCreate,
@@ -33,6 +35,8 @@ __all__ = [
     "UserLogin",
     "UserResponse",
     "Token",
+    "SwitchRoleRequest",
+    "UserUpdate",
     "StudyCreate",
     "StudyUpdate",
     "StudyResponse",
