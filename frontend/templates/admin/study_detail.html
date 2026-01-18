@@ -21,6 +21,12 @@
         color: var(--primary-color);
     }
 
+    .sidebar-header p {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+
     .nav-menu {
         list-style: none;
         margin-top: 30px;
@@ -44,6 +50,18 @@
     .nav-link:hover {
         background: rgba(255, 255, 255, 0.05);
         text-decoration: none;
+    }
+
+    .logout-link {
+        margin-top: auto;
+        padding-top: 20px;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .logout-link .user-info {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+        color: var(--text-muted);
     }
 
     .main-content {
@@ -215,7 +233,9 @@
     <aside class="sidebar">
         <div class="sidebar-header">
             <h1>PAD Annotation</h1>
+            <p>Admin Panel</p>
         </div>
+
         <nav>
             <ul class="nav-menu">
                 <li class="nav-item">
@@ -238,6 +258,14 @@
                 </li>
             </ul>
         </nav>
+
+        <div class="logout-link">
+            <div class="user-info">{{ user.name }}</div>
+            <a href="#" class="nav-link" onclick="logout()">
+                <span class="icon">🚪</span>
+                Logout
+            </a>
+        </div>
     </aside>
 
     <main class="main-content">
