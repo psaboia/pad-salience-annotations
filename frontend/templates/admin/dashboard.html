@@ -81,32 +81,30 @@
         font-size: 1.5rem;
     }
 
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 20px;
-        margin-bottom: 30px;
-    }
-
-    .stat-card {
-        background: var(--card-color);
-        border-radius: 12px;
-        padding: 20px;
-        border: 1px solid var(--border-color);
-    }
-
-    .stat-card .label {
-        font-size: 0.8rem;
+    .header-stats {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.9rem;
         color: var(--text-muted);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
     }
 
-    .stat-card .value {
-        font-size: 2rem;
-        font-weight: 600;
+    .header-stats strong {
         color: var(--primary-color);
-        margin-top: 8px;
+    }
+
+    .header-stats .separator {
+        color: var(--border-color);
+    }
+
+    .header-stat-link {
+        color: var(--text-muted);
+        text-decoration: none;
+    }
+
+    .header-stat-link:hover {
+        color: var(--primary-color);
+        text-decoration: underline;
     }
 
     .study-list {
@@ -198,6 +196,12 @@
         padding-top: 20px;
         border-top: 1px solid var(--border-color);
     }
+
+    .logout-link .user-info {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+    }
 </style>
 {% endblock %}
 
@@ -233,6 +237,7 @@
         </nav>
 
         <div class="logout-link">
+            <div class="user-info">{{ user.name }}</div>
             <a href="#" class="nav-link" onclick="logout()">
                 <span class="icon">🚪</span>
                 Logout
@@ -243,28 +248,14 @@
     <main class="main-content">
         <div class="page-header">
             <h2>Dashboard</h2>
+            <div class="header-stats">
+                <span>📋 <strong id="activeStudies">-</strong> active studies</span>
+                <span class="separator">·</span>
+                <a href="/admin/users" class="header-stat-link">👥 <strong id="totalSpecialists">-</strong> specialists</a>
+            </div>
             <a href="/admin/studies/new" class="btn btn-primary">
                 + New Study
             </a>
-        </div>
-
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="label">Active Studies</div>
-                <div class="value" id="activeStudies">-</div>
-            </div>
-            <div class="stat-card">
-                <div class="label">Total Specialists</div>
-                <div class="value" id="totalSpecialists">-</div>
-            </div>
-            <div class="stat-card">
-                <div class="label">Total Samples</div>
-                <div class="value" id="totalSamples">-</div>
-            </div>
-            <div class="stat-card">
-                <div class="label">Legacy Sessions</div>
-                <div class="value" id="legacySessions">-</div>
-            </div>
         </div>
 
         <div class="card">
@@ -287,16 +278,12 @@
         try {
             // Load studies
             const studies = await apiCall('/api/admin/studies');
-            const samples = await apiCall('/api/admin/samples');
             const specialists = await apiCall('/api/admin/specialists');
-            const stats = await apiCall('/api/stats');
 
             // Update stats
             const activeCount = studies.filter(s => s.status === 'active').length;
             document.getElementById('activeStudies').textContent = activeCount;
             document.getElementById('totalSpecialists').textContent = specialists.length;
-            document.getElementById('totalSamples').textContent = samples.length;
-            document.getElementById('legacySessions').textContent = stats.total_sessions;
 
             // Load progress for active/paused studies
             const progressMap = {};

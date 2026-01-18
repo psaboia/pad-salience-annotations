@@ -153,6 +153,12 @@
         border-top: 1px solid var(--border-color);
     }
 
+    .logout-link .user-info {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+    }
+
     .form-divider {
         margin: 20px 0;
         padding-top: 15px;
@@ -208,6 +214,7 @@
         </nav>
 
         <div class="logout-link">
+            <div class="user-info">{{ user.name }}</div>
             <a href="#" class="nav-link" onclick="logout()">
                 <span class="icon">🚪</span>
                 Logout
