@@ -89,6 +89,16 @@
         gap: 10px;
     }
 
+    .replay-label {
+        color: var(--text-muted);
+        font-weight: 400;
+    }
+
+    .drug-name {
+        color: var(--primary-color);
+        font-weight: 600;
+    }
+
     .content-header .back-link {
         font-size: 0.85rem;
     }
@@ -478,7 +488,7 @@
     <main class="main-content">
         <div class="content-header">
             <div class="header-title">
-                <h2 id="pageTitle">Session Replay</h2>
+                <h2><span class="replay-label">Replay</span> <span class="drug-name" id="drugName">-</span></h2>
                 <span class="badge badge-secondary" id="sampleBadge">Loading...</span>
             </div>
             <a href="/admin/studies/{{ study_id }}/progress" class="back-link">← Back to Progress</a>
@@ -602,7 +612,7 @@
 
     function setupReplay() {
         // Update page info
-        document.getElementById('pageTitle').textContent = `Replay - ${replayData.sample.drug_name_display}`;
+        document.getElementById('drugName').textContent = replayData.sample.drug_name_display;
         document.getElementById('sampleBadge').textContent = `Card #${replayData.sample.card_id}`;
 
         // Update session info
