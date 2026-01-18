@@ -71,9 +71,6 @@
     }
 
     .page-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
         margin-bottom: 30px;
     }
 
@@ -81,114 +78,113 @@
         font-size: 1.5rem;
     }
 
-    .header-stats {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 0.9rem;
-        color: var(--text-muted);
+    /* Stats Cards */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 30px;
     }
 
-    .header-stats strong {
+    .stat-card {
+        background: var(--card-color);
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid var(--border-color);
+    }
+
+    .stat-card .stat-label {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+
+    .stat-card .stat-value {
+        font-size: 2rem;
+        font-weight: 600;
         color: var(--primary-color);
     }
 
-    .header-stats .separator {
-        color: var(--border-color);
-    }
-
-    .header-stat-link {
+    .stat-card .stat-detail {
+        font-size: 0.8rem;
         color: var(--text-muted);
-        text-decoration: none;
+        margin-top: 4px;
     }
 
-    .header-stat-link:hover {
-        color: var(--primary-color);
-        text-decoration: underline;
+    /* Content Grid */
+    .content-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
     }
 
-    .study-list {
+    /* Progress Section */
+    .progress-list {
         display: flex;
         flex-direction: column;
         gap: 12px;
     }
 
-    .study-item {
-        background: var(--card-color);
-        border-radius: 12px;
-        padding: 16px 20px;
-        border: 1px solid var(--border-color);
-        display: grid;
-        grid-template-columns: 1fr auto auto;
-        gap: 20px;
-        align-items: center;
-        transition: all 0.2s;
-    }
-
-    .study-item:hover {
-        border-color: var(--primary-color);
-    }
-
-    .study-info h3 {
-        font-size: 1rem;
-        margin-bottom: 4px;
-    }
-
-    .study-info p {
-        font-size: 0.8rem;
-        color: var(--text-muted);
-    }
-
-    .study-progress {
+    .progress-item {
         display: flex;
         align-items: center;
-        gap: 12px;
-        min-width: 200px;
+        gap: 16px;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 8px;
     }
 
-    .study-progress .progress-bar {
+    .progress-item .study-name {
         flex: 1;
+        font-weight: 500;
+    }
+
+    .progress-item .progress-bar {
+        width: 120px;
         height: 8px;
-        min-width: 80px;
     }
 
-    .study-progress .progress-text {
-        font-size: 0.8rem;
-        color: var(--text-muted);
-        white-space: nowrap;
-    }
-
-    .study-progress .progress-text strong {
+    .progress-item .progress-percent {
+        width: 50px;
+        text-align: right;
+        font-weight: 600;
         color: var(--primary-color);
     }
 
-    .study-meta {
+    /* Activity Section */
+    .activity-list {
         display: flex;
-        align-items: center;
-        gap: 10px;
+        flex-direction: column;
+        gap: 8px;
     }
 
-    .settings-btn {
-        background: #333;
-        border: 1px solid #555;
-        color: #ccc;
-        width: 32px;
-        height: 32px;
-        border-radius: 6px;
-        cursor: pointer;
+    .activity-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 8px;
+        font-size: 0.9rem;
+    }
+
+    .activity-item .activity-icon {
         font-size: 1.2rem;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        text-decoration: none;
     }
 
-    .settings-btn:hover {
-        background: #444;
-        color: #fff;
-        border-color: #666;
-        text-decoration: none;
+    .activity-item .activity-text {
+        flex: 1;
+    }
+
+    .activity-item .activity-text strong {
+        color: var(--primary-color);
+    }
+
+    .activity-item .activity-time {
+        font-size: 0.8rem;
+        color: var(--text-muted);
     }
 
     .logout-link {
@@ -333,9 +329,9 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/studies/new" class="nav-link">
-                        <span class="icon">➕</span>
-                        New Study
+                    <a href="/admin/studies" class="nav-link">
+                        <span class="icon">📋</span>
+                        Studies
                     </a>
                 </li>
                 <li class="nav-item">
@@ -365,23 +361,55 @@
     <main class="main-content">
         <div class="page-header">
             <h2>Dashboard</h2>
-            <div class="header-stats">
-                <span>📋 <strong id="activeStudies">-</strong> active studies</span>
-                <span class="separator">·</span>
-                <a href="/admin/users" class="header-stat-link">👥 <strong id="totalSpecialists">-</strong> specialists</a>
-            </div>
-            <a href="/admin/studies/new" class="btn btn-primary">
-                + New Study
-            </a>
         </div>
 
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Studies</h3>
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Studies</div>
+                <div class="stat-value" id="totalStudies">-</div>
+                <div class="stat-detail"><span id="activeStudies">-</span> active</div>
             </div>
-            <div id="studiesList" class="study-list">
-                <div class="loading">
-                    <div class="spinner"></div>
+            <div class="stat-card">
+                <div class="stat-label">Specialists</div>
+                <div class="stat-value" id="totalSpecialists">-</div>
+                <div class="stat-detail"><span id="activeSpecialists">-</span> active</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Annotations</div>
+                <div class="stat-value" id="totalAnnotations">-</div>
+                <div class="stat-detail">across all studies</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Completion</div>
+                <div class="stat-value" id="overallCompletion">-</div>
+                <div class="stat-detail">overall progress</div>
+            </div>
+        </div>
+
+        <!-- Content Grid -->
+        <div class="content-grid">
+            <!-- Active Studies Progress -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Active Studies</h3>
+                </div>
+                <div id="progressList" class="progress-list">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Recent Activity</h3>
+                </div>
+                <div id="activityList" class="activity-list">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -393,97 +421,130 @@
 <script>
     async function loadDashboard() {
         try {
-            // Load studies
-            const studies = await apiCall('/api/admin/studies');
-            const specialists = await apiCall('/api/admin/specialists');
+            // Load all data in parallel
+            const [studies, specialists, activity] = await Promise.all([
+                apiCall('/api/admin/studies'),
+                apiCall('/api/admin/specialists'),
+                apiCall('/api/admin/dashboard/activity').catch(() => [])
+            ]);
 
             // Update stats
-            const activeCount = studies.filter(s => s.status === 'active').length;
-            document.getElementById('activeStudies').textContent = activeCount;
-            document.getElementById('totalSpecialists').textContent = specialists.length;
+            updateStats(studies, specialists);
 
-            // Load progress for active/paused studies
-            const progressMap = {};
-            const activeStudies = studies.filter(s =>
-                s.status === 'active' || s.status === 'paused' || s.status === 'completed'
-            );
+            // Load progress for active studies
+            const activeStudies = studies.filter(s => s.status === 'active');
+            const progressData = await loadStudiesProgress(activeStudies);
+            renderProgress(activeStudies, progressData);
 
-            await Promise.all(activeStudies.map(async study => {
-                try {
-                    const progress = await apiCall(`/api/admin/studies/${study.id}/progress`);
-                    progressMap[study.id] = progress;
-                } catch (e) {
-                    // Ignore errors for individual progress loads
-                }
-            }));
-
-            // Render studies
-            renderStudies(studies, progressMap);
+            // Render activity
+            renderActivity(activity);
         } catch (error) {
             showError(error.message);
         }
     }
 
-    function renderStudies(studies, progressMap) {
-        const list = document.getElementById('studiesList');
+    function updateStats(studies, specialists) {
+        const activeStudies = studies.filter(s => s.status === 'active');
+        const activeSpecialists = specialists.filter(s => s.is_active);
+
+        document.getElementById('totalStudies').textContent = studies.length;
+        document.getElementById('activeStudies').textContent = activeStudies.length;
+        document.getElementById('totalSpecialists').textContent = specialists.length;
+        document.getElementById('activeSpecialists').textContent = activeSpecialists.length;
+    }
+
+    async function loadStudiesProgress(studies) {
+        const progressMap = {};
+        let totalAnnotations = 0;
+        let totalSamples = 0;
+        let completedSamples = 0;
+
+        await Promise.all(studies.map(async study => {
+            try {
+                const progress = await apiCall(`/api/admin/studies/${study.id}/progress`);
+                progressMap[study.id] = progress;
+                totalAnnotations += progress.completed_annotations || 0;
+                totalSamples += progress.total_annotations || 0;
+                completedSamples += progress.completed_annotations || 0;
+            } catch (e) {
+                // Ignore errors
+            }
+        }));
+
+        // Update annotation stats
+        document.getElementById('totalAnnotations').textContent = totalAnnotations;
+
+        // Calculate overall completion
+        const overallPercent = totalSamples > 0 ? Math.round((completedSamples / totalSamples) * 100) : 0;
+        document.getElementById('overallCompletion').textContent = overallPercent + '%';
+
+        return progressMap;
+    }
+
+    function renderProgress(studies, progressMap) {
+        const container = document.getElementById('progressList');
 
         if (studies.length === 0) {
-            list.innerHTML = `
+            container.innerHTML = `
                 <div class="empty-state">
-                    <h3>No studies yet</h3>
-                    <p>Create your first study to get started</p>
+                    <p>No active studies</p>
                 </div>
             `;
             return;
         }
 
-        list.innerHTML = studies.map(study => {
+        container.innerHTML = studies.map(study => {
             const progress = progressMap[study.id];
-            const hasProgress = progress && progress.specialists.length > 0;
+            const percent = progress ? progress.overall_percentage : 0;
 
             return `
-                <div class="study-item">
-                    <div class="study-info">
-                        <h3>${study.name}</h3>
-                        <p>${study.description || 'No description'}</p>
+                <div class="progress-item">
+                    <a href="/admin/studies/${study.id}" class="study-name">${study.name}</a>
+                    <div class="progress-bar">
+                        <div class="progress-bar-fill" style="width: ${percent}%"></div>
                     </div>
-                    ${hasProgress ? `
-                        <div class="study-progress">
-                            <div class="progress-bar">
-                                <div class="progress-bar-fill" style="width: ${progress.overall_percentage}%"></div>
-                            </div>
-                            <div class="progress-text">
-                                <strong>${progress.overall_percentage}%</strong> · ${progress.specialists.length} specialist${progress.specialists.length !== 1 ? 's' : ''}
-                            </div>
-                        </div>
-                    ` : `
-                        <div class="study-progress">
-                            <div class="progress-text" style="color: var(--text-muted);">
-                                ${study.status === 'draft' ? 'Draft' : 'No specialists'}
-                            </div>
-                        </div>
-                    `}
-                    <div class="study-meta">
-                        <span class="badge badge-${getStatusBadge(study.status)}" title="Status: ${study.status}">${study.status}</span>
-                        ${study.status === 'active' || study.status === 'paused' ?
-                            `<a href="/admin/studies/${study.id}/progress" class="btn btn-primary btn-sm" title="Track progress">Track</a>` : ''
-                        }
-                        <a href="/admin/studies/${study.id}" class="settings-btn" title="Study settings">⚙</a>
-                    </div>
+                    <div class="progress-percent">${percent}%</div>
                 </div>
             `;
         }).join('');
     }
 
-    function getStatusBadge(status) {
-        const badges = {
-            'draft': 'secondary',
-            'active': 'success',
-            'paused': 'warning',
-            'completed': 'primary',
-            'archived': 'secondary'
-        };
-        return badges[status] || 'secondary';
+    function renderActivity(activity) {
+        const container = document.getElementById('activityList');
+
+        if (!activity || activity.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <p>No recent activity</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = activity.map(item => `
+            <div class="activity-item">
+                <span class="activity-icon">✏️</span>
+                <span class="activity-text">
+                    <strong>${item.specialist_name}</strong> annotated sample in <strong>${item.study_name}</strong>
+                </span>
+                <span class="activity-time">${formatRelativeTime(item.completed_at)}</span>
+            </div>
+        `).join('');
+    }
+
+    function formatRelativeTime(dateStr) {
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return 'just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays < 7) return `${diffDays}d ago`;
+        return date.toLocaleDateString();
     }
 
     function toggleRoleSwitcher() {

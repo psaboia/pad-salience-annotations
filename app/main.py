@@ -203,6 +203,16 @@ async def admin_dashboard(request: Request):
     return templates.TemplateResponse("admin/dashboard.html", {"request": request, "user": user})
 
 
+@app.get("/admin/studies")
+async def admin_studies(request: Request):
+    """Render studies list page."""
+    user = await get_current_user_optional(request)
+    if not user or user.get("active_role") not in ("admin", "super_admin"):
+        return RedirectResponse(url="/login", status_code=302)
+
+    return templates.TemplateResponse("admin/studies.html", {"request": request, "user": user})
+
+
 @app.get("/admin/studies/new")
 async def admin_new_study(request: Request):
     """Render new study page."""

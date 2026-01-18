@@ -656,3 +656,35 @@ async def get_progress(study_id: int, _: dict = Depends(require_admin)):
         progress["study"] = StudyResponse(**study).model_dump()
 
         return progress
+
+
+# Dashboard endpoints
+@router.get("/dashboard/activity")
+async def get_recent_activity(_: dict = Depends(require_admin)):
+    """Get recent annotation activity for dashboard."""
+    async with get_db_context() as db:
+        cursor = await db.execute(
+            """
+            SELECT
+                s.completed_at,
+                u.name as specialist_name,
+                st.name as study_name
+            FROM annotation_sessions s
+            JOIN assignments a ON s.assignment_id = a.id
+            JOIN users u ON a.specialist_id = u.id
+            JOIN studies st ON a.study_id = st.id
+            WHERE s.status = 'completed' AND s.completed_at IS NOT NULL
+            ORDER BY s.completed_at DESC
+            LIMIT 10
+            """
+        )
+        rows = await cursor.fetchall()
+
+        return [
+            {
+                "completed_at": row["completed_at"],
+                "specialist_name": row["specialist_name"],
+                "study_name": row["study_name"]
+            }
+            for row in rows
+        ]

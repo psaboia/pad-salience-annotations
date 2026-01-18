@@ -1,0 +1,590 @@
+{% extends "base.html" %}
+
+{% block title %}Studies - PAD Annotation System{% endblock %}
+
+{% block head %}
+<style>
+    .layout {
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        min-height: 100vh;
+    }
+
+    .sidebar {
+        background: var(--sidebar-color);
+        border-right: 1px solid var(--border-color);
+        padding: 20px;
+    }
+
+    .sidebar-header {
+        margin-bottom: 30px;
+    }
+
+    .sidebar-header h1 {
+        font-size: 1.1rem;
+        color: var(--primary-color);
+    }
+
+    .sidebar-header p {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+
+    .nav-menu {
+        list-style: none;
+    }
+
+    .nav-item {
+        margin-bottom: 4px;
+    }
+
+    .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        color: var(--text-color);
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
+
+    .nav-link:hover {
+        background: rgba(255, 255, 255, 0.05);
+        text-decoration: none;
+    }
+
+    .nav-link.active {
+        background: var(--primary-color);
+        color: #000;
+    }
+
+    .nav-link .icon {
+        font-size: 1.1rem;
+    }
+
+    .main-content {
+        padding: 30px;
+        overflow-y: auto;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+
+    .page-header h2 {
+        font-size: 1.5rem;
+    }
+
+    .filters {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .segmented-control {
+        display: flex;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 3px;
+        gap: 2px;
+    }
+
+    .segmented-control button {
+        padding: 8px 12px;
+        border: none;
+        background: transparent;
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .segmented-control button:hover {
+        color: var(--text-color);
+    }
+
+    .segmented-control button.active {
+        background: var(--primary-color);
+        color: #000;
+    }
+
+    .sort-select {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 8px 12px;
+        color: var(--text-color);
+        font-size: 0.85rem;
+        cursor: pointer;
+    }
+
+    .sort-select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+    }
+
+    .study-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .study-item {
+        background: var(--card-color);
+        border-radius: 12px;
+        padding: 16px 20px;
+        border: 1px solid var(--border-color);
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 20px;
+        align-items: center;
+        transition: all 0.2s;
+    }
+
+    .study-item:hover {
+        border-color: var(--primary-color);
+    }
+
+    .study-info h3 {
+        font-size: 1rem;
+        margin-bottom: 4px;
+    }
+
+    .study-info p {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    .study-progress {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 200px;
+    }
+
+    .study-progress .progress-bar {
+        flex: 1;
+        height: 8px;
+        min-width: 80px;
+    }
+
+    .study-progress .progress-text {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        white-space: nowrap;
+    }
+
+    .study-progress .progress-text strong {
+        color: var(--primary-color);
+    }
+
+    .study-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .settings-btn {
+        background: #333;
+        border: 1px solid #555;
+        color: #ccc;
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1.2rem;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+    }
+
+    .settings-btn:hover {
+        background: #444;
+        color: #fff;
+        border-color: #666;
+        text-decoration: none;
+    }
+
+    .logout-link {
+        margin-top: auto;
+        padding-top: 20px;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .logout-link .user-info {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+    }
+
+    /* Role Switcher */
+    .role-switcher {
+        position: relative;
+        margin-bottom: 20px;
+    }
+
+    .role-switcher-btn {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 10px 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        color: var(--text-color);
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .role-switcher-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: var(--primary-color);
+    }
+
+    .role-switcher-btn .current-role {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .role-switcher-btn .role-icon {
+        font-size: 1rem;
+    }
+
+    .role-switcher-btn .arrow {
+        font-size: 0.7rem;
+        transition: transform 0.2s;
+    }
+
+    .role-switcher.open .arrow {
+        transform: rotate(180deg);
+    }
+
+    .role-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        margin-top: 4px;
+        background: var(--card-color);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        overflow: hidden;
+        display: none;
+        z-index: 100;
+    }
+
+    .role-switcher.open .role-dropdown {
+        display: block;
+    }
+
+    .role-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        color: var(--text-color);
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .role-option:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .role-option.active {
+        background: var(--primary-color);
+        color: #000;
+    }
+
+    .role-option .check {
+        margin-left: auto;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="layout">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1>PAD Annotation</h1>
+            <p>Admin Panel</p>
+        </div>
+
+        {% if user.roles and user.roles|length > 1 %}
+        <div class="role-switcher" id="roleSwitcher">
+            <button class="role-switcher-btn" onclick="toggleRoleSwitcher()">
+                <span class="current-role">
+                    <span class="role-icon">{{ '👑' if user.active_role == 'super_admin' else ('👔' if user.active_role == 'admin' else '🔬') }}</span>
+                    <span>{{ 'Super Admin' if user.active_role == 'super_admin' else ('Admin' if user.active_role == 'admin' else 'Specialist') }}</span>
+                </span>
+                <span class="arrow">▼</span>
+            </button>
+            <div class="role-dropdown">
+                {% for role in user.roles %}
+                <div class="role-option {{ 'active' if role == user.active_role else '' }}"
+                     onclick="switchRole('{{ role }}')">
+                    <span class="role-icon">{{ '👑' if role == 'super_admin' else ('👔' if role == 'admin' else '🔬') }}</span>
+                    <span>{{ 'Super Admin' if role == 'super_admin' else ('Admin' if role == 'admin' else 'Specialist') }}</span>
+                    {% if role == user.active_role %}
+                    <span class="check">✓</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <nav>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="/admin" class="nav-link">
+                        <span class="icon">📊</span>
+                        Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/studies" class="nav-link active">
+                        <span class="icon">📋</span>
+                        Studies
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/users?role=specialist" class="nav-link">
+                        <span class="icon">🔬</span>
+                        Specialists
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/users" class="nav-link">
+                        <span class="icon">👥</span>
+                        Users
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <div class="logout-link">
+            <div class="user-info">{{ user.name }}</div>
+            <a href="#" class="nav-link" onclick="logout()">
+                <span class="icon">🚪</span>
+                Logout
+            </a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="page-header">
+            <h2>Studies</h2>
+            <a href="/admin/studies/new" class="btn btn-primary">
+                + New Study
+            </a>
+        </div>
+
+        <div class="filters">
+            <div class="segmented-control" id="statusFilter">
+                <button class="active" data-filter="all" onclick="setStatusFilter('all')">All</button>
+                <button data-filter="draft" onclick="setStatusFilter('draft')">Draft</button>
+                <button data-filter="active" onclick="setStatusFilter('active')">Active</button>
+                <button data-filter="paused" onclick="setStatusFilter('paused')">Paused</button>
+                <button data-filter="completed" onclick="setStatusFilter('completed')">Completed</button>
+            </div>
+            <select class="sort-select" id="sortSelect" onchange="setSort(this.value)">
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+                <option value="name">Name A-Z</option>
+                <option value="name-desc">Name Z-A</option>
+            </select>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Studies</h3>
+                <span id="studyCount" class="text-muted"></span>
+            </div>
+            <div id="studiesList" class="study-list">
+                <div class="loading">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let allStudies = [];
+    let progressMap = {};
+    let statusFilter = 'all';
+    let sortOrder = 'newest';
+
+    function setStatusFilter(filter) {
+        statusFilter = filter;
+        document.querySelectorAll('#statusFilter button').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.filter === filter);
+        });
+        renderStudies();
+    }
+
+    function setSort(sort) {
+        sortOrder = sort;
+        renderStudies();
+    }
+
+    async function loadStudies() {
+        try {
+            allStudies = await apiCall('/api/admin/studies');
+
+            // Load progress for active/paused/completed studies
+            progressMap = {};
+            const studiesWithProgress = allStudies.filter(s =>
+                s.status === 'active' || s.status === 'paused' || s.status === 'completed'
+            );
+
+            await Promise.all(studiesWithProgress.map(async study => {
+                try {
+                    const progress = await apiCall(`/api/admin/studies/${study.id}/progress`);
+                    progressMap[study.id] = progress;
+                } catch (e) {
+                    // Ignore errors for individual progress loads
+                }
+            }));
+
+            renderStudies();
+        } catch (error) {
+            showError(error.message);
+        }
+    }
+
+    function renderStudies() {
+        const list = document.getElementById('studiesList');
+
+        // Apply filter
+        let filtered = allStudies;
+        if (statusFilter !== 'all') {
+            filtered = allStudies.filter(s => s.status === statusFilter);
+        }
+
+        // Apply sort
+        filtered = [...filtered].sort((a, b) => {
+            switch (sortOrder) {
+                case 'newest':
+                    return new Date(b.created_at) - new Date(a.created_at);
+                case 'oldest':
+                    return new Date(a.created_at) - new Date(b.created_at);
+                case 'name':
+                    return a.name.localeCompare(b.name);
+                case 'name-desc':
+                    return b.name.localeCompare(a.name);
+                default:
+                    return 0;
+            }
+        });
+
+        // Update count
+        document.getElementById('studyCount').textContent = `(${filtered.length})`;
+
+        if (filtered.length === 0) {
+            list.innerHTML = `
+                <div class="empty-state">
+                    <h3>No studies found</h3>
+                    <p>${statusFilter === 'all' ? 'Create your first study to get started' : 'No ' + statusFilter + ' studies'}</p>
+                </div>
+            `;
+            return;
+        }
+
+        list.innerHTML = filtered.map(study => {
+            const progress = progressMap[study.id];
+            const hasProgress = progress && progress.specialists.length > 0;
+
+            return `
+                <div class="study-item">
+                    <div class="study-info">
+                        <h3>${study.name}</h3>
+                        <p>${study.description || 'No description'}</p>
+                    </div>
+                    ${hasProgress ? `
+                        <div class="study-progress">
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill" style="width: ${progress.overall_percentage}%"></div>
+                            </div>
+                            <div class="progress-text">
+                                <strong>${progress.overall_percentage}%</strong> · ${progress.specialists.length} specialist${progress.specialists.length !== 1 ? 's' : ''}
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="study-progress">
+                            <div class="progress-text" style="color: var(--text-muted);">
+                                ${study.status === 'draft' ? 'Draft' : 'No specialists'}
+                            </div>
+                        </div>
+                    `}
+                    <div class="study-meta">
+                        <span class="badge badge-${getStatusBadge(study.status)}" title="Status: ${study.status}">${study.status}</span>
+                        ${study.status === 'active' || study.status === 'paused' ?
+                            `<a href="/admin/studies/${study.id}/progress" class="btn btn-primary btn-sm" title="Track progress">Track</a>` : ''
+                        }
+                        <a href="/admin/studies/${study.id}" class="settings-btn" title="Study settings">⚙</a>
+                        ${study.status === 'draft' ?
+                            `<button class="settings-btn" onclick="deleteStudy(${study.id}, '${study.name.replace(/'/g, "\\'")}')" title="Delete study">🗑</button>` : ''
+                        }
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function getStatusBadge(status) {
+        const badges = {
+            'draft': 'secondary',
+            'active': 'success',
+            'paused': 'warning',
+            'completed': 'primary',
+            'archived': 'secondary'
+        };
+        return badges[status] || 'secondary';
+    }
+
+    async function deleteStudy(studyId, studyName) {
+        if (!confirm(`Delete study "${studyName}"?\n\nThis action cannot be undone.`)) return;
+
+        try {
+            await apiCall(`/api/admin/studies/${studyId}`, { method: 'DELETE' });
+            loadStudies();
+        } catch (error) {
+            showError(error.message);
+        }
+    }
+
+    function toggleRoleSwitcher() {
+        document.getElementById('roleSwitcher').classList.toggle('open');
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        const switcher = document.getElementById('roleSwitcher');
+        if (switcher && !switcher.contains(e.target)) {
+            switcher.classList.remove('open');
+        }
+    });
+
+    // Load on page load
+    loadStudies();
+</script>
+{% endblock %}
