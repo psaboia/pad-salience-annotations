@@ -35,8 +35,13 @@ async def login(data: UserLogin, response: Response):
         if not roles:
             roles = [user["role"]]
 
-        # Default active role is admin if available, otherwise first role
-        active_role = "admin" if "admin" in roles else roles[0]
+        # Default active role priority: super_admin > admin > first role
+        if "super_admin" in roles:
+            active_role = "super_admin"
+        elif "admin" in roles:
+            active_role = "admin"
+        else:
+            active_role = roles[0]
 
         # Create token with roles
         token = create_token_with_role(user["id"], roles, active_role)

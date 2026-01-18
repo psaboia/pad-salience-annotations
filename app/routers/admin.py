@@ -37,7 +37,7 @@ from ..models import (
 )
 from ..models.auth import UserCreate, UserUpdate, UserResponse
 from ..models.studies import SampleInStudy, AssignmentProgress
-from ..services.auth import require_admin, hash_password
+from ..services.auth import require_admin, require_super_admin, hash_password
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -314,8 +314,8 @@ async def list_users(
 
 
 @router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def create_new_user(data: UserCreate, _: dict = Depends(require_admin)):
-    """Create a new user."""
+async def create_new_user(data: UserCreate, _: dict = Depends(require_super_admin)):
+    """Create a new user (super_admin only)."""
     async with get_db_context() as db:
         # Check if email already exists
         existing = await get_user_by_email(db, data.email)
@@ -327,18 +327,28 @@ async def create_new_user(data: UserCreate, _: dict = Depends(require_admin)):
 
         password_hash = hash_password(data.password)
 
+        # For the legacy users.role field, map super_admin to admin
+        # (the users table constraint only allows 'admin' or 'specialist')
+        legacy_role = data.role
+        if legacy_role == 'super_admin':
+            legacy_role = 'admin'
+
         user_id = await create_user(
             db,
             email=data.email,
             name=data.name,
             password_hash=password_hash,
-            role=data.role,
+            role=legacy_role,
             expertise_level=data.expertise_level,
             years_experience=data.years_experience,
             training_date=data.training_date,
             institution=data.institution,
             specializations=data.specializations
         )
+
+        # If the actual role is super_admin, update user_roles table
+        if data.role == 'super_admin':
+            await set_user_roles(db, user_id, ['super_admin'])
 
         user = await get_user_by_id_include_inactive(db, user_id)
         return UserResponse(
@@ -380,8 +390,8 @@ async def get_user(user_id: int, _: dict = Depends(require_admin)):
 
 
 @router.put("/users/{user_id}", response_model=UserResponse)
-async def update_existing_user(user_id: int, data: UserUpdate, _: dict = Depends(require_admin)):
-    """Update a user."""
+async def update_existing_user(user_id: int, data: UserUpdate, _: dict = Depends(require_super_admin)):
+    """Update a user (super_admin only)."""
     async with get_db_context() as db:
         user = await get_user_by_id_include_inactive(db, user_id)
         if not user:
@@ -401,13 +411,27 @@ async def update_existing_user(user_id: int, data: UserUpdate, _: dict = Depends
         if data.password:
             password_hash = hash_password(data.password)
 
+        # For the legacy users.role field, map super_admin to admin
+        # (the users table constraint only allows 'admin' or 'specialist')
+        legacy_role = None
+        if data.roles:
+            # Determine legacy role from roles list
+            if 'super_admin' in data.roles or 'admin' in data.roles:
+                legacy_role = 'admin'
+            elif 'specialist' in data.roles:
+                legacy_role = 'specialist'
+        elif data.role:
+            legacy_role = data.role
+            if legacy_role == 'super_admin':
+                legacy_role = 'admin'
+
         await update_user(
             db,
             user_id=user_id,
             email=data.email,
             name=data.name,
             password_hash=password_hash,
-            role=data.role,
+            role=legacy_role,
             expertise_level=data.expertise_level,
             years_experience=data.years_experience,
             training_date=data.training_date,
@@ -416,20 +440,25 @@ async def update_existing_user(user_id: int, data: UserUpdate, _: dict = Depends
             is_active=data.is_active
         )
 
-        # Sync user_roles table if role was changed
-        if data.role:
+        # Update user_roles table
+        if data.roles:
+            # If roles list is provided, replace all roles
+            await set_user_roles(db, user_id, data.roles)
+        elif data.role:
+            # Legacy: if single role is provided, add it to existing roles
             current_roles = await get_user_roles(db, user_id)
             if data.role not in current_roles:
-                # Add new role while keeping existing ones
                 new_roles = list(set(current_roles + [data.role]))
                 await set_user_roles(db, user_id, new_roles)
 
         user = await get_user_by_id_include_inactive(db, user_id)
+        roles = await get_user_roles(db, user_id)
         return UserResponse(
             id=user["id"],
             email=user["email"],
             name=user["name"],
             role=user["role"],
+            roles=roles,
             expertise_level=user.get("expertise_level"),
             years_experience=user.get("years_experience"),
             training_date=user.get("training_date"),
@@ -441,8 +470,8 @@ async def update_existing_user(user_id: int, data: UserUpdate, _: dict = Depends
 
 
 @router.delete("/users/{user_id}")
-async def delete_user(user_id: int, admin: dict = Depends(require_admin)):
-    """Deactivate a user (soft delete)."""
+async def delete_user(user_id: int, admin: dict = Depends(require_super_admin)):
+    """Deactivate a user (super_admin only, soft delete)."""
     if user_id == admin["id"]:
         raise HTTPException(
             status_code=400,
@@ -454,25 +483,25 @@ async def delete_user(user_id: int, admin: dict = Depends(require_admin)):
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        # Check if user is an admin
+        # Check if user is a super_admin
         user_roles = await get_user_roles(db, user_id)
-        if "admin" in user_roles:
-            # Count active admins
+        if "super_admin" in user_roles:
+            # Count active super_admins
             cursor = await db.execute(
                 """
                 SELECT COUNT(DISTINCT u.id) as count
                 FROM users u
                 JOIN user_roles ur ON u.id = ur.user_id
-                WHERE ur.role = 'admin' AND u.is_active = 1
+                WHERE ur.role = 'super_admin' AND u.is_active = 1
                 """
             )
             row = await cursor.fetchone()
-            active_admin_count = row[0] if row else 0
+            active_super_admin_count = row[0] if row else 0
 
-            if active_admin_count <= 1:
+            if active_super_admin_count <= 1:
                 raise HTTPException(
                     status_code=400,
-                    detail="Cannot deactivate the last active admin"
+                    detail="Cannot deactivate the last active super admin"
                 )
 
         await deactivate_user(db, user_id)
@@ -539,6 +568,54 @@ async def create_new_assignment(
         return AssignmentResponse(**assignment)
 
 
+@router.get("/studies/{study_id}/assignments/{specialist_id}/stats")
+async def get_assignment_stats(
+    study_id: int,
+    specialist_id: int,
+    _: dict = Depends(require_admin)
+):
+    """Get statistics for an assignment (annotation count, etc.)."""
+    async with get_db_context() as db:
+        # Get assignment
+        cursor = await db.execute(
+            "SELECT id FROM assignments WHERE study_id = ? AND specialist_id = ?",
+            (study_id, specialist_id)
+        )
+        assignment = await cursor.fetchone()
+        if not assignment:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+
+        assignment_id = assignment["id"]
+
+        # Count completed sessions
+        cursor = await db.execute(
+            """
+            SELECT COUNT(*) as count FROM annotation_sessions
+            WHERE assignment_id = ? AND status = 'completed'
+            """,
+            (assignment_id,)
+        )
+        row = await cursor.fetchone()
+        completed_sessions = row["count"] if row else 0
+
+        # Count total annotations
+        cursor = await db.execute(
+            """
+            SELECT COUNT(*) as count FROM annotations a
+            JOIN annotation_sessions s ON a.session_id = s.id
+            WHERE s.assignment_id = ?
+            """,
+            (assignment_id,)
+        )
+        row = await cursor.fetchone()
+        total_annotations = row["count"] if row else 0
+
+        return {
+            "completed_sessions": completed_sessions,
+            "total_annotations": total_annotations
+        }
+
+
 @router.delete("/studies/{study_id}/assignments/{specialist_id}")
 async def delete_assignment(
     study_id: int,
@@ -551,10 +628,10 @@ async def delete_assignment(
         if not study:
             raise HTTPException(status_code=404, detail="Study not found")
 
-        if study["status"] not in ("draft",):
+        if study["status"] not in ("draft", "active", "paused"):
             raise HTTPException(
                 status_code=400,
-                detail="Can only remove assignments from draft studies"
+                detail="Can only remove assignments from draft, active, or paused studies"
             )
 
         await db.execute(

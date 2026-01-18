@@ -309,11 +309,15 @@ async def set_user_roles(db: aiosqlite.Connection, user_id: int, roles: list[str
             (user_id, role)
         )
 
-    # Update the primary role in users table (first role or 'specialist' as default)
-    primary_role = roles[0] if roles else 'specialist'
+    # Update the legacy role in users table
+    # Map super_admin to admin (users table constraint only allows 'admin' or 'specialist')
+    if 'super_admin' in roles or 'admin' in roles:
+        legacy_role = 'admin'
+    else:
+        legacy_role = 'specialist'
     await db.execute(
         "UPDATE users SET role = ?, updated_at = datetime('now') WHERE id = ?",
-        (primary_role, user_id)
+        (legacy_role, user_id)
     )
 
     await db.commit()

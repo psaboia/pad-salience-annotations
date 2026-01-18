@@ -304,8 +304,8 @@
         <div class="role-switcher" id="roleSwitcher">
             <button class="role-switcher-btn" onclick="toggleRoleSwitcher()">
                 <span class="current-role">
-                    <span class="role-icon">{{ '👔' if user.active_role == 'admin' else '🔬' }}</span>
-                    <span>{{ 'Admin' if user.active_role == 'admin' else 'Specialist' }}</span>
+                    <span class="role-icon">{{ '👑' if user.active_role == 'super_admin' else ('👔' if user.active_role == 'admin' else '🔬') }}</span>
+                    <span>{{ 'Super Admin' if user.active_role == 'super_admin' else ('Admin' if user.active_role == 'admin' else 'Specialist') }}</span>
                 </span>
                 <span class="arrow">▼</span>
             </button>
@@ -313,8 +313,8 @@
                 {% for role in user.roles %}
                 <div class="role-option {{ 'active' if role == user.active_role else '' }}"
                      onclick="switchRole('{{ role }}')">
-                    <span class="role-icon">{{ '👔' if role == 'admin' else '🔬' }}</span>
-                    <span>{{ 'Admin' if role == 'admin' else 'Specialist' }}</span>
+                    <span class="role-icon">{{ '👑' if role == 'super_admin' else ('👔' if role == 'admin' else '🔬') }}</span>
+                    <span>{{ 'Super Admin' if role == 'super_admin' else ('Admin' if role == 'admin' else 'Specialist') }}</span>
                     {% if role == user.active_role %}
                     <span class="check">✓</span>
                     {% endif %}
@@ -336,6 +336,12 @@
                     <a href="/admin/studies/new" class="nav-link">
                         <span class="icon">➕</span>
                         New Study
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/users?role=specialist" class="nav-link">
+                        <span class="icon">🔬</span>
+                        Specialists
                     </a>
                 </li>
                 <li class="nav-item">

@@ -183,8 +183,8 @@ async def login_page(request: Request):
     """Render login page."""
     user = await get_current_user_optional(request)
     if user:
-        # Already logged in, redirect based on role
-        if user["role"] == "admin":
+        # Already logged in, redirect based on active role
+        if user.get("active_role") in ("admin", "super_admin"):
             return RedirectResponse(url="/admin", status_code=302)
         return RedirectResponse(url="/specialist", status_code=302)
 
@@ -197,7 +197,7 @@ async def admin_dashboard(request: Request):
     user = await get_current_user_optional(request)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
-    if user["role"] != "admin":
+    if user.get("active_role") not in ("admin", "super_admin"):
         return RedirectResponse(url="/specialist", status_code=302)
 
     return templates.TemplateResponse("admin/dashboard.html", {"request": request, "user": user})
@@ -207,7 +207,7 @@ async def admin_dashboard(request: Request):
 async def admin_new_study(request: Request):
     """Render new study page."""
     user = await get_current_user_optional(request)
-    if not user or user["role"] != "admin":
+    if not user or user.get("active_role") not in ("admin", "super_admin"):
         return RedirectResponse(url="/login", status_code=302)
 
     return templates.TemplateResponse("admin/study_new.html", {"request": request, "user": user})
@@ -217,7 +217,7 @@ async def admin_new_study(request: Request):
 async def admin_study_detail(request: Request, study_id: int):
     """Render study detail page."""
     user = await get_current_user_optional(request)
-    if not user or user["role"] != "admin":
+    if not user or user.get("active_role") not in ("admin", "super_admin"):
         return RedirectResponse(url="/login", status_code=302)
 
     return templates.TemplateResponse(
@@ -230,7 +230,7 @@ async def admin_study_detail(request: Request, study_id: int):
 async def admin_study_progress(request: Request, study_id: int):
     """Render study progress page."""
     user = await get_current_user_optional(request)
-    if not user or user["role"] != "admin":
+    if not user or user.get("active_role") not in ("admin", "super_admin"):
         return RedirectResponse(url="/login", status_code=302)
 
     return templates.TemplateResponse(
@@ -243,7 +243,7 @@ async def admin_study_progress(request: Request, study_id: int):
 async def admin_users(request: Request):
     """Render users management page."""
     user = await get_current_user_optional(request)
-    if not user or user["role"] != "admin":
+    if not user or user.get("active_role") not in ("admin", "super_admin"):
         return RedirectResponse(url="/login", status_code=302)
 
     return templates.TemplateResponse("admin/users.html", {"request": request, "user": user})
@@ -285,7 +285,7 @@ async def root(request: Request):
     user = await get_current_user_optional(request)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
-    if user["role"] == "admin":
+    if user.get("active_role") in ("admin", "super_admin"):
         return RedirectResponse(url="/admin", status_code=302)
     return RedirectResponse(url="/specialist", status_code=302)
 

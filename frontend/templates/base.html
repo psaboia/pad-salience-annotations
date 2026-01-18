@@ -421,7 +421,7 @@
                 });
 
                 // Redirect based on the new role
-                if (role === 'admin') {
+                if (role === 'super_admin' || role === 'admin') {
                     window.location.href = '/admin';
                 } else {
                     window.location.href = '/specialist';
