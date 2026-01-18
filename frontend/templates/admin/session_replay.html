@@ -151,6 +151,23 @@
         font-weight: 600;
     }
 
+    .nav-specialist {
+        font-size: 0.8rem;
+    }
+
+    .nav-specialist-label {
+        color: var(--text-muted);
+    }
+
+    .nav-specialist-name {
+        color: var(--text-color);
+        font-weight: 500;
+    }
+
+    .nav-divider {
+        color: var(--border-color);
+    }
+
     .image-container {
         flex: 1;
         display: flex;
@@ -192,6 +209,7 @@
 
     .timeline-container {
         margin-bottom: 10px;
+        position: relative;
     }
 
     .timeline {
@@ -228,6 +246,46 @@
         background: var(--success-color);
         border-radius: 2px;
         transform: translateX(-50%);
+    }
+
+    .timeline-tooltip {
+        position: absolute;
+        bottom: 20px;
+        left: 0;
+        background: var(--card-color);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 0.75rem;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.15s;
+        z-index: 100;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .timeline-tooltip.visible {
+        opacity: 1;
+    }
+
+    .timeline-tooltip .tooltip-time {
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .timeline-tooltip .tooltip-annotation {
+        color: var(--text-color);
+    }
+
+    .timeline-tooltip .tooltip-annotation .color-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 6px;
+        vertical-align: middle;
     }
 
     .controls-row {
@@ -497,10 +555,15 @@
                 <h2><span class="replay-label">▶ Replay</span> <span class="drug-name" id="drugName">-</span></h2>
                 <span class="badge badge-secondary" id="sampleBadge">Loading...</span>
             </div>
-            <a href="/admin/studies/{{ study_id }}/progress" class="back-link">← Back to Progress</a>
+            <a href="/admin/studies/{{ study_id }}/progress" class="back-link">← Back to Study Progress</a>
         </div>
 
         <div class="session-navigation" id="sessionNavigation">
+            <span class="nav-specialist">
+                <span class="nav-specialist-label">Specialist:</span>
+                <span class="nav-specialist-name" id="navSpecialistName">-</span>
+            </span>
+            <span class="nav-divider">|</span>
             <button class="nav-btn" id="prevBtn" onclick="navigateToPrevious()" disabled>
                 ← Prev
             </button>
@@ -524,10 +587,11 @@
 
         <div class="playback-controls">
             <div class="timeline-container">
-                <div class="timeline" id="timeline" onclick="seekTimeline(event)">
+                <div class="timeline" id="timeline" onclick="seekTimeline(event)" onmousemove="showTimelineTooltip(event)" onmouseleave="hideTimelineTooltip()">
                     <div class="timeline-progress" id="timelineProgress"></div>
                     <div class="timeline-markers" id="timelineMarkers"></div>
                 </div>
+                <div class="timeline-tooltip" id="timelineTooltip"></div>
             </div>
             <div class="controls-row">
                 <button class="play-btn" id="playBtn" onclick="togglePlayback()">▶</button>
@@ -888,6 +952,43 @@
         updateActiveAnnotation();
     }
 
+    function showTimelineTooltip(event) {
+        const timeline = document.getElementById('timeline');
+        const tooltip = document.getElementById('timelineTooltip');
+        const rect = timeline.getBoundingClientRect();
+        const percent = (event.clientX - rect.left) / rect.width;
+        const totalDuration = getTotalDuration();
+        const hoverTime = percent * totalDuration;
+
+        // Find annotation at this time
+        const annotationAtTime = replayData.annotations.find(ann =>
+            ann.timestamp_start_ms !== null &&
+            ann.timestamp_start_ms <= hoverTime &&
+            (ann.timestamp_end_ms === null || ann.timestamp_end_ms >= hoverTime)
+        );
+
+        // Build tooltip content
+        let content = `<div class="tooltip-time">${formatTime(hoverTime)}</div>`;
+        if (annotationAtTime) {
+            content += `<div class="tooltip-annotation">
+                <span class="color-dot" style="background: ${annotationAtTime.color || '#00d4ff'}"></span>
+                ${annotationAtTime.type}${annotationAtTime.lanes && annotationAtTime.lanes.length ? ' - Lanes: ' + annotationAtTime.lanes.join(', ') : ''}
+            </div>`;
+        }
+
+        tooltip.innerHTML = content;
+
+        // Position tooltip
+        const tooltipX = event.clientX - rect.left;
+        tooltip.style.left = Math.max(0, Math.min(tooltipX - tooltip.offsetWidth / 2, rect.width - tooltip.offsetWidth)) + 'px';
+
+        tooltip.classList.add('visible');
+    }
+
+    function hideTimelineTooltip() {
+        document.getElementById('timelineTooltip').classList.remove('visible');
+    }
+
     function seekToAnnotation(index) {
         const ann = replayData.annotations[index];
         if (ann.timestamp_start_ms !== null) {
@@ -953,6 +1054,7 @@
         const nav = replayData.navigation;
         if (!nav) return;
 
+        document.getElementById('navSpecialistName').textContent = replayData.specialist.name;
         document.getElementById('navCurrent').textContent = nav.current_index;
         document.getElementById('navTotal').textContent = nav.total_sessions;
 

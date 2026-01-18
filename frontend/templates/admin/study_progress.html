@@ -625,7 +625,7 @@
                                     <div class="completed-time">${formatShortDate(sess.completed_at)}</div>
                                     <div>
                                         <span class="audio-badge ${sess.has_audio ? '' : 'no-audio'}">
-                                            ${sess.has_audio ? formatDuration(sess.audio_duration_ms) : 'No audio'}
+                                            ${sess.has_audio ? '🎙 ' + formatDuration(sess.audio_duration_ms) : '🔇 No audio'}
                                         </span>
                                     </div>
                                     <div>
