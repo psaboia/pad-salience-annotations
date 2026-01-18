@@ -248,16 +248,46 @@
         font-size: 0.85rem;
     }
 
-    .refresh-btn {
+    .header-actions {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 12px;
+        font-size: 1rem;
     }
 
-    .refresh-btn.loading .spinner {
-        width: 16px;
-        height: 16px;
-        border-width: 2px;
+    .header-actions a {
+        color: #fff;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .header-actions a:hover {
+        color: var(--primary-color);
+    }
+
+    .header-actions .separator {
+        color: var(--text-muted);
+    }
+
+    .refresh-icon {
+        cursor: pointer;
+        color: #fff;
+        font-size: 1.1rem;
+        transition: color 0.2s, transform 0.3s;
+        display: inline-block;
+    }
+
+    .refresh-icon:hover {
+        color: var(--primary-color);
+    }
+
+    .refresh-icon.spinning {
+        animation: spin 0.6s ease-in-out;
+    }
+
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
     }
 </style>
 {% endblock %}
@@ -309,6 +339,12 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="/admin/users?role=specialist" class="nav-link">
+                        <span class="icon">🔬</span>
+                        Specialists
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="/admin/users" class="nav-link">
                         <span class="icon">👥</span>
                         Users
@@ -350,6 +386,15 @@
         }
     }
 
+    async function refreshWithAnimation() {
+        const icon = document.querySelector('.refresh-icon');
+        if (icon) {
+            icon.classList.add('spinning');
+            setTimeout(() => icon.classList.remove('spinning'), 600);
+        }
+        await loadProgress();
+    }
+
     function renderProgress(data) {
         const content = document.getElementById('content');
         const exp = data.study;
@@ -361,11 +406,10 @@
                     <h2>${exp.name}</h2>
                     <span class="badge badge-${getStatusBadge(exp.status)}">${exp.status.toUpperCase()}</span>
                 </div>
-                <div>
-                    <a href="/admin/studies/${studyId}" class="btn btn-secondary">View Details</a>
-                    <button class="btn btn-primary refresh-btn" onclick="loadProgress()" id="refreshBtn">
-                        Refresh
-                    </button>
+                <div class="header-actions">
+                    <a href="/admin/studies/${studyId}">⚙ Settings</a>
+                    <span class="separator">·</span>
+                    <span class="refresh-icon" onclick="refreshWithAnimation()" title="Refresh">↻</span>
                 </div>
             </div>
 

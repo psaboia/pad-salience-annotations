@@ -568,6 +568,54 @@ async def create_new_assignment(
         return AssignmentResponse(**assignment)
 
 
+@router.get("/studies/{study_id}/assignments/{specialist_id}/stats")
+async def get_assignment_stats(
+    study_id: int,
+    specialist_id: int,
+    _: dict = Depends(require_admin)
+):
+    """Get statistics for an assignment (annotation count, etc.)."""
+    async with get_db_context() as db:
+        # Get assignment
+        cursor = await db.execute(
+            "SELECT id FROM assignments WHERE study_id = ? AND specialist_id = ?",
+            (study_id, specialist_id)
+        )
+        assignment = await cursor.fetchone()
+        if not assignment:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+
+        assignment_id = assignment["id"]
+
+        # Count completed sessions
+        cursor = await db.execute(
+            """
+            SELECT COUNT(*) as count FROM annotation_sessions
+            WHERE assignment_id = ? AND status = 'completed'
+            """,
+            (assignment_id,)
+        )
+        row = await cursor.fetchone()
+        completed_sessions = row["count"] if row else 0
+
+        # Count total annotations
+        cursor = await db.execute(
+            """
+            SELECT COUNT(*) as count FROM annotations a
+            JOIN annotation_sessions s ON a.session_id = s.id
+            WHERE s.assignment_id = ?
+            """,
+            (assignment_id,)
+        )
+        row = await cursor.fetchone()
+        total_annotations = row["count"] if row else 0
+
+        return {
+            "completed_sessions": completed_sessions,
+            "total_annotations": total_annotations
+        }
+
+
 @router.delete("/studies/{study_id}/assignments/{specialist_id}")
 async def delete_assignment(
     study_id: int,
@@ -580,10 +628,10 @@ async def delete_assignment(
         if not study:
             raise HTTPException(status_code=404, detail="Study not found")
 
-        if study["status"] not in ("draft",):
+        if study["status"] not in ("draft", "active", "paused"):
             raise HTTPException(
                 status_code=400,
-                detail="Can only remove assignments from draft studies"
+                detail="Can only remove assignments from draft, active, or paused studies"
             )
 
         await db.execute(

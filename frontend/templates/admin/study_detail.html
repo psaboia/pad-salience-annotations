@@ -171,7 +171,23 @@
 
     .header-actions {
         display: flex;
-        gap: 10px;
+        align-items: center;
+        gap: 12px;
+        font-size: 1rem;
+    }
+
+    .header-actions a {
+        color: #fff;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .header-actions a:hover {
+        color: var(--primary-color);
+    }
+
+    .header-actions .separator {
+        color: var(--text-muted);
     }
 
     .details-grid {
@@ -358,6 +374,12 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="/admin/users?role=specialist" class="nav-link">
+                        <span class="icon">🔬</span>
+                        Specialists
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="/admin/users" class="nav-link">
                         <span class="icon">👥</span>
                         Users
@@ -426,7 +448,7 @@
     }
 
     function canModifyAssignments(status) {
-        return status === 'draft' || status === 'active';
+        return status === 'draft' || status === 'active' || status === 'paused';
     }
 
     function renderStudy(study, assignments) {
@@ -443,9 +465,10 @@
                 </div>
                 <div class="header-actions">
                     <span class="badge badge-${getStatusBadge(study.status)}">${study.status.toUpperCase()}</span>
-                    ${study.status === 'active' || study.status === 'paused' ?
-                        `<a href="/admin/studies/${study.id}/progress" class="btn btn-primary">View Progress</a>` : ''
-                    }
+                    ${study.status === 'active' || study.status === 'paused' ? `
+                        <span class="separator">·</span>
+                        <a href="/admin/studies/${study.id}/progress">📊 Progress</a>
+                    ` : ''}
                 </div>
             </div>
 
@@ -494,7 +517,7 @@
                 <div class="card-header">
                     <h3 class="card-title">Assigned Specialists (${assignments.length})</h3>
                     ${canModify ? `
-                        <button class="btn btn-primary btn-sm" onclick="openAddSpecialistModal()">+ Add Specialist</button>
+                        <button class="btn btn-primary btn-sm" onclick="openAddSpecialistModal()">👤+ Add Specialist</button>
                     ` : ''}
                 </div>
                 ${assignments.length === 0 ? `
@@ -511,7 +534,7 @@
                                 <th>Expertise</th>
                                 <th>Status</th>
                                 <th>Started</th>
-                                ${study.status === 'draft' ? '<th></th>' : ''}
+                                ${canModify ? '<th></th>' : ''}
                             </tr>
                         </thead>
                         <tbody>
@@ -522,7 +545,7 @@
                                     <td>${a.expertise_level_snapshot ? formatExpertise(a.expertise_level_snapshot) : '-'}</td>
                                     <td><span class="badge badge-${getAssignmentStatusBadge(a.status)}">${a.status}</span></td>
                                     <td>${a.started_at ? formatDate(a.started_at) : '-'}</td>
-                                    ${study.status === 'draft' ? `
+                                    ${canModify ? `
                                         <td>
                                             <span class="remove-btn" onclick="removeSpecialist(${a.specialist_id}, '${a.specialist_name}')" title="Remove">✕</span>
                                         </td>
@@ -624,9 +647,22 @@
     }
 
     async function removeSpecialist(specialistId, specialistName) {
-        if (!confirm(`Remove ${specialistName} from this study?`)) return;
-
         try {
+            // First, check if there are annotations that will be lost
+            const stats = await apiCall(`/api/admin/studies/${studyId}/assignments/${specialistId}/stats`);
+
+            let confirmMessage = `Remove ${specialistName} from this study?`;
+
+            if (stats.total_annotations > 0 || stats.completed_sessions > 0) {
+                confirmMessage = `⚠️ WARNING: Remove ${specialistName} from this study?\n\n` +
+                    `This will PERMANENTLY DELETE:\n` +
+                    `• ${stats.completed_sessions} completed session(s)\n` +
+                    `• ${stats.total_annotations} annotation(s)\n\n` +
+                    `This action cannot be undone!`;
+            }
+
+            if (!confirm(confirmMessage)) return;
+
             await apiCall(`/api/admin/studies/${studyId}/assignments/${specialistId}`, {
                 method: 'DELETE'
             });
