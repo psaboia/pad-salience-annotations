@@ -596,8 +596,8 @@
 
     function setupReplay() {
         // Update page info
-        document.getElementById('pageTitle').textContent = `${replayData.sample.drug_name_display} - Replay`;
-        document.getElementById('sampleBadge').textContent = `Card #${replayData.sample.card_id}`;
+        document.getElementById('pageTitle').textContent = `Replay - ${replayData.sample.drug_name_display} 'Card #${replayData.sample.card_id}'`;
+        document.getElementById('sampleBadge').style.display = 'none';
 
         // Update session info
         document.getElementById('specialistName').textContent = replayData.specialist.name;
