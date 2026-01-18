@@ -626,6 +626,10 @@
         </div>
         <div class="session-info" id="sessionInfo">
             <div class="info-row">
+                <span class="label">Study:</span>
+                <span id="studyName">-</span>
+            </div>
+            <div class="info-row">
                 <span class="label">Specialist:</span>
                 <span id="specialistName">-</span>
             </div>
@@ -692,6 +696,7 @@
         document.getElementById('sampleBadge').textContent = `Card #${replayData.sample.card_id}`;
 
         // Update session info
+        document.getElementById('studyName').textContent = replayData.study.name;
         document.getElementById('specialistName').textContent = replayData.specialist.name;
         document.getElementById('completedAt').textContent = formatDate(replayData.session.completed_at);
         document.getElementById('sessionDuration').textContent = formatDuration(replayData.session.audio_duration_ms);
