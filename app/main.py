@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from contextlib import asynccontextmanager
 
+import mimetypes
 import yaml
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
@@ -17,6 +18,9 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from typing import Optional, Any
+
+# Register webm as audio type (Python defaults to video/webm)
+mimetypes.add_type('audio/webm', '.webm')
 
 from .database import init_db, get_db_context, import_samples_from_manifest, migrate_legacy_annotations
 from .routers import auth_router, admin_router, specialist_router
@@ -249,6 +253,19 @@ async def admin_study_progress(request: Request, study_id: int):
     )
 
 
+@app.get("/admin/studies/{study_id}/sessions/{session_id}/replay")
+async def admin_session_replay(request: Request, study_id: int, session_id: int):
+    """Render session replay page."""
+    user = await get_current_user_optional(request)
+    if not user or user.get("active_role") not in ("admin", "super_admin"):
+        return RedirectResponse(url="/login", status_code=302)
+
+    return templates.TemplateResponse(
+        "admin/session_replay.html",
+        {"request": request, "user": user, "study_id": study_id, "session_id": session_id}
+    )
+
+
 @app.get("/admin/users")
 async def admin_users(request: Request):
     """Render users management page."""
@@ -286,6 +303,7 @@ async def annotate_page(request: Request, study_id: int):
 app.mount("/sample_images", StaticFiles(directory=BASE_DIR / "sample_images"), name="sample_images")
 app.mount("/assets", StaticFiles(directory=BASE_DIR / "assets"), name="assets")
 app.mount("/static", StaticFiles(directory=BASE_DIR / "frontend" / "static"), name="static")
+app.mount("/data/audio", StaticFiles(directory=DATA_DIR / "audio"), name="audio")
 app.mount("/prototype", StaticFiles(directory=BASE_DIR / "prototype", html=True), name="prototype")
 
 

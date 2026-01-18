@@ -409,6 +409,45 @@
             font-size: 1.1rem;
         }
 
+        .rec-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: #333;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            margin-left: auto;
+        }
+
+        .rec-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #666;
+        }
+
+        .rec-indicator.recording .rec-dot {
+            background: #ff4757;
+            animation: pulse 1s infinite;
+        }
+
+        .rec-indicator.no-mic .rec-dot {
+            background: #666;
+        }
+
+        .rec-indicator.recording {
+            background: rgba(255, 71, 87, 0.2);
+        }
+
+        .rec-label {
+            color: #aaa;
+        }
+
+        .rec-indicator.recording .rec-label {
+            color: #ff4757;
+        }
+
         .divider {
             height: 1px;
             background: #333;
@@ -900,9 +939,10 @@
                 <div class="audio-status">
                     <div class="audio-indicator" id="audioIndicator"></div>
                     <span class="audio-time" id="audioTime">00:00</span>
-                    <button class="tool-btn primary rec-btn" id="recordBtn" onclick="toggleRecording()" title="Start/Stop Recording">
-                        ● Rec
-                    </button>
+                    <span class="rec-indicator" id="recIndicator" title="Recording status">
+                        <span class="rec-dot"></span>
+                        <span class="rec-label" id="recLabel">Ready</span>
+                    </span>
                 </div>
             </div>
 
@@ -1201,6 +1241,8 @@
                 canvas.style.width = padImage.width + 'px';
                 canvas.style.height = padImage.height + 'px';
                 redrawAnnotations();
+                // Auto-start recording when image loads
+                startAutoRecording();
             };
 
             padImage.src = `/${currentSample.image_path}`;
@@ -1484,8 +1526,42 @@
             }
         }
 
-        async function toggleRecording() {
-            if (!isRecording) {
+        // Flag to track if we've already requested mic permission this session
+        let micPermissionRequested = false;
+        let micPermissionGranted = false;
+
+        async function startAutoRecording() {
+            // Don't start if already recording
+            if (isRecording) return;
+
+            const recIndicator = document.getElementById('recIndicator');
+            const recLabel = document.getElementById('recLabel');
+            const audioIndicator = document.getElementById('audioIndicator');
+
+            // Request microphone permission (browser remembers this per session)
+            if (!micPermissionRequested) {
+                micPermissionRequested = true;
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    micPermissionGranted = true;
+                    // Stop the test stream, we'll create a new one for actual recording
+                    stream.getTracks().forEach(track => track.stop());
+                } catch (error) {
+                    console.warn('Microphone permission denied:', error.message);
+                    micPermissionGranted = false;
+                    // Update UI to show no mic
+                    recIndicator.classList.add('no-mic');
+                    recLabel.textContent = 'No Mic';
+                    recIndicator.title = 'Microphone permission denied. Annotations will be saved without audio.';
+                }
+            }
+
+            // Start recording timer regardless of mic permission
+            // This ensures timestamps are captured for replay (even without audio)
+            recordingStartTime = Date.now();
+            audioTimerInterval = setInterval(updateAudioTimer, 1000);
+
+            if (micPermissionGranted) {
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     mediaRecorder = new MediaRecorder(stream);
@@ -1495,23 +1571,50 @@
                     };
                     mediaRecorder.start();
                     isRecording = true;
-                    recordingStartTime = Date.now();
-                    document.getElementById('recordBtn').textContent = '■ Stop';
-                    document.getElementById('recordBtn').classList.add('recording');
-                    document.getElementById('audioIndicator').classList.add('recording');
-                    audioTimerInterval = setInterval(updateAudioTimer, 1000);
+
+                    // Update UI to show recording
+                    recIndicator.classList.remove('no-mic');
+                    recIndicator.classList.add('recording');
+                    recLabel.textContent = 'Recording';
+                    audioIndicator.classList.add('recording');
                 } catch (error) {
-                    alert('Could not access microphone: ' + error.message);
+                    console.error('Failed to start recording:', error);
+                    // Fall back to no-mic mode
+                    recIndicator.classList.add('no-mic');
+                    recLabel.textContent = 'No Mic';
                 }
-            } else {
-                mediaRecorder.stop();
-                isRecording = false;
-                clearInterval(audioTimerInterval);
-                document.getElementById('recordBtn').textContent = '● Rec';
-                document.getElementById('recordBtn').classList.remove('recording');
-                document.getElementById('audioIndicator').classList.remove('recording');
-                mediaRecorder.stream.getTracks().forEach(track => track.stop());
             }
+        }
+
+        function stopAutoRecording() {
+            // Stop the timer
+            if (audioTimerInterval) {
+                clearInterval(audioTimerInterval);
+                audioTimerInterval = null;
+            }
+
+            // Stop media recorder if active
+            if (isRecording && mediaRecorder) {
+                return new Promise((resolve) => {
+                    mediaRecorder.onstop = () => {
+                        isRecording = false;
+                        const recIndicator = document.getElementById('recIndicator');
+                        const audioIndicator = document.getElementById('audioIndicator');
+                        recIndicator.classList.remove('recording');
+                        audioIndicator.classList.remove('recording');
+                        document.getElementById('recLabel').textContent = 'Stopped';
+                        resolve();
+                    };
+                    mediaRecorder.stop();
+                    mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                });
+            }
+
+            // If not recording audio, just reset UI
+            const recIndicator = document.getElementById('recIndicator');
+            recIndicator.classList.remove('recording');
+            document.getElementById('recLabel').textContent = 'Stopped';
+            return Promise.resolve();
         }
 
         function updateAudioTimer() {
@@ -1548,11 +1651,13 @@
             doneBtn.textContent = 'Saving...';
 
             try {
+                // Calculate audio duration before stopping
                 let audioDuration = null;
-                if (isRecording) {
+                if (recordingStartTime) {
                     audioDuration = Date.now() - recordingStartTime;
-                    await stopRecordingForExport();
                 }
+                // Stop recording (audio and/or timer)
+                await stopAutoRecording();
 
                 const root = document.documentElement;
                 const style = getComputedStyle(root);
@@ -1617,25 +1722,6 @@
             }
         }
 
-        function stopRecordingForExport() {
-            return new Promise((resolve) => {
-                if (!isRecording || !mediaRecorder) {
-                    resolve();
-                    return;
-                }
-                mediaRecorder.onstop = () => {
-                    isRecording = false;
-                    clearInterval(audioTimerInterval);
-                    document.getElementById('recordBtn').textContent = '● Rec';
-                    document.getElementById('recordBtn').classList.remove('recording');
-                    document.getElementById('audioIndicator').classList.remove('recording');
-                    resolve();
-                };
-                mediaRecorder.stop();
-                mediaRecorder.stream.getTracks().forEach(track => track.stop());
-            });
-        }
-
         function blobToBase64(blob) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -1677,8 +1763,18 @@
             document.getElementById('doneBtn').disabled = false;
             document.getElementById('doneBtn').textContent = 'DONE';
             document.getElementById('audioTime').textContent = '00:00';
+
+            // Reset recording state
             recordingStartTime = null;
             audioChunks = [];
+            isRecording = false;
+
+            // Reset recording indicator UI
+            const recIndicator = document.getElementById('recIndicator');
+            recIndicator.classList.remove('recording');
+            document.getElementById('recLabel').textContent = 'Ready';
+            document.getElementById('audioIndicator').classList.remove('recording');
+
             annotations = [];  // Clear saved annotations
 
             await loadCurrentSession();
