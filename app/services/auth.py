@@ -147,9 +147,19 @@ async def get_current_user(
     return user
 
 
+async def require_super_admin(user: dict = Depends(get_current_user)) -> dict:
+    """Require the current user to be acting as super_admin."""
+    if user.get("active_role") != "super_admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Super admin access required"
+        )
+    return user
+
+
 async def require_admin(user: dict = Depends(get_current_user)) -> dict:
-    """Require the current user to be acting as admin."""
-    if user.get("active_role") != "admin":
+    """Require the current user to be acting as admin or super_admin."""
+    if user.get("active_role") not in ("admin", "super_admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
@@ -158,8 +168,8 @@ async def require_admin(user: dict = Depends(get_current_user)) -> dict:
 
 
 async def require_specialist(user: dict = Depends(get_current_user)) -> dict:
-    """Require the current user to be acting as a specialist (or admin)."""
-    if user.get("active_role") not in ("specialist", "admin"):
+    """Require the current user to be acting as a specialist (or admin/super_admin)."""
+    if user.get("active_role") not in ("specialist", "admin", "super_admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Specialist access required"

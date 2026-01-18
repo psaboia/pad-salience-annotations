@@ -23,6 +23,7 @@ class UserUpdate(BaseModel):
     name: Optional[str] = None
     password: Optional[str] = None
     role: Optional[str] = None
+    roles: Optional[List[str]] = None
     expertise_level: Optional[str] = None
     years_experience: Optional[int] = None
     training_date: Optional[str] = None
