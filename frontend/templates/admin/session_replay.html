@@ -87,6 +87,48 @@
         font-size: 0.85rem;
     }
 
+    .session-navigation {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        padding: 10px 20px;
+        background: var(--card-color);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .nav-btn {
+        padding: 6px 16px;
+        background: var(--primary-color);
+        color: #000;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .nav-btn:hover:not(:disabled) {
+        background: #00b8e6;
+    }
+
+    .nav-btn:disabled {
+        background: #333;
+        color: #666;
+        cursor: not-allowed;
+    }
+
+    .nav-info {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+    }
+
+    .nav-info span:first-child {
+        color: var(--primary-color);
+        font-weight: 600;
+    }
+
     .image-container {
         flex: 1;
         display: flex;
@@ -436,6 +478,18 @@
             <a href="/admin/studies/{{ study_id }}/progress" class="back-link">← Back to Progress</a>
         </div>
 
+        <div class="session-navigation" id="sessionNavigation">
+            <button class="nav-btn" id="prevBtn" onclick="navigateToPrevious()" disabled>
+                ← Prev
+            </button>
+            <span class="nav-info">
+                <span id="navCurrent">-</span> of <span id="navTotal">-</span>
+            </span>
+            <button class="nav-btn" id="nextBtn" onclick="navigateToNext()" disabled>
+                Next →
+            </button>
+        </div>
+
         <div class="image-container" id="imageContainer">
             <div class="loading-overlay" id="loadingOverlay">
                 <div class="spinner"></div>
@@ -563,6 +617,7 @@
             renderAnnotations();
             renderAnnotationsList();
             renderTimelineMarkers();
+            setupNavigation();
         };
         sampleImage.src = `/${replayData.sample.image_path}`;
 
@@ -870,6 +925,69 @@
         }
         return `${formatTime(startMs)} → ${formatTime(endMs)}`;
     }
+
+    // Navigation functions
+    function setupNavigation() {
+        const nav = replayData.navigation;
+        if (!nav) return;
+
+        document.getElementById('navCurrent').textContent = nav.current_index;
+        document.getElementById('navTotal').textContent = nav.total_sessions;
+
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+
+        if (nav.previous_session_id) {
+            prevBtn.disabled = false;
+        } else {
+            prevBtn.disabled = true;
+        }
+
+        if (nav.next_session_id) {
+            nextBtn.disabled = false;
+        } else {
+            nextBtn.disabled = true;
+        }
+    }
+
+    function navigateToPrevious() {
+        const nav = replayData.navigation;
+        if (nav && nav.previous_session_id) {
+            window.location.href = `/admin/studies/${studyId}/sessions/${nav.previous_session_id}/replay`;
+        }
+    }
+
+    function navigateToNext() {
+        const nav = replayData.navigation;
+        if (nav && nav.next_session_id) {
+            window.location.href = `/admin/studies/${studyId}/sessions/${nav.next_session_id}/replay`;
+        }
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        // Ignore if typing in an input
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+        switch(e.key) {
+            case 'ArrowLeft':
+                if (!e.ctrlKey && !e.metaKey) {
+                    e.preventDefault();
+                    navigateToPrevious();
+                }
+                break;
+            case 'ArrowRight':
+                if (!e.ctrlKey && !e.metaKey) {
+                    e.preventDefault();
+                    navigateToNext();
+                }
+                break;
+            case ' ':
+                e.preventDefault();
+                togglePlayback();
+                break;
+        }
+    });
 
     // Initialize
     loadReplayData();

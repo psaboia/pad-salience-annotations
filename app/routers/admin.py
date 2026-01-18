@@ -807,6 +807,27 @@ async def get_session_replay_data(session_id: int, _: dict = Depends(require_adm
         if session.get('audio_filename'):
             audio_url = f"/data/audio/{session['audio_filename']}"
 
+        # Get navigation info (previous/next sessions for same specialist in same study)
+        cursor = await db.execute(
+            """
+            SELECT ans.id as session_id
+            FROM annotation_sessions ans
+            JOIN assignments a ON ans.assignment_id = a.id
+            WHERE a.study_id = ?
+              AND a.specialist_id = ?
+              AND ans.status = 'completed'
+            ORDER BY ans.completed_at, ans.id
+            """,
+            (session['study_id'], session['specialist_id'])
+        )
+        all_sessions = [row['session_id'] for row in await cursor.fetchall()]
+
+        # Find current position and determine prev/next
+        current_index = all_sessions.index(session_id) if session_id in all_sessions else -1
+        total_sessions = len(all_sessions)
+        previous_session_id = all_sessions[current_index - 1] if current_index > 0 else None
+        next_session_id = all_sessions[current_index + 1] if current_index < total_sessions - 1 else None
+
         return {
             "session": {
                 "id": session['session_id'],
@@ -830,7 +851,13 @@ async def get_session_replay_data(session_id: int, _: dict = Depends(require_adm
             },
             "study_id": session['study_id'],
             "annotations": annotations,
-            "audio_url": audio_url
+            "audio_url": audio_url,
+            "navigation": {
+                "current_index": current_index + 1,
+                "total_sessions": total_sessions,
+                "previous_session_id": previous_session_id,
+                "next_session_id": next_session_id
+            }
         }
 
 
