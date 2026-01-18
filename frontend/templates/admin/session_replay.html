@@ -151,15 +151,16 @@
         font-weight: 600;
     }
 
+    .nav-study,
     .nav-specialist {
         font-size: 0.8rem;
     }
 
-    .nav-specialist-label {
+    .nav-label {
         color: var(--text-muted);
     }
 
-    .nav-specialist-name {
+    .nav-value {
         color: var(--text-color);
         font-weight: 500;
     }
@@ -559,9 +560,14 @@
         </div>
 
         <div class="session-navigation" id="sessionNavigation">
+            <span class="nav-study">
+                <span class="nav-label">Study:</span>
+                <span class="nav-value" id="navStudyName">-</span>
+            </span>
+            <span class="nav-divider">|</span>
             <span class="nav-specialist">
-                <span class="nav-specialist-label">Specialist:</span>
-                <span class="nav-specialist-name" id="navSpecialistName">-</span>
+                <span class="nav-label">Specialist:</span>
+                <span class="nav-value" id="navSpecialistName">-</span>
             </span>
             <span class="nav-divider">|</span>
             <button class="nav-btn" id="prevBtn" onclick="navigateToPrevious()" disabled>
@@ -1054,6 +1060,7 @@
         const nav = replayData.navigation;
         if (!nav) return;
 
+        document.getElementById('navStudyName').textContent = replayData.study.name;
         document.getElementById('navSpecialistName').textContent = replayData.specialist.name;
         document.getElementById('navCurrent').textContent = nav.current_index;
         document.getElementById('navTotal').textContent = nav.total_sessions;

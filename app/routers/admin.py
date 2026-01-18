@@ -721,6 +721,7 @@ async def get_session_replay_data(session_id: int, _: dict = Depends(require_adm
                 ans.completed_at,
                 a.id as assignment_id,
                 a.study_id,
+                st.name as study_name,
                 u.id as specialist_id,
                 u.name as specialist_name,
                 u.email as specialist_email,
@@ -730,6 +731,7 @@ async def get_session_replay_data(session_id: int, _: dict = Depends(require_adm
                 s.image_path
             FROM annotation_sessions ans
             JOIN assignments a ON ans.assignment_id = a.id
+            JOIN studies st ON a.study_id = st.id
             JOIN users u ON a.specialist_id = u.id
             JOIN study_samples ss ON ans.study_sample_id = ss.id
             JOIN samples s ON ss.sample_id = s.id
@@ -849,7 +851,10 @@ async def get_session_replay_data(session_id: int, _: dict = Depends(require_adm
                 "card_id": session['card_id'],
                 "image_path": session['image_path']
             },
-            "study_id": session['study_id'],
+            "study": {
+                "id": session['study_id'],
+                "name": session['study_name']
+            },
             "annotations": annotations,
             "audio_url": audio_url,
             "navigation": {
