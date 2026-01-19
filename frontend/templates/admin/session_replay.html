@@ -83,8 +83,90 @@
         font-size: 1.1rem;
     }
 
+    .header-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .replay-label {
+        background: var(--primary-color);
+        color: #000;
+        font-weight: 600;
+        font-size: 0.75rem;
+        padding: 3px 8px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .drug-name {
+        color: var(--primary-color);
+        font-weight: 600;
+    }
+
     .content-header .back-link {
         font-size: 0.85rem;
+    }
+
+    .session-navigation {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 15px;
+        padding: 6px 20px;
+        background: var(--card-color);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .nav-btn {
+        padding: 3px 12px;
+        background: var(--primary-color);
+        color: #000;
+        border: none;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .nav-btn:hover:not(:disabled) {
+        background: #00b8e6;
+    }
+
+    .nav-btn:disabled {
+        background: #333;
+        color: #666;
+        cursor: not-allowed;
+    }
+
+    .nav-info {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    .nav-info span:first-child {
+        color: var(--primary-color);
+        font-weight: 600;
+    }
+
+    .nav-study,
+    .nav-specialist {
+        font-size: 0.8rem;
+    }
+
+    .nav-label {
+        color: var(--text-muted);
+    }
+
+    .nav-value {
+        color: var(--text-color);
+        font-weight: 500;
+    }
+
+    .nav-divider {
+        color: var(--border-color);
     }
 
     .image-container {
@@ -128,6 +210,7 @@
 
     .timeline-container {
         margin-bottom: 10px;
+        position: relative;
     }
 
     .timeline {
@@ -164,6 +247,46 @@
         background: var(--success-color);
         border-radius: 2px;
         transform: translateX(-50%);
+    }
+
+    .timeline-tooltip {
+        position: absolute;
+        bottom: 20px;
+        left: 0;
+        background: var(--card-color);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 0.75rem;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.15s;
+        z-index: 100;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .timeline-tooltip.visible {
+        opacity: 1;
+    }
+
+    .timeline-tooltip .tooltip-time {
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .timeline-tooltip .tooltip-annotation {
+        color: var(--text-color);
+    }
+
+    .timeline-tooltip .tooltip-annotation .color-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 6px;
+        vertical-align: middle;
     }
 
     .controls-row {
@@ -429,11 +552,33 @@
 
     <main class="main-content">
         <div class="content-header">
-            <div>
-                <h2 id="pageTitle">Session Replay</h2>
+            <div class="header-title">
+                <h2><span class="replay-label">▶ Replay</span> <span class="drug-name" id="drugName">-</span></h2>
                 <span class="badge badge-secondary" id="sampleBadge">Loading...</span>
             </div>
-            <a href="/admin/studies/{{ study_id }}/progress" class="back-link">← Back to Progress</a>
+            <a href="/admin/studies/{{ study_id }}/progress" class="back-link">← Back to Study Progress</a>
+        </div>
+
+        <div class="session-navigation" id="sessionNavigation">
+            <span class="nav-study">
+                <span class="nav-label">Study:</span>
+                <span class="nav-value" id="navStudyName">-</span>
+            </span>
+            <span class="nav-divider">|</span>
+            <span class="nav-specialist">
+                <span class="nav-label">Specialist:</span>
+                <span class="nav-value" id="navSpecialistName">-</span>
+            </span>
+            <span class="nav-divider">|</span>
+            <button class="nav-btn" id="prevBtn" onclick="navigateToPrevious()" disabled>
+                ← Prev
+            </button>
+            <span class="nav-info">
+                <span id="navCurrent">-</span> of <span id="navTotal">-</span>
+            </span>
+            <button class="nav-btn" id="nextBtn" onclick="navigateToNext()" disabled>
+                Next →
+            </button>
         </div>
 
         <div class="image-container" id="imageContainer">
@@ -448,10 +593,11 @@
 
         <div class="playback-controls">
             <div class="timeline-container">
-                <div class="timeline" id="timeline" onclick="seekTimeline(event)">
+                <div class="timeline" id="timeline" onclick="seekTimeline(event)" onmousemove="showTimelineTooltip(event)" onmouseleave="hideTimelineTooltip()">
                     <div class="timeline-progress" id="timelineProgress"></div>
                     <div class="timeline-markers" id="timelineMarkers"></div>
                 </div>
+                <div class="timeline-tooltip" id="timelineTooltip"></div>
             </div>
             <div class="controls-row">
                 <button class="play-btn" id="playBtn" onclick="togglePlayback()">▶</button>
@@ -479,6 +625,10 @@
             <h3>Session Details</h3>
         </div>
         <div class="session-info" id="sessionInfo">
+            <div class="info-row">
+                <span class="label">Study:</span>
+                <span id="studyName">-</span>
+            </div>
             <div class="info-row">
                 <span class="label">Specialist:</span>
                 <span id="specialistName">-</span>
@@ -542,10 +692,11 @@
 
     function setupReplay() {
         // Update page info
-        document.getElementById('pageTitle').textContent = `${replayData.sample.drug_name_display} - Replay`;
+        document.getElementById('drugName').textContent = replayData.sample.drug_name_display;
         document.getElementById('sampleBadge').textContent = `Card #${replayData.sample.card_id}`;
 
         // Update session info
+        document.getElementById('studyName').textContent = replayData.study.name;
         document.getElementById('specialistName').textContent = replayData.specialist.name;
         document.getElementById('completedAt').textContent = formatDate(replayData.session.completed_at);
         document.getElementById('sessionDuration').textContent = formatDuration(replayData.session.audio_duration_ms);
@@ -563,6 +714,7 @@
             renderAnnotations();
             renderAnnotationsList();
             renderTimelineMarkers();
+            setupNavigation();
         };
         sampleImage.src = `/${replayData.sample.image_path}`;
 
@@ -811,6 +963,43 @@
         updateActiveAnnotation();
     }
 
+    function showTimelineTooltip(event) {
+        const timeline = document.getElementById('timeline');
+        const tooltip = document.getElementById('timelineTooltip');
+        const rect = timeline.getBoundingClientRect();
+        const percent = (event.clientX - rect.left) / rect.width;
+        const totalDuration = getTotalDuration();
+        const hoverTime = percent * totalDuration;
+
+        // Find annotation at this time
+        const annotationAtTime = replayData.annotations.find(ann =>
+            ann.timestamp_start_ms !== null &&
+            ann.timestamp_start_ms <= hoverTime &&
+            (ann.timestamp_end_ms === null || ann.timestamp_end_ms >= hoverTime)
+        );
+
+        // Build tooltip content
+        let content = `<div class="tooltip-time">${formatTime(hoverTime)}</div>`;
+        if (annotationAtTime) {
+            content += `<div class="tooltip-annotation">
+                <span class="color-dot" style="background: ${annotationAtTime.color || '#00d4ff'}"></span>
+                ${annotationAtTime.type}${annotationAtTime.lanes && annotationAtTime.lanes.length ? ' - Lanes: ' + annotationAtTime.lanes.join(', ') : ''}
+            </div>`;
+        }
+
+        tooltip.innerHTML = content;
+
+        // Position tooltip
+        const tooltipX = event.clientX - rect.left;
+        tooltip.style.left = Math.max(0, Math.min(tooltipX - tooltip.offsetWidth / 2, rect.width - tooltip.offsetWidth)) + 'px';
+
+        tooltip.classList.add('visible');
+    }
+
+    function hideTimelineTooltip() {
+        document.getElementById('timelineTooltip').classList.remove('visible');
+    }
+
     function seekToAnnotation(index) {
         const ann = replayData.annotations[index];
         if (ann.timestamp_start_ms !== null) {
@@ -870,6 +1059,71 @@
         }
         return `${formatTime(startMs)} → ${formatTime(endMs)}`;
     }
+
+    // Navigation functions
+    function setupNavigation() {
+        const nav = replayData.navigation;
+        if (!nav) return;
+
+        document.getElementById('navStudyName').textContent = replayData.study.name;
+        document.getElementById('navSpecialistName').textContent = replayData.specialist.name;
+        document.getElementById('navCurrent').textContent = nav.current_index;
+        document.getElementById('navTotal').textContent = nav.total_sessions;
+
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+
+        if (nav.previous_session_id) {
+            prevBtn.disabled = false;
+        } else {
+            prevBtn.disabled = true;
+        }
+
+        if (nav.next_session_id) {
+            nextBtn.disabled = false;
+        } else {
+            nextBtn.disabled = true;
+        }
+    }
+
+    function navigateToPrevious() {
+        const nav = replayData.navigation;
+        if (nav && nav.previous_session_id) {
+            window.location.href = `/admin/studies/${studyId}/sessions/${nav.previous_session_id}/replay`;
+        }
+    }
+
+    function navigateToNext() {
+        const nav = replayData.navigation;
+        if (nav && nav.next_session_id) {
+            window.location.href = `/admin/studies/${studyId}/sessions/${nav.next_session_id}/replay`;
+        }
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        // Ignore if typing in an input
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+        switch(e.key) {
+            case 'ArrowLeft':
+                if (!e.ctrlKey && !e.metaKey) {
+                    e.preventDefault();
+                    navigateToPrevious();
+                }
+                break;
+            case 'ArrowRight':
+                if (!e.ctrlKey && !e.metaKey) {
+                    e.preventDefault();
+                    navigateToNext();
+                }
+                break;
+            case ' ':
+                e.preventDefault();
+                togglePlayback();
+                break;
+        }
+    });
 
     // Initialize
     loadReplayData();

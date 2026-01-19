@@ -721,6 +721,7 @@ async def get_session_replay_data(session_id: int, _: dict = Depends(require_adm
                 ans.completed_at,
                 a.id as assignment_id,
                 a.study_id,
+                st.name as study_name,
                 u.id as specialist_id,
                 u.name as specialist_name,
                 u.email as specialist_email,
@@ -730,6 +731,7 @@ async def get_session_replay_data(session_id: int, _: dict = Depends(require_adm
                 s.image_path
             FROM annotation_sessions ans
             JOIN assignments a ON ans.assignment_id = a.id
+            JOIN studies st ON a.study_id = st.id
             JOIN users u ON a.specialist_id = u.id
             JOIN study_samples ss ON ans.study_sample_id = ss.id
             JOIN samples s ON ss.sample_id = s.id
@@ -807,6 +809,27 @@ async def get_session_replay_data(session_id: int, _: dict = Depends(require_adm
         if session.get('audio_filename'):
             audio_url = f"/data/audio/{session['audio_filename']}"
 
+        # Get navigation info (previous/next sessions for same specialist in same study)
+        cursor = await db.execute(
+            """
+            SELECT ans.id as session_id
+            FROM annotation_sessions ans
+            JOIN assignments a ON ans.assignment_id = a.id
+            WHERE a.study_id = ?
+              AND a.specialist_id = ?
+              AND ans.status = 'completed'
+            ORDER BY ans.completed_at, ans.id
+            """,
+            (session['study_id'], session['specialist_id'])
+        )
+        all_sessions = [row['session_id'] for row in await cursor.fetchall()]
+
+        # Find current position and determine prev/next
+        current_index = all_sessions.index(session_id) if session_id in all_sessions else -1
+        total_sessions = len(all_sessions)
+        previous_session_id = all_sessions[current_index - 1] if current_index > 0 else None
+        next_session_id = all_sessions[current_index + 1] if current_index < total_sessions - 1 else None
+
         return {
             "session": {
                 "id": session['session_id'],
@@ -828,9 +851,18 @@ async def get_session_replay_data(session_id: int, _: dict = Depends(require_adm
                 "card_id": session['card_id'],
                 "image_path": session['image_path']
             },
-            "study_id": session['study_id'],
+            "study": {
+                "id": session['study_id'],
+                "name": session['study_name']
+            },
             "annotations": annotations,
-            "audio_url": audio_url
+            "audio_url": audio_url,
+            "navigation": {
+                "current_index": current_index + 1,
+                "total_sessions": total_sessions,
+                "previous_session_id": previous_session_id,
+                "next_session_id": next_session_id
+            }
         }
 
 
@@ -842,8 +874,10 @@ async def get_recent_activity(_: dict = Depends(require_admin)):
         cursor = await db.execute(
             """
             SELECT
+                s.id as session_id,
                 s.completed_at,
                 u.name as specialist_name,
+                st.id as study_id,
                 st.name as study_name
             FROM annotation_sessions s
             JOIN assignments a ON s.assignment_id = a.id
@@ -858,6 +892,8 @@ async def get_recent_activity(_: dict = Depends(require_admin)):
 
         return [
             {
+                "session_id": row["session_id"],
+                "study_id": row["study_id"],
                 "completed_at": row["completed_at"],
                 "specialist_name": row["specialist_name"],
                 "study_name": row["study_name"]
