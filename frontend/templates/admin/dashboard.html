@@ -93,12 +93,23 @@
         border: 1px solid var(--border-color);
     }
 
+    .stat-card .stat-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+
+    .stat-card .stat-icon {
+        font-size: 1.4rem;
+        opacity: 0.7;
+    }
+
     .stat-card .stat-label {
         font-size: 0.8rem;
         color: var(--text-muted);
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        margin-bottom: 8px;
     }
 
     .stat-card .stat-value {
@@ -168,6 +179,14 @@
         background: rgba(255, 255, 255, 0.02);
         border-radius: 8px;
         font-size: 0.9rem;
+        text-decoration: none;
+        color: var(--text-color);
+        transition: background 0.2s;
+    }
+
+    .activity-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+        text-decoration: none;
     }
 
     .activity-item .activity-icon {
@@ -366,22 +385,34 @@
         <!-- Stats Cards -->
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-label">Total Studies</div>
+                <div class="stat-header">
+                    <span class="stat-label">Total Studies</span>
+                    <span class="stat-icon">📋</span>
+                </div>
                 <div class="stat-value" id="totalStudies">-</div>
                 <div class="stat-detail"><span id="activeStudies">-</span> active</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Specialists</div>
+                <div class="stat-header">
+                    <span class="stat-label">Specialists</span>
+                    <span class="stat-icon">🔬</span>
+                </div>
                 <div class="stat-value" id="totalSpecialists">-</div>
                 <div class="stat-detail"><span id="activeSpecialists">-</span> active</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Annotations</div>
+                <div class="stat-header">
+                    <span class="stat-label">Annotations</span>
+                    <span class="stat-icon">✏️</span>
+                </div>
                 <div class="stat-value" id="totalAnnotations">-</div>
                 <div class="stat-detail">across all studies</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Completion</div>
+                <div class="stat-header">
+                    <span class="stat-label">Completion</span>
+                    <span class="stat-icon">📈</span>
+                </div>
                 <div class="stat-value" id="overallCompletion">-</div>
                 <div class="stat-detail">overall progress</div>
             </div>
@@ -499,7 +530,7 @@
 
             return `
                 <div class="progress-item">
-                    <a href="/admin/studies/${study.id}" class="study-name">${study.name}</a>
+                    <a href="/admin/studies/${study.id}/progress" class="study-name">${study.name}</a>
                     <div class="progress-bar">
                         <div class="progress-bar-fill" style="width: ${percent}%"></div>
                     </div>
@@ -522,13 +553,13 @@
         }
 
         container.innerHTML = activity.map(item => `
-            <div class="activity-item">
+            <a href="/admin/studies/${item.study_id}/sessions/${item.session_id}/replay" class="activity-item">
                 <span class="activity-icon">✏️</span>
                 <span class="activity-text">
                     <strong>${item.specialist_name}</strong> annotated sample in <strong>${item.study_name}</strong>
                 </span>
                 <span class="activity-time">${formatRelativeTime(item.completed_at)}</span>
-            </div>
+            </a>
         `).join('');
     }
 

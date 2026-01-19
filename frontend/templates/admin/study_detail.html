@@ -152,42 +152,64 @@
         overflow-y: auto;
     }
 
-    .page-header {
+    .breadcrumb {
         display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-bottom: 20px;
+    }
+
+    .breadcrumb a {
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .breadcrumb a:hover {
+        color: var(--primary-color);
+    }
+
+    .breadcrumb .separator {
+        opacity: 0.5;
+    }
+
+    .breadcrumb .current {
+        color: var(--text-color);
+    }
+
+    .page-header {
         margin-bottom: 30px;
     }
 
     .page-header h2 {
         font-size: 1.5rem;
+        margin-bottom: 8px;
     }
 
     .page-header .meta {
         color: var(--text-muted);
         font-size: 0.85rem;
-        margin-top: 8px;
+        margin-top: 4px;
     }
 
-    .header-actions {
+    .page-header-actions {
         display: flex;
         align-items: center;
         gap: 12px;
-        font-size: 1rem;
+        margin-top: 8px;
     }
 
-    .header-actions a {
-        color: #fff;
+    .page-header-actions a {
+        color: var(--text-muted);
         text-decoration: none;
+        font-size: 0.85rem;
         transition: color 0.2s;
     }
 
-    .header-actions a:hover {
+    .page-header-actions a:hover {
         color: var(--primary-color);
-    }
-
-    .header-actions .separator {
-        color: var(--text-muted);
     }
 
     .details-grid {
@@ -456,18 +478,22 @@
         const canModify = canModifyAssignments(study.status);
 
         content.innerHTML = `
+            <div class="breadcrumb">
+                <a href="/admin">Dashboard</a>
+                <span class="separator">›</span>
+                <a href="/admin/studies">Studies</a>
+                <span class="separator">›</span>
+                <span class="current">${study.name}</span>
+            </div>
+
             <div class="page-header">
-                <div>
-                    <h2>${study.name}</h2>
-                    <div class="meta">
-                        Created ${formatDate(study.created_at)}
-                    </div>
-                </div>
-                <div class="header-actions">
+                <h2>${study.name}</h2>
+                <div class="meta">Created ${formatDate(study.created_at)}</div>
+                <div class="page-header-actions">
                     <span class="badge badge-${getStatusBadge(study.status)}">${study.status.toUpperCase()}</span>
                     ${study.status === 'active' || study.status === 'paused' ? `
-                        <span class="separator">·</span>
-                        <a href="/admin/studies/${study.id}/progress">📊 Progress</a>
+                        <span style="color: var(--text-muted);">·</span>
+                        <a href="/admin/studies/${study.id}/progress">📊 View Progress</a>
                     ` : ''}
                 </div>
             </div>

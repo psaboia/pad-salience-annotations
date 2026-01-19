@@ -874,8 +874,10 @@ async def get_recent_activity(_: dict = Depends(require_admin)):
         cursor = await db.execute(
             """
             SELECT
+                s.id as session_id,
                 s.completed_at,
                 u.name as specialist_name,
+                st.id as study_id,
                 st.name as study_name
             FROM annotation_sessions s
             JOIN assignments a ON s.assignment_id = a.id
@@ -890,6 +892,8 @@ async def get_recent_activity(_: dict = Depends(require_admin)):
 
         return [
             {
+                "session_id": row["session_id"],
+                "study_id": row["study_id"],
                 "completed_at": row["completed_at"],
                 "specialist_name": row["specialist_name"],
                 "study_name": row["study_name"]
