@@ -152,6 +152,13 @@
         font-weight: 500;
     }
 
+    .progress-item .study-icons {
+        display: flex;
+        gap: 4px;
+        opacity: 0.7;
+        font-size: 0.85rem;
+    }
+
     .progress-item .progress-bar {
         width: 120px;
         height: 8px;
@@ -527,10 +534,18 @@
         container.innerHTML = studies.map(study => {
             const progress = progressMap[study.id];
             const percent = progress ? progress.overall_percentage : 0;
+            const hasEyetracking = study.eyetracking_mode === 'required';
+            const hasAudio = progress && progress.sessions_with_audio > 0;
+            const hasDrawings = progress && progress.sessions_with_drawings > 0;
 
             return `
                 <div class="progress-item">
                     <a href="/admin/studies/${study.id}/progress" class="study-name">${study.name}</a>
+                    <span class="study-icons">
+                        ${hasEyetracking ? '<span title="Eye-tracking enabled">👁️</span>' : ''}
+                        ${hasDrawings ? '<span title="Has drawings/annotations">📐</span>' : ''}
+                        ${hasAudio ? '<span title="Has audio recordings">🎙</span>' : ''}
+                    </span>
                     <div class="progress-bar">
                         <div class="progress-bar-fill" style="width: ${percent}%"></div>
                     </div>

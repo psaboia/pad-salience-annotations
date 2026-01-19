@@ -206,6 +206,11 @@
         color: var(--primary-color);
     }
 
+    .eyetracking-indicator {
+        color: #a5b4fc;
+        font-size: 0.85rem;
+    }
+
     .overall-progress {
         display: flex;
         align-items: center;
@@ -305,6 +310,14 @@
         color: var(--text-muted);
         font-size: 0.8rem;
         transition: transform 0.2s;
+    }
+
+    .specialist-icons {
+        display: inline-flex;
+        gap: 4px;
+        margin-left: 8px;
+        opacity: 0.7;
+        font-size: 0.85rem;
     }
 
     .specialist-row.expanded .expand-icon {
@@ -577,6 +590,10 @@
                 <h2>${exp.name}</h2>
                 <div class="page-header-actions">
                     <span class="badge badge-${getStatusBadge(exp.status)}">${exp.status.toUpperCase()}</span>
+                    ${exp.eyetracking_mode === 'required' ? `
+                        <span style="color: var(--text-muted);">·</span>
+                        <span class="eyetracking-indicator">👁️ Eye-tracking</span>
+                    ` : ''}
                     <span style="color: var(--text-muted);">·</span>
                     <a href="/admin/studies/${studyId}">✏️ Edit Study</a>
                     <span style="color: var(--text-muted);">·</span>
@@ -607,22 +624,32 @@
                         <div class="empty-state">
                             <p>No specialists assigned</p>
                         </div>
-                    ` : data.specialists.map(s => renderSpecialistRow(s)).join('')}
+                    ` : data.specialists.map(s => renderSpecialistRow(s, exp.eyetracking_mode)).join('')}
                 </div>
             </div>
         `;
     }
 
-    function renderSpecialistRow(s) {
+    function renderSpecialistRow(s, eyetrackingMode) {
         const sessions = getSpecialistSessions(s.assignment_id ? null : null);
         // We need specialist_id from the assignment, let's get sessions by name for now
         const specialistSessions = completedSessions.filter(sess => sess.specialist_name === s.specialist_name);
+        const hasDrawings = specialistSessions.some(sess => sess.has_annotations);
+        const hasAudio = specialistSessions.some(sess => sess.has_audio);
+        const hasEyetracking = eyetrackingMode === 'required';
 
         return `
             <div class="specialist-row" id="specialist-row-${s.assignment_id}">
                 <div class="specialist-header" onclick="toggleSpecialistRow(${s.assignment_id})">
                     <div>
-                        <div class="name">${s.specialist_name}</div>
+                        <div class="name">
+                            ${s.specialist_name}
+                            <span class="specialist-icons">
+                                ${hasEyetracking ? '<span title="Eye-tracking enabled">👁️</span>' : ''}
+                                ${hasDrawings ? '<span title="Has drawings">📐</span>' : ''}
+                                ${hasAudio ? '<span title="Has audio">🎙</span>' : ''}
+                            </span>
+                        </div>
                         <div class="status">
                             <span class="badge badge-${getAssignmentStatusBadge(s.status)}">${s.status}</span>
                             ${s.started_at ? ` - Started ${formatDate(s.started_at)}` : ''}

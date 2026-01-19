@@ -371,15 +371,16 @@ async def create_study(
     name: str,
     created_by: int,
     description: Optional[str] = None,
-    instructions: Optional[str] = None
+    instructions: Optional[str] = None,
+    eyetracking_mode: str = "disabled"
 ) -> int:
     """Create a new study."""
     cursor = await db.execute(
         """
-        INSERT INTO studies (name, description, instructions, created_by)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO studies (name, description, instructions, created_by, eyetracking_mode)
+        VALUES (?, ?, ?, ?, ?)
         """,
-        (name, description, instructions, created_by)
+        (name, description, instructions, created_by, eyetracking_mode)
     )
     await db.commit()
     return cursor.lastrowid
@@ -497,7 +498,8 @@ async def get_specialist_assignments(
     """Get all assignments for a specialist with study details."""
     cursor = await db.execute(
         """
-        SELECT a.*, e.name as study_name, e.description, e.instructions, e.status as study_status
+        SELECT a.*, e.name as study_name, e.description, e.instructions,
+               e.status as study_status, e.eyetracking_mode
         FROM assignments a
         JOIN studies e ON a.study_id = e.id
         WHERE a.specialist_id = ? AND e.status IN ('active', 'paused')
@@ -813,11 +815,40 @@ async def get_study_progress(
     total_annotations = sum(s["total_samples"] for s in specialists)
     completed_annotations = sum(s["completed_samples"] for s in specialists)
 
+    # Count sessions with audio
+    cursor = await db.execute(
+        """
+        SELECT COUNT(*) as count
+        FROM annotation_sessions s
+        JOIN assignments a ON s.assignment_id = a.id
+        WHERE a.study_id = ? AND s.audio_filename IS NOT NULL
+        """,
+        (study_id,)
+    )
+    row = await cursor.fetchone()
+    sessions_with_audio = row["count"]
+
+    # Count sessions with drawings (annotations)
+    cursor = await db.execute(
+        """
+        SELECT COUNT(DISTINCT s.id) as count
+        FROM annotation_sessions s
+        JOIN assignments a ON s.assignment_id = a.id
+        JOIN annotations ann ON ann.session_id = s.id
+        WHERE a.study_id = ?
+        """,
+        (study_id,)
+    )
+    row = await cursor.fetchone()
+    sessions_with_drawings = row["count"]
+
     return {
         "specialists": specialists,
         "total_annotations": total_annotations,
         "completed_annotations": completed_annotations,
-        "overall_percentage": round((completed_annotations / total_annotations) * 100, 1) if total_annotations > 0 else 0
+        "overall_percentage": round((completed_annotations / total_annotations) * 100, 1) if total_annotations > 0 else 0,
+        "sessions_with_audio": sessions_with_audio,
+        "sessions_with_drawings": sessions_with_drawings
     }
 
 

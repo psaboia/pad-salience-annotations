@@ -501,6 +501,49 @@
         justify-content: center;
         z-index: 100;
     }
+
+    /* AprilTags sidebar section */
+    .apriltags-info {
+        padding: 12px 15px;
+        border-bottom: 1px solid var(--border-color);
+        display: none;
+    }
+
+    .apriltags-info.visible {
+        display: block;
+    }
+
+    .apriltags-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .apriltag-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .apriltag-item img {
+        width: 32px;
+        height: 32px;
+        background: white;
+        padding: 2px;
+        image-rendering: pixelated;
+    }
+
+    .apriltag-item .tag-label {
+        font-size: 0.65rem;
+        color: var(--text-muted);
+    }
+
+    .apriltag-item .tag-id {
+        font-size: 0.75rem;
+        color: var(--primary-color);
+        font-weight: 600;
+    }
 </style>
 {% endblock %}
 
@@ -646,6 +689,30 @@
                 <span id="annotationCount">-</span>
             </div>
         </div>
+        <div class="apriltags-info" id="apriltagsInfo">
+            <div class="apriltags-row">
+                <div class="apriltag-item">
+                    <img id="sidebarTagTL" src="" alt="TL">
+                    <span class="tag-label">TL</span>
+                    <span class="tag-id" id="sidebarTagTLId">-</span>
+                </div>
+                <div class="apriltag-item">
+                    <img id="sidebarTagTR" src="" alt="TR">
+                    <span class="tag-label">TR</span>
+                    <span class="tag-id" id="sidebarTagTRId">-</span>
+                </div>
+                <div class="apriltag-item">
+                    <img id="sidebarTagBL" src="" alt="BL">
+                    <span class="tag-label">BL</span>
+                    <span class="tag-id" id="sidebarTagBLId">-</span>
+                </div>
+                <div class="apriltag-item">
+                    <img id="sidebarTagBR" src="" alt="BR">
+                    <span class="tag-label">BR</span>
+                    <span class="tag-id" id="sidebarTagBRId">-</span>
+                </div>
+            </div>
+        </div>
         <div id="noAudioNotice" class="no-audio-notice" style="display: none;">
             No audio recorded for this session. Playback uses timestamps only.
         </div>
@@ -690,6 +757,34 @@
         }
     }
 
+    function setupAprilTags() {
+        const eyetrackingMode = replayData.study.eyetracking_mode;
+        const tags = replayData.sample.tags;
+
+        // Only show tags if eye-tracking was enabled for this study
+        if (eyetrackingMode !== 'required' || !tags) {
+            return;
+        }
+
+        // Show sidebar section
+        document.getElementById('apriltagsInfo').classList.add('visible');
+
+        // Sidebar elements
+        const sidebarElements = {
+            'top-left': { img: document.getElementById('sidebarTagTL'), id: document.getElementById('sidebarTagTLId') },
+            'top-right': { img: document.getElementById('sidebarTagTR'), id: document.getElementById('sidebarTagTRId') },
+            'bottom-left': { img: document.getElementById('sidebarTagBL'), id: document.getElementById('sidebarTagBLId') },
+            'bottom-right': { img: document.getElementById('sidebarTagBR'), id: document.getElementById('sidebarTagBRId') }
+        };
+
+        for (const pos of Object.keys(sidebarElements)) {
+            if (tags[pos] !== undefined) {
+                sidebarElements[pos].img.src = `/assets/apriltags/tag36h11_${tags[pos]}.png`;
+                sidebarElements[pos].id.textContent = tags[pos];
+            }
+        }
+    }
+
     function setupReplay() {
         // Update page info
         document.getElementById('drugName').textContent = replayData.sample.drug_name_display;
@@ -701,6 +796,9 @@
         document.getElementById('completedAt').textContent = formatDate(replayData.session.completed_at);
         document.getElementById('sessionDuration').textContent = formatDuration(replayData.session.audio_duration_ms);
         document.getElementById('annotationCount').textContent = replayData.annotations.length;
+
+        // Setup AprilTags if eye-tracking was enabled
+        setupAprilTags();
 
         // Load image
         sampleImage.onload = () => {

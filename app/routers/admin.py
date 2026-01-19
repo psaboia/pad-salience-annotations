@@ -24,6 +24,7 @@ from ..database import (
     get_user_by_email,
     get_user_roles,
     set_user_roles,
+    get_sample_tags_by_position,
 )
 from ..models import (
     StudyCreate,
@@ -69,7 +70,8 @@ async def create_new_study(data: StudyCreate, admin: dict = Depends(require_admi
             name=data.name,
             description=data.description,
             instructions=data.instructions,
-            created_by=admin["id"]
+            created_by=admin["id"],
+            eyetracking_mode=data.eyetracking_mode or "disabled"
         )
         study = await get_study_by_id(db, study_id)
         return StudyResponse(**study)
@@ -116,6 +118,11 @@ async def update_study(study_id: int, data: StudyUpdate, _: dict = Depends(requi
             await db.execute(
                 "UPDATE studies SET instructions = ?, updated_at = datetime('now') WHERE id = ?",
                 (data.instructions, study_id)
+            )
+        if data.eyetracking_mode is not None:
+            await db.execute(
+                "UPDATE studies SET eyetracking_mode = ?, updated_at = datetime('now') WHERE id = ?",
+                (data.eyetracking_mode, study_id)
             )
         if data.status is not None:
             await update_study_status(db, study_id, data.status)
@@ -674,7 +681,8 @@ async def get_completed_sessions(study_id: int, _: dict = Depends(require_admin)
                 a.specialist_id,
                 u.name as specialist_name,
                 s.drug_name_display,
-                s.card_id
+                s.card_id,
+                (SELECT COUNT(*) FROM annotations ann WHERE ann.session_id = ans.id) as annotation_count
             FROM annotation_sessions ans
             JOIN assignments a ON ans.assignment_id = a.id
             JOIN users u ON a.specialist_id = u.id
@@ -692,6 +700,7 @@ async def get_completed_sessions(study_id: int, _: dict = Depends(require_admin)
                 "session_id": row["session_id"],
                 "session_uuid": row["session_uuid"],
                 "has_audio": row["audio_filename"] is not None,
+                "has_annotations": row["annotation_count"] > 0,
                 "audio_duration_ms": row["audio_duration_ms"],
                 "completed_at": row["completed_at"],
                 "specialist_id": row["specialist_id"],
@@ -722,9 +731,11 @@ async def get_session_replay_data(session_id: int, _: dict = Depends(require_adm
                 a.id as assignment_id,
                 a.study_id,
                 st.name as study_name,
+                st.eyetracking_mode,
                 u.id as specialist_id,
                 u.name as specialist_name,
                 u.email as specialist_email,
+                ss.sample_id,
                 s.drug_name,
                 s.drug_name_display,
                 s.card_id,
@@ -830,6 +841,9 @@ async def get_session_replay_data(session_id: int, _: dict = Depends(require_adm
         previous_session_id = all_sessions[current_index - 1] if current_index > 0 else None
         next_session_id = all_sessions[current_index + 1] if current_index < total_sessions - 1 else None
 
+        # Get sample tags for AprilTag display in replay
+        sample_tags = await get_sample_tags_by_position(db, session['sample_id'])
+
         return {
             "session": {
                 "id": session['session_id'],
@@ -849,11 +863,13 @@ async def get_session_replay_data(session_id: int, _: dict = Depends(require_adm
                 "drug_name": session['drug_name'],
                 "drug_name_display": session['drug_name_display'],
                 "card_id": session['card_id'],
-                "image_path": session['image_path']
+                "image_path": session['image_path'],
+                "tags": sample_tags
             },
             "study": {
                 "id": session['study_id'],
-                "name": session['study_name']
+                "name": session['study_name'],
+                "eyetracking_mode": session['eyetracking_mode']
             },
             "annotations": annotations,
             "audio_url": audio_url,

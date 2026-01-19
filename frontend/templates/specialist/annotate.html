@@ -1198,6 +1198,32 @@
             return detectedLanes;
         }
 
+        // Apply eyetracking mode from study settings
+        function applyEyetrackingMode(mode) {
+            const badge = document.querySelector('.eyetracking-badge');
+            const settingsSection = document.querySelector('.settings-section:has(#eyetrackingEnabled)');
+            const apriltagSettings = document.getElementById('apriltagSettings');
+
+            if (mode === 'disabled') {
+                // Hide AprilTags
+                document.body.classList.add('eyetracking-disabled');
+                // Hide eyetracking settings section entirely
+                if (settingsSection) settingsSection.style.display = 'none';
+                if (apriltagSettings) apriltagSettings.style.display = 'none';
+            } else if (mode === 'required') {
+                // Show AprilTags
+                document.body.classList.remove('eyetracking-disabled');
+                // Hide settings section (user can't disable)
+                if (settingsSection) settingsSection.style.display = 'none';
+                // Show apriltag size settings
+                if (apriltagSettings) apriltagSettings.style.display = 'block';
+                // Update badge text
+                if (badge) {
+                    badge.innerHTML = '<span class="dot"></span>Eye-tracking ativo';
+                }
+            }
+        }
+
         // Load current session data from API
         async function loadCurrentSession() {
             try {
@@ -1214,6 +1240,10 @@
                 }
 
                 currentSample = sessionData.sample;
+
+                // Apply eyetracking mode from study settings
+                applyEyetrackingMode(sessionData.eyetracking_mode || 'disabled');
+
                 loadSampleImage();
                 updateProgress();
             } catch (error) {

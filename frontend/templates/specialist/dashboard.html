@@ -122,6 +122,16 @@
         border-left: 3px solid var(--primary-color);
     }
 
+    .study-card .eyetracking-info {
+        padding: 10px 14px;
+        background: rgba(99, 102, 241, 0.1);
+        border-radius: 8px;
+        font-size: 0.85rem;
+        margin-bottom: 16px;
+        color: #a5b4fc;
+        border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+
     .study-card .progress-section {
         margin-bottom: 16px;
     }
@@ -226,6 +236,12 @@
                         <div class="instructions">
                             <strong>Instructions:</strong><br>
                             ${a.instructions}
+                        </div>
+                    ` : ''}
+
+                    ${a.eyetracking_mode === 'required' ? `
+                        <div class="eyetracking-info">
+                            👁️ Eye-tracking enabled
                         </div>
                     ` : ''}
 
