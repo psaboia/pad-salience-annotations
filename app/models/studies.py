@@ -9,6 +9,7 @@ class StudyCreate(BaseModel):
     name: str
     description: Optional[str] = None
     instructions: Optional[str] = None
+    eyetracking_mode: Optional[str] = "disabled"  # 'disabled' or 'required'
 
 
 class StudyUpdate(BaseModel):
@@ -17,6 +18,7 @@ class StudyUpdate(BaseModel):
     description: Optional[str] = None
     instructions: Optional[str] = None
     status: Optional[str] = None
+    eyetracking_mode: Optional[str] = None  # 'disabled' or 'required'
 
 
 class StudyResponse(BaseModel):
@@ -26,6 +28,7 @@ class StudyResponse(BaseModel):
     description: Optional[str] = None
     instructions: Optional[str] = None
     status: str
+    eyetracking_mode: Optional[str] = "disabled"  # 'disabled' or 'required'
     created_by: int
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
@@ -75,6 +78,7 @@ class AssignmentResponse(BaseModel):
     study_status: Optional[str] = None
     description: Optional[str] = None
     instructions: Optional[str] = None
+    eyetracking_mode: Optional[str] = None
     specialist_name: Optional[str] = None
     specialist_email: Optional[str] = None
 

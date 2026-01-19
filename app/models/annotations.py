@@ -95,6 +95,7 @@ class SessionProgressResponse(BaseModel):
     percentage: float
     is_complete: bool = False
     next_sample: Optional[SampleInfo] = None
+    eyetracking_mode: Optional[str] = "disabled"  # 'disabled' or 'required'
 
 
 # Legacy models for backward compatibility

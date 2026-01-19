@@ -21,6 +21,7 @@ from ..database import (
     complete_session,
     save_annotations,
     get_sample_tags_by_position,
+    get_study_by_id,
 )
 from ..models import (
     AssignmentResponse,
@@ -105,6 +106,10 @@ async def get_current_sample(study_id: int, user: dict = Depends(require_special
                 detail="Study not started. Call /start first."
             )
 
+        # Get study for eyetracking_mode
+        study = await get_study_by_id(db, study_id)
+        eyetracking_mode = study.get("eyetracking_mode", "disabled") if study else "disabled"
+
         progress = await get_assignment_progress(db, assignment["id"])
 
         if assignment["status"] == "completed" or progress["remaining"] == 0:
@@ -113,7 +118,8 @@ async def get_current_sample(study_id: int, user: dict = Depends(require_special
                 total_samples=progress["total"],
                 completed=progress["completed"],
                 percentage=100.0,
-                is_complete=True
+                is_complete=True,
+                eyetracking_mode=eyetracking_mode
             )
 
         # Get current session data
@@ -125,7 +131,8 @@ async def get_current_sample(study_id: int, user: dict = Depends(require_special
                 total_samples=progress["total"],
                 completed=progress["completed"],
                 percentage=100.0,
-                is_complete=True
+                is_complete=True,
+                eyetracking_mode=eyetracking_mode
             )
 
         # Create session if needed
@@ -194,7 +201,8 @@ async def get_current_sample(study_id: int, user: dict = Depends(require_special
             completed=progress["completed"],
             percentage=progress["percentage"],
             is_complete=False,
-            next_sample=next_sample
+            next_sample=next_sample,
+            eyetracking_mode=eyetracking_mode
         )
 
 

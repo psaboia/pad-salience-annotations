@@ -511,6 +511,10 @@
                         <h4>Instructions</h4>
                         <p>${study.instructions || 'No instructions provided'}</p>
                     </div>
+                    <div class="info-section">
+                        <h4>Eye-tracking</h4>
+                        <p>${study.eyetracking_mode === 'required' ? '🔴 Required (AprilTags visible)' : 'Disabled'}</p>
+                    </div>
                     ${study.status === 'draft' ? `
                         <div class="status-actions">
                             <button class="btn btn-success" onclick="activateStudy()">Activate Study</button>
