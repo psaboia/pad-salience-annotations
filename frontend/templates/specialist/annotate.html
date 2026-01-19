@@ -1717,7 +1717,9 @@
 
         async function completeSession() {
             if (!currentSample) return;
-            if (annotations.length === 0) {
+            // Only require annotations in drawing mode
+            const isAudioOnly = sessionData && sessionData.annotation_mode === 'audio_only';
+            if (!isAudioOnly && annotations.length === 0) {
                 alert('Please add at least one annotation.');
                 return;
             }
