@@ -73,7 +73,8 @@ async def create_new_study(data: StudyCreate, admin: dict = Depends(require_admi
             description=data.description,
             instructions=data.instructions,
             created_by=admin["id"],
-            eyetracking_mode=data.eyetracking_mode or "disabled"
+            eyetracking_mode=data.eyetracking_mode or "disabled",
+            annotation_mode=data.annotation_mode or "drawing"
         )
         study = await get_study_by_id(db, study_id)
         return StudyResponse(**study)

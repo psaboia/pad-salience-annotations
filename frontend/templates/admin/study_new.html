@@ -451,10 +451,12 @@
         text-align: center;
     }
 
-    .pad-import-hint {
-        margin: 10px 0 0 0;
+    .pad-import-hint,
+    .form-hint {
+        margin: 6px 0 0 0;
         font-size: 0.8rem;
         color: var(--text-muted);
+        display: block;
     }
 
     .section-divider {
@@ -690,6 +692,14 @@
                             <option value="disabled">Disabled</option>
                             <option value="required">Required (AprilTags visible)</option>
                         </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="annotationMode">Annotation Mode</label>
+                        <select id="annotationMode" class="form-control">
+                            <option value="drawing">Drawing (rectangles/polygons)</option>
+                            <option value="audio_only">Audio Only (no drawing tools)</option>
+                        </select>
+                        <small class="form-hint">Audio Only: specialists only record audio and eye-tracking, without drawing annotations</small>
                     </div>
                 </form>
                 <div class="wizard-actions">
@@ -1080,7 +1090,8 @@
                 name: document.getElementById('name').value.trim(),
                 description: document.getElementById('description').value.trim() || null,
                 instructions: document.getElementById('instructions').value.trim() || null,
-                eyetracking_mode: document.getElementById('eyetrackingMode').value
+                eyetracking_mode: document.getElementById('eyetrackingMode').value,
+                annotation_mode: document.getElementById('annotationMode').value
             };
             const study = await apiCall('/api/admin/studies', {
                 method: 'POST',

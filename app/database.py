@@ -372,15 +372,16 @@ async def create_study(
     created_by: int,
     description: Optional[str] = None,
     instructions: Optional[str] = None,
-    eyetracking_mode: str = "disabled"
+    eyetracking_mode: str = "disabled",
+    annotation_mode: str = "drawing"
 ) -> int:
     """Create a new study."""
     cursor = await db.execute(
         """
-        INSERT INTO studies (name, description, instructions, created_by, eyetracking_mode)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO studies (name, description, instructions, created_by, eyetracking_mode, annotation_mode)
+        VALUES (?, ?, ?, ?, ?, ?)
         """,
-        (name, description, instructions, created_by, eyetracking_mode)
+        (name, description, instructions, created_by, eyetracking_mode, annotation_mode)
     )
     await db.commit()
     return cursor.lastrowid
@@ -499,7 +500,7 @@ async def get_specialist_assignments(
     cursor = await db.execute(
         """
         SELECT a.*, e.name as study_name, e.description, e.instructions,
-               e.status as study_status, e.eyetracking_mode
+               e.status as study_status, e.eyetracking_mode, e.annotation_mode
         FROM assignments a
         JOIN studies e ON a.study_id = e.id
         WHERE a.specialist_id = ? AND e.status IN ('active', 'paused')
