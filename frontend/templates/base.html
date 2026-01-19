@@ -397,6 +397,11 @@
             alert('Error: ' + message);
         }
 
+        function showSuccess(message) {
+            // Simple alert for now, can be replaced with toast
+            alert(message);
+        }
+
         function formatDate(dateStr) {
             if (!dateStr) return '-';
             return new Date(dateStr).toLocaleDateString('en-US', {

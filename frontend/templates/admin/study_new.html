@@ -377,6 +377,58 @@
         font-weight: 500;
         color: var(--primary-color);
     }
+
+    /* PAD Import Section */
+    .pad-import-section {
+        background: rgba(0, 212, 255, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 20px;
+    }
+
+    .pad-import-section h4 {
+        margin: 0 0 12px 0;
+        font-size: 0.95rem;
+        color: var(--primary-color);
+    }
+
+    .pad-import-controls {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .pad-import-controls select {
+        flex: 1;
+        max-width: 300px;
+    }
+
+    .pad-import-hint {
+        margin: 10px 0 0 0;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    .section-divider {
+        display: flex;
+        align-items: center;
+        margin: 20px 0;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+    }
+
+    .section-divider::before,
+    .section-divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--border-color);
+    }
+
+    .section-divider span {
+        padding: 0 16px;
+    }
 </style>
 {% endblock %}
 
@@ -504,6 +556,27 @@
                 <div class="card-header">
                     <h3 class="card-title">Select Samples</h3>
                 </div>
+
+                <!-- Load from PAD Project -->
+                <div class="pad-import-section">
+                    <h4>Load from PAD Project</h4>
+                    <div class="pad-import-controls">
+                        <select id="padProjectSelect" class="form-control">
+                            <option value="">Select a project...</option>
+                        </select>
+                        <button type="button" class="btn btn-primary" onclick="loadFromPAD()" id="loadPadBtn">
+                            Load Samples
+                        </button>
+                    </div>
+                    <p class="pad-import-hint">
+                        This will fetch one sample per drug from the selected project (quantity=100%, not deleted)
+                    </p>
+                </div>
+
+                <div class="section-divider">
+                    <span>OR select from existing samples</span>
+                </div>
+
                 <div class="selection-info">
                     <span><span class="count" id="selectedSamplesCount">0</span> samples selected</span>
                     <button type="button" class="btn btn-secondary btn-sm" onclick="toggleAllSamples()">Toggle All</button>
@@ -582,6 +655,9 @@
 
     async function loadData() {
         try {
+            // Load PAD projects
+            loadPADProjects();
+
             // Load samples
             samples = await apiCall('/api/admin/samples');
             renderSamples();
@@ -591,6 +667,62 @@
             renderSpecialists();
         } catch (error) {
             showError(error.message);
+        }
+    }
+
+    // Load PAD projects for the dropdown
+    async function loadPADProjects() {
+        try {
+            const projects = await apiCall('/api/admin/pad-projects');
+            const select = document.getElementById('padProjectSelect');
+            select.innerHTML = '<option value="">Select a project...</option>' +
+                projects.map(p => `<option value="${p.id}" data-name="${p.name}">${p.name}</option>`).join('');
+        } catch (error) {
+            console.error('Failed to load PAD projects:', error);
+            // Don't show error to user - PAD import is optional
+            const select = document.getElementById('padProjectSelect');
+            select.innerHTML = '<option value="">PAD projects unavailable</option>';
+            select.disabled = true;
+            document.getElementById('loadPadBtn').disabled = true;
+        }
+    }
+
+    // Load samples from selected PAD project
+    async function loadFromPAD() {
+        const select = document.getElementById('padProjectSelect');
+        const projectId = select.value;
+        const projectName = select.options[select.selectedIndex].dataset.name || select.options[select.selectedIndex].text;
+
+        if (!projectId) {
+            showError('Please select a project');
+            return;
+        }
+
+        const btn = document.getElementById('loadPadBtn');
+        btn.disabled = true;
+        btn.textContent = 'Loading...';
+
+        try {
+            const result = await apiCall('/api/admin/pad-import', {
+                method: 'POST',
+                body: JSON.stringify({
+                    project_id: parseInt(projectId),
+                    project_name: projectName
+                })
+            });
+
+            showSuccess(`Imported ${result.imported} samples from ${projectName}`);
+
+            // Clear current selection and reload samples
+            selectedSamples.clear();
+            samples = await apiCall('/api/admin/samples');
+            renderSamples();
+
+        } catch (error) {
+            showError(error.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Load Samples';
         }
     }
 

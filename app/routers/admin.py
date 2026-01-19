@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from typing import List
+from pydantic import BaseModel
 
 from ..database import (
     get_db_context,
@@ -916,3 +917,150 @@ async def get_recent_activity(_: dict = Depends(require_admin)):
             }
             for row in rows
         ]
+
+
+# PAD Analytics integration endpoints
+class PADImportRequest(BaseModel):
+    project_id: int
+    project_name: str
+
+
+@router.get("/pad-projects")
+async def list_pad_projects(_: dict = Depends(require_admin)):
+    """List available PAD projects from pad-analytics."""
+    try:
+        import pad_analytics as pad
+
+        projects = pad.get_projects()
+        return [
+            {
+                "id": int(row["id"]),
+                "name": row["project_name"],
+                "annotation": row.get("annotation", "")
+            }
+            for _, row in projects.iterrows()
+            if row["project_name"]  # Filter out empty names
+        ]
+    except ImportError:
+        raise HTTPException(
+            status_code=503,
+            detail="pad-analytics library is not installed"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch PAD projects: {str(e)}"
+        )
+
+
+@router.post("/pad-import")
+async def import_pad_samples(
+    data: PADImportRequest,
+    _: dict = Depends(require_admin)
+):
+    """Import one sample per drug from a PAD project."""
+    try:
+        import pad_analytics as pad
+    except ImportError:
+        raise HTTPException(
+            status_code=503,
+            detail="pad-analytics library is not installed"
+        )
+
+    import httpx
+    from pathlib import Path
+
+    # Get cards from project
+    try:
+        cards = pad.get_project_cards(data.project_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch project cards: {str(e)}"
+        )
+
+    # Filter valid cards (not deleted, quantity=100%)
+    valid_cards = cards[(cards['deleted'] == False) & (cards['quantity'] == 100)].copy()
+
+    if valid_cards.empty:
+        raise HTTPException(
+            status_code=400,
+            detail="No valid cards found in project (need quantity=100% and not deleted)"
+        )
+
+    # Normalize drug names and select one per drug
+    valid_cards['drug_normalized'] = valid_cards['sample_name'].str.lower().str.strip()
+    one_per_drug = valid_cards.groupby('drug_normalized').first().reset_index()
+
+    # Download images and create samples
+    samples_dir = Path("sample_images")
+    samples_dir.mkdir(exist_ok=True)
+
+    imported_samples = []
+    async with httpx.AsyncClient() as client:
+        for _, card in one_per_drug.iterrows():
+            # Build image URL from processed_file_location
+            processed_path = card['processed_file_location']
+            # Convert /var/www/html/images/... to https://pad.crc.nd.edu/images/...
+            relative_path = processed_path.replace('/var/www/html/', '')
+            image_url = f"https://pad.crc.nd.edu/{relative_path}"
+
+            # Clean drug name for filename
+            drug_name = card['drug_normalized'].replace(' ', '-').replace('(', '').replace(')', '')
+            filename = f"{drug_name}_{card['id']}_processed.png"
+            local_path = samples_dir / filename
+
+            try:
+                response = await client.get(image_url, timeout=30.0)
+                response.raise_for_status()
+                local_path.write_bytes(response.content)
+
+                imported_samples.append({
+                    "drug_name": drug_name,
+                    "drug_name_display": card['sample_name'].title(),
+                    "card_id": int(card['id']),
+                    "quantity": int(card['quantity']),
+                    "filename": filename,
+                    "path": f"sample_images/{filename}",
+                    "image_type": "processed"
+                })
+            except Exception as e:
+                print(f"Failed to download {image_url}: {e}")
+                continue
+
+    if not imported_samples:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to download any images from the project"
+        )
+
+    # Save to database - REPLACE samples not used in any study
+    async with get_db_context() as db:
+        # Only delete samples that are not referenced by any study
+        await db.execute("""
+            DELETE FROM samples
+            WHERE id NOT IN (SELECT DISTINCT sample_id FROM study_samples)
+        """)
+
+        # Insert new samples
+        for sample in imported_samples:
+            await db.execute("""
+                INSERT INTO samples
+                (drug_name, drug_name_display, card_id, quantity, filename, image_path, image_type)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
+                sample['drug_name'],
+                sample['drug_name_display'],
+                sample['card_id'],
+                sample['quantity'],
+                sample['filename'],
+                sample['path'],
+                sample['image_type']
+            ))
+        await db.commit()
+
+    return {
+        "imported": len(imported_samples),
+        "project_name": data.project_name,
+        "samples": imported_samples
+    }
