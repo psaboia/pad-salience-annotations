@@ -923,6 +923,7 @@ async def get_recent_activity(_: dict = Depends(require_admin)):
 class PADImportRequest(BaseModel):
     project_id: int
     project_name: str
+    samples_per_drug: int = 1  # Number of samples (different sample_id) per drug
 
 
 @router.get("/pad-projects")
@@ -988,9 +989,30 @@ async def import_pad_samples(
             detail="No valid cards found in project (need quantity=100% and not deleted)"
         )
 
-    # Normalize drug names and select one per drug
+    # Normalize drug names
     valid_cards['drug_normalized'] = valid_cards['sample_name'].str.lower().str.strip()
-    one_per_drug = valid_cards.groupby('drug_normalized').first().reset_index()
+
+    # Select N samples per drug with different sample_ids
+    # First, get one card per (drug, sample_id) combination
+    unique_samples = valid_cards.groupby(['drug_normalized', 'sample_id']).first().reset_index()
+
+    # Then select up to N different sample_ids per drug
+    samples_per_drug = data.samples_per_drug
+    selected_samples = []
+    for drug in unique_samples['drug_normalized'].unique():
+        drug_samples = unique_samples[unique_samples['drug_normalized'] == drug]
+        # Take up to N samples with different sample_ids
+        selected = drug_samples.head(samples_per_drug)
+        selected_samples.append(selected)
+
+    if not selected_samples:
+        raise HTTPException(
+            status_code=400,
+            detail="No valid samples found after filtering"
+        )
+
+    import pandas as pd
+    samples_to_import = pd.concat(selected_samples, ignore_index=True)
 
     # Download images and create samples
     samples_dir = Path("sample_images")
@@ -998,7 +1020,7 @@ async def import_pad_samples(
 
     imported_samples = []
     async with httpx.AsyncClient() as client:
-        for _, card in one_per_drug.iterrows():
+        for _, card in samples_to_import.iterrows():
             # Build image URL from processed_file_location
             processed_path = card['processed_file_location']
             # Convert /var/www/html/images/... to https://pad.crc.nd.edu/images/...

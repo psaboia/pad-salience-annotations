@@ -435,6 +435,22 @@
         max-width: 300px;
     }
 
+    .samples-per-drug {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .samples-per-drug label {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        white-space: nowrap;
+    }
+
+    .samples-per-drug input {
+        text-align: center;
+    }
+
     .pad-import-hint {
         margin: 10px 0 0 0;
         font-size: 0.8rem;
@@ -697,12 +713,16 @@
                         <select id="padProjectSelect" class="form-control">
                             <option value="">Select a project...</option>
                         </select>
+                        <div class="samples-per-drug">
+                            <label for="samplesPerDrug">Samples per drug:</label>
+                            <input type="number" id="samplesPerDrug" class="form-control" value="1" min="1" max="10" style="width: 70px;">
+                        </div>
                         <button type="button" class="btn btn-primary" onclick="loadFromPAD()" id="loadPadBtn">
                             Load Samples
                         </button>
                     </div>
                     <p class="pad-import-hint">
-                        This will fetch one sample per drug from the selected project (quantity=100%, not deleted)
+                        Fetches N samples per drug with different sample IDs (quantity=100%, not deleted)
                     </p>
                 </div>
 
@@ -844,6 +864,7 @@
         const select = document.getElementById('padProjectSelect');
         const projectId = select.value;
         const projectName = select.options[select.selectedIndex].dataset.name || select.options[select.selectedIndex].text;
+        const samplesPerDrug = parseInt(document.getElementById('samplesPerDrug').value) || 1;
 
         if (!projectId) {
             showError('Please select a project');
@@ -859,7 +880,8 @@
                 method: 'POST',
                 body: JSON.stringify({
                     project_id: parseInt(projectId),
-                    project_name: projectName
+                    project_name: projectName,
+                    samples_per_drug: samplesPerDrug
                 })
             });
 
