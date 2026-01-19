@@ -7,6 +7,7 @@ from .auth import (
     Token,
     SwitchRoleRequest,
     UserUpdate,
+    ChangePasswordRequest,
 )
 from .studies import (
     StudyCreate,
@@ -37,6 +38,7 @@ __all__ = [
     "Token",
     "SwitchRoleRequest",
     "UserUpdate",
+    "ChangePasswordRequest",
     "StudyCreate",
     "StudyUpdate",
     "StudyResponse",

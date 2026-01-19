@@ -60,6 +60,12 @@ class SwitchRoleRequest(BaseModel):
     role: str
 
 
+class ChangePasswordRequest(BaseModel):
+    """Request model for changing password."""
+    current_password: str
+    new_password: str
+
+
 class Token(BaseModel):
     """JWT token response."""
     access_token: str
