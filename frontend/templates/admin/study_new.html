@@ -885,7 +885,8 @@
                 })
             });
 
-            showSuccess(`Imported ${result.imported} samples from ${projectName}`);
+            const tagsMsg = result.tags_allocated ? ` (${result.tags_allocated} AprilTags allocated)` : '';
+            showSuccess(`Imported ${result.imported} samples from ${projectName}${tagsMsg}`);
 
             // Clear current selection and reload samples
             selectedSamples.clear();

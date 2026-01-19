@@ -26,6 +26,7 @@ from ..database import (
     get_user_roles,
     set_user_roles,
     get_sample_tags_by_position,
+    allocate_tags_for_all_samples,
 )
 from ..models import (
     StudyCreate,
@@ -1058,6 +1059,12 @@ async def import_pad_samples(
 
     # Save to database - REPLACE samples not used in any study
     async with get_db_context() as db:
+        # Delete tags for samples that will be deleted
+        await db.execute("""
+            DELETE FROM sample_tags
+            WHERE sample_id NOT IN (SELECT DISTINCT sample_id FROM study_samples)
+        """)
+
         # Only delete samples that are not referenced by any study
         await db.execute("""
             DELETE FROM samples
@@ -1081,8 +1088,12 @@ async def import_pad_samples(
             ))
         await db.commit()
 
+        # Allocate AprilTags for eye-tracking
+        tags_allocated = await allocate_tags_for_all_samples(db)
+
     return {
         "imported": len(imported_samples),
+        "tags_allocated": tags_allocated,
         "project_name": data.project_name,
         "samples": imported_samples
     }

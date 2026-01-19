@@ -972,3 +972,128 @@ async def identify_sample_by_tags(
         return best_match
 
     return None
+
+
+# AprilTag allocation functions
+APRILTAG_TOTAL = 587  # IDs 0-586 for tag36h11 family
+TAGS_PER_SAMPLE = 4
+TAG_POSITIONS = ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+MIN_TAG_DISTANCE = 2  # Minimum number of different tags between any two samples
+
+
+async def get_all_tag_allocations(db: aiosqlite.Connection) -> dict[int, set[int]]:
+    """Get all existing tag allocations as {sample_id: set of tag_ids}."""
+    cursor = await db.execute("""
+        SELECT sample_id, GROUP_CONCAT(tag_id) as tags
+        FROM sample_tags
+        GROUP BY sample_id
+    """)
+    rows = await cursor.fetchall()
+
+    allocations = {}
+    for row in rows:
+        tags = set(int(t) for t in row['tags'].split(','))
+        allocations[row['sample_id']] = tags
+    return allocations
+
+
+async def get_samples_without_tags(db: aiosqlite.Connection) -> list[dict]:
+    """Get all samples that don't have tags allocated."""
+    cursor = await db.execute("""
+        SELECT s.id, s.drug_name_display, s.card_id
+        FROM samples s
+        LEFT JOIN sample_tags st ON s.id = st.sample_id
+        WHERE st.id IS NULL
+        ORDER BY s.id
+    """)
+    rows = await cursor.fetchall()
+    return await rows_to_dicts(rows)
+
+
+def _is_valid_tag_allocation(candidate: set[int], existing: list[set[int]]) -> bool:
+    """Check if a candidate allocation has minimum distance from all existing allocations."""
+    for existing_set in existing:
+        shared = len(candidate & existing_set)
+        if shared > TAGS_PER_SAMPLE - MIN_TAG_DISTANCE:
+            return False
+    return True
+
+
+def _allocate_tags_greedy(existing_allocations: list[set[int]], count: int = 1) -> list[set[int]]:
+    """Allocate tag sets using a greedy algorithm."""
+    from itertools import combinations
+
+    all_tags = list(range(APRILTAG_TOTAL))
+    new_allocations = []
+    all_existing = existing_allocations.copy()
+
+    for _ in range(count):
+        # Count tag usage to prefer less used tags
+        tag_usage = {}
+        for alloc in all_existing:
+            for tag in alloc:
+                tag_usage[tag] = tag_usage.get(tag, 0) + 1
+
+        sorted_tags = sorted(all_tags, key=lambda t: tag_usage.get(t, 0))
+
+        found = False
+        # Try combinations starting with least used tags
+        for combo in combinations(sorted_tags[:100], TAGS_PER_SAMPLE):
+            candidate = set(combo)
+            if _is_valid_tag_allocation(candidate, all_existing):
+                new_allocations.append(candidate)
+                all_existing.append(candidate)
+                found = True
+                break
+
+        if not found:
+            # Fallback: try all combinations
+            for combo in combinations(all_tags, TAGS_PER_SAMPLE):
+                candidate = set(combo)
+                if _is_valid_tag_allocation(candidate, all_existing):
+                    new_allocations.append(candidate)
+                    all_existing.append(candidate)
+                    found = True
+                    break
+
+        if not found:
+            raise ValueError(f"Cannot allocate more tags. Maximum capacity reached.")
+
+    return new_allocations
+
+
+async def allocate_tags_for_sample(db: aiosqlite.Connection, sample_id: int, existing_sets: list[set[int]]) -> set[int]:
+    """Allocate and save tags for a single sample."""
+    new_tags = _allocate_tags_greedy(existing_sets, count=1)[0]
+
+    tag_list = sorted(new_tags)
+    for i, position in enumerate(TAG_POSITIONS):
+        await db.execute("""
+            INSERT INTO sample_tags (sample_id, tag_id, position)
+            VALUES (?, ?, ?)
+        """, (sample_id, tag_list[i], position))
+
+    return new_tags
+
+
+async def allocate_tags_for_all_samples(db: aiosqlite.Connection) -> int:
+    """Allocate tags for all samples that don't have them. Returns count of allocations."""
+    existing = await get_all_tag_allocations(db)
+    samples_needing_tags = await get_samples_without_tags(db)
+
+    if not samples_needing_tags:
+        return 0
+
+    existing_sets = list(existing.values())
+    allocated_count = 0
+
+    for sample in samples_needing_tags:
+        try:
+            new_tags = await allocate_tags_for_sample(db, sample['id'], existing_sets)
+            existing_sets.append(new_tags)
+            allocated_count += 1
+        except ValueError:
+            break
+
+    await db.commit()
+    return allocated_count
