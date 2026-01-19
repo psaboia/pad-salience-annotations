@@ -3,7 +3,7 @@
 from fastapi import APIRouter, HTTPException, status, Response, Depends
 
 from ..database import get_db_context, get_user_by_email, create_user, get_user_roles, add_user_role
-from ..models import UserCreate, UserLogin, UserResponse, Token, SwitchRoleRequest
+from ..models import UserCreate, UserLogin, UserResponse, Token, SwitchRoleRequest, ChangePasswordRequest
 from ..services.auth import (
     hash_password,
     verify_password,
@@ -92,6 +92,35 @@ async def get_me(user: dict = Depends(get_current_user)):
         is_active=bool(user["is_active"]),
         created_at=user.get("created_at")
     )
+
+
+@router.post("/change-password")
+async def change_password(data: ChangePasswordRequest, user: dict = Depends(get_current_user)):
+    """Change the current user's password."""
+    # Verify current password
+    if not verify_password(data.current_password, user["password_hash"]):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect"
+        )
+
+    # Validate new password
+    if len(data.new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be at least 6 characters"
+        )
+
+    # Update password in database
+    new_hash = hash_password(data.new_password)
+    async with get_db_context() as db:
+        await db.execute(
+            "UPDATE users SET password_hash = ? WHERE id = ?",
+            (new_hash, user["id"])
+        )
+        await db.commit()
+
+    return {"status": "success", "message": "Password changed successfully"}
 
 
 @router.post("/switch-role", response_model=Token)
