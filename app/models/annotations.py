@@ -96,6 +96,7 @@ class SessionProgressResponse(BaseModel):
     is_complete: bool = False
     next_sample: Optional[SampleInfo] = None
     eyetracking_mode: Optional[str] = "disabled"  # 'disabled' or 'required'
+    annotation_mode: Optional[str] = "drawing"  # 'drawing' or 'audio_only'
 
 
 # Legacy models for backward compatibility

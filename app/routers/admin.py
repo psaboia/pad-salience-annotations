@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from typing import List
+from pydantic import BaseModel
 
 from ..database import (
     get_db_context,
@@ -25,6 +26,7 @@ from ..database import (
     get_user_roles,
     set_user_roles,
     get_sample_tags_by_position,
+    allocate_tags_for_all_samples,
 )
 from ..models import (
     StudyCreate,
@@ -71,7 +73,8 @@ async def create_new_study(data: StudyCreate, admin: dict = Depends(require_admi
             description=data.description,
             instructions=data.instructions,
             created_by=admin["id"],
-            eyetracking_mode=data.eyetracking_mode or "disabled"
+            eyetracking_mode=data.eyetracking_mode or "disabled",
+            annotation_mode=data.annotation_mode or "drawing"
         )
         study = await get_study_by_id(db, study_id)
         return StudyResponse(**study)
@@ -916,3 +919,182 @@ async def get_recent_activity(_: dict = Depends(require_admin)):
             }
             for row in rows
         ]
+
+
+# PAD Analytics integration endpoints
+class PADImportRequest(BaseModel):
+    project_id: int
+    project_name: str
+    samples_per_drug: int = 1  # Number of samples (different sample_id) per drug
+
+
+@router.get("/pad-projects")
+async def list_pad_projects(_: dict = Depends(require_admin)):
+    """List available PAD projects from pad-analytics."""
+    try:
+        import pad_analytics as pad
+
+        projects = pad.get_projects()
+        return [
+            {
+                "id": int(row["id"]),
+                "name": row["project_name"],
+                "annotation": row.get("annotation", "")
+            }
+            for _, row in projects.iterrows()
+            if row["project_name"]  # Filter out empty names
+        ]
+    except ImportError:
+        raise HTTPException(
+            status_code=503,
+            detail="pad-analytics library is not installed"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch PAD projects: {str(e)}"
+        )
+
+
+@router.post("/pad-import")
+async def import_pad_samples(
+    data: PADImportRequest,
+    _: dict = Depends(require_admin)
+):
+    """Import one sample per drug from a PAD project."""
+    try:
+        import pad_analytics as pad
+    except ImportError:
+        raise HTTPException(
+            status_code=503,
+            detail="pad-analytics library is not installed"
+        )
+
+    import httpx
+    from pathlib import Path
+
+    # Get cards from project
+    try:
+        cards = pad.get_project_cards(data.project_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch project cards: {str(e)}"
+        )
+
+    # Filter valid cards (not deleted, quantity=100%)
+    valid_cards = cards[(cards['deleted'] == False) & (cards['quantity'] == 100)].copy()
+
+    if valid_cards.empty:
+        raise HTTPException(
+            status_code=400,
+            detail="No valid cards found in project (need quantity=100% and not deleted)"
+        )
+
+    # Normalize drug names
+    valid_cards['drug_normalized'] = valid_cards['sample_name'].str.lower().str.strip()
+
+    # Select N samples per drug with different sample_ids
+    # First, get one card per (drug, sample_id) combination
+    unique_samples = valid_cards.groupby(['drug_normalized', 'sample_id']).first().reset_index()
+
+    # Then select up to N different sample_ids per drug
+    samples_per_drug = data.samples_per_drug
+    selected_samples = []
+    for drug in unique_samples['drug_normalized'].unique():
+        drug_samples = unique_samples[unique_samples['drug_normalized'] == drug]
+        # Take up to N samples with different sample_ids
+        selected = drug_samples.head(samples_per_drug)
+        selected_samples.append(selected)
+
+    if not selected_samples:
+        raise HTTPException(
+            status_code=400,
+            detail="No valid samples found after filtering"
+        )
+
+    import pandas as pd
+    samples_to_import = pd.concat(selected_samples, ignore_index=True)
+
+    # Download images and create samples
+    samples_dir = Path("sample_images")
+    samples_dir.mkdir(exist_ok=True)
+
+    imported_samples = []
+    async with httpx.AsyncClient() as client:
+        for _, card in samples_to_import.iterrows():
+            # Build image URL from processed_file_location
+            processed_path = card['processed_file_location']
+            # Convert /var/www/html/images/... to https://pad.crc.nd.edu/images/...
+            relative_path = processed_path.replace('/var/www/html/', '')
+            image_url = f"https://pad.crc.nd.edu/{relative_path}"
+
+            # Clean drug name for filename
+            drug_name = card['drug_normalized'].replace(' ', '-').replace('(', '').replace(')', '')
+            filename = f"{drug_name}_{card['id']}_processed.png"
+            local_path = samples_dir / filename
+
+            try:
+                response = await client.get(image_url, timeout=30.0)
+                response.raise_for_status()
+                local_path.write_bytes(response.content)
+
+                imported_samples.append({
+                    "drug_name": drug_name,
+                    "drug_name_display": card['sample_name'].title(),
+                    "card_id": int(card['id']),
+                    "quantity": int(card['quantity']),
+                    "filename": filename,
+                    "path": f"sample_images/{filename}",
+                    "image_type": "processed"
+                })
+            except Exception as e:
+                print(f"Failed to download {image_url}: {e}")
+                continue
+
+    if not imported_samples:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to download any images from the project"
+        )
+
+    # Save to database - REPLACE samples not used in any study
+    async with get_db_context() as db:
+        # Delete tags for samples that will be deleted
+        await db.execute("""
+            DELETE FROM sample_tags
+            WHERE sample_id NOT IN (SELECT DISTINCT sample_id FROM study_samples)
+        """)
+
+        # Only delete samples that are not referenced by any study
+        await db.execute("""
+            DELETE FROM samples
+            WHERE id NOT IN (SELECT DISTINCT sample_id FROM study_samples)
+        """)
+
+        # Insert new samples
+        for sample in imported_samples:
+            await db.execute("""
+                INSERT INTO samples
+                (drug_name, drug_name_display, card_id, quantity, filename, image_path, image_type)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
+                sample['drug_name'],
+                sample['drug_name_display'],
+                sample['card_id'],
+                sample['quantity'],
+                sample['filename'],
+                sample['path'],
+                sample['image_type']
+            ))
+        await db.commit()
+
+        # Allocate AprilTags for eye-tracking
+        tags_allocated = await allocate_tags_for_all_samples(db)
+
+    return {
+        "imported": len(imported_samples),
+        "tags_allocated": tags_allocated,
+        "project_name": data.project_name,
+        "samples": imported_samples
+    }

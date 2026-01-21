@@ -277,6 +277,24 @@
             margin-bottom: 15px;
         }
 
+        .audio-only-notice {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid var(--primary-color);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .audio-only-notice p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Disable canvas interactions in audio-only mode */
+        .audio-only-mode #annotationCanvas {
+            pointer-events: none;
+        }
+
         .tool-buttons {
             display: flex;
             gap: 6px;
@@ -906,7 +924,7 @@
                 <span class="eyetracking-badge"><span class="dot"></span>Eye-tracking</span>
             </div>
 
-            <div class="tools-section">
+            <div class="tools-section" id="drawingToolsSection">
                 <h3>Tools</h3>
                 <div class="tool-buttons">
                     <button class="tool-btn icon-btn secondary active" id="rectTool" onclick="setTool('rectangle')" title="Rectangle">
@@ -930,6 +948,12 @@
                     <div class="color-option" style="background: #ffa502;" onclick="setColor('#ffa502')" title="Orange"></div>
                     <div class="color-option" style="background: #a55eea;" onclick="setColor('#a55eea')" title="Purple"></div>
                 </div>
+            </div>
+
+            <!-- Audio-only mode indicator (shown when drawing tools are hidden) -->
+            <div class="tools-section audio-only-notice" id="audioOnlyNotice" style="display: none;">
+                <h3>Audio Only Mode</h3>
+                <p>This study uses audio recording and eye-tracking only. Drawing tools are disabled.</p>
             </div>
 
             <div class="divider"></div>
@@ -1224,6 +1248,25 @@
             }
         }
 
+        // Apply annotation mode from study settings
+        function applyAnnotationMode(mode) {
+            const drawingTools = document.getElementById('drawingToolsSection');
+            const audioOnlyNotice = document.getElementById('audioOnlyNotice');
+
+            if (mode === 'audio_only') {
+                // Hide drawing tools
+                if (drawingTools) drawingTools.style.display = 'none';
+                if (audioOnlyNotice) audioOnlyNotice.style.display = 'block';
+                // Disable canvas drawing
+                document.body.classList.add('audio-only-mode');
+            } else {
+                // Show drawing tools (default)
+                if (drawingTools) drawingTools.style.display = 'block';
+                if (audioOnlyNotice) audioOnlyNotice.style.display = 'none';
+                document.body.classList.remove('audio-only-mode');
+            }
+        }
+
         // Load current session data from API
         async function loadCurrentSession() {
             try {
@@ -1243,6 +1286,9 @@
 
                 // Apply eyetracking mode from study settings
                 applyEyetrackingMode(sessionData.eyetracking_mode || 'disabled');
+
+                // Apply annotation mode from study settings
+                applyAnnotationMode(sessionData.annotation_mode || 'drawing');
 
                 loadSampleImage();
                 updateProgress();
@@ -1671,7 +1717,9 @@
 
         async function completeSession() {
             if (!currentSample) return;
-            if (annotations.length === 0) {
+            // Only require annotations in drawing mode
+            const isAudioOnly = sessionData && sessionData.annotation_mode === 'audio_only';
+            if (!isAudioOnly && annotations.length === 0) {
                 alert('Please add at least one annotation.');
                 return;
             }

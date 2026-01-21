@@ -106,9 +106,10 @@ async def get_current_sample(study_id: int, user: dict = Depends(require_special
                 detail="Study not started. Call /start first."
             )
 
-        # Get study for eyetracking_mode
+        # Get study for eyetracking_mode and annotation_mode
         study = await get_study_by_id(db, study_id)
         eyetracking_mode = study.get("eyetracking_mode", "disabled") if study else "disabled"
+        annotation_mode = study.get("annotation_mode", "drawing") if study else "drawing"
 
         progress = await get_assignment_progress(db, assignment["id"])
 
@@ -119,7 +120,8 @@ async def get_current_sample(study_id: int, user: dict = Depends(require_special
                 completed=progress["completed"],
                 percentage=100.0,
                 is_complete=True,
-                eyetracking_mode=eyetracking_mode
+                eyetracking_mode=eyetracking_mode,
+                annotation_mode=annotation_mode
             )
 
         # Get current session data
@@ -132,7 +134,8 @@ async def get_current_sample(study_id: int, user: dict = Depends(require_special
                 completed=progress["completed"],
                 percentage=100.0,
                 is_complete=True,
-                eyetracking_mode=eyetracking_mode
+                eyetracking_mode=eyetracking_mode,
+                annotation_mode=annotation_mode
             )
 
         # Create session if needed
@@ -202,7 +205,8 @@ async def get_current_sample(study_id: int, user: dict = Depends(require_special
             percentage=progress["percentage"],
             is_complete=False,
             next_sample=next_sample,
-            eyetracking_mode=eyetracking_mode
+            eyetracking_mode=eyetracking_mode,
+            annotation_mode=annotation_mode
         )
 
 

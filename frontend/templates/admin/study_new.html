@@ -304,6 +304,37 @@
         margin-bottom: 8px;
     }
 
+    .sample-card .image-container {
+        position: relative;
+    }
+
+    .sample-card .zoom-btn {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        width: 24px;
+        height: 24px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .sample-card:hover .zoom-btn {
+        opacity: 1;
+    }
+
+    .sample-card .zoom-btn:hover {
+        background: rgba(0, 212, 255, 0.8);
+    }
+
     .sample-card .name {
         font-size: 0.85rem;
         font-weight: 500;
@@ -376,6 +407,178 @@
     .selection-info .count {
         font-weight: 500;
         color: var(--primary-color);
+    }
+
+    /* PAD Import Section */
+    .pad-import-section {
+        background: rgba(0, 212, 255, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 20px;
+    }
+
+    .pad-import-section h4 {
+        margin: 0 0 12px 0;
+        font-size: 0.95rem;
+        color: var(--primary-color);
+    }
+
+    .pad-import-controls {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .pad-import-controls select {
+        flex: 1;
+        max-width: 300px;
+    }
+
+    .samples-per-drug {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .samples-per-drug label {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        white-space: nowrap;
+    }
+
+    .samples-per-drug input {
+        text-align: center;
+    }
+
+    .pad-import-hint,
+    .form-hint {
+        margin: 6px 0 0 0;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        display: block;
+    }
+
+    .section-divider {
+        display: flex;
+        align-items: center;
+        margin: 20px 0;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+    }
+
+    .section-divider::before,
+    .section-divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--border-color);
+    }
+
+    .section-divider span {
+        padding: 0 16px;
+    }
+
+    /* Image Preview Modal */
+    .image-preview-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 2000;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+    }
+
+    .image-preview-modal.active {
+        display: flex;
+    }
+
+    .image-preview-modal .modal-header {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 24px;
+        background: rgba(0, 0, 0, 0.5);
+    }
+
+    .image-preview-modal .modal-title {
+        color: white;
+        font-size: 1.1rem;
+        font-weight: 500;
+    }
+
+    .image-preview-modal .modal-subtitle {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+    }
+
+    .image-preview-modal .close-btn {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 32px;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+    }
+
+    .image-preview-modal .close-btn:hover {
+        color: var(--primary-color);
+    }
+
+    .image-preview-modal .image-container {
+        max-width: 90vw;
+        max-height: 80vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .image-preview-modal img {
+        max-width: 100%;
+        max-height: 80vh;
+        object-fit: contain;
+        border-radius: 8px;
+    }
+
+    .image-preview-modal .modal-actions {
+        position: absolute;
+        bottom: 24px;
+        display: flex;
+        gap: 12px;
+    }
+
+    .image-preview-modal .select-btn {
+        padding: 10px 24px;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .image-preview-modal .select-btn.selected {
+        background: var(--success-color);
+        border: none;
+        color: white;
+    }
+
+    .image-preview-modal .select-btn.not-selected {
+        background: transparent;
+        border: 2px solid var(--primary-color);
+        color: var(--primary-color);
+    }
+
+    .image-preview-modal .select-btn:hover {
+        transform: scale(1.05);
     }
 </style>
 {% endblock %}
@@ -490,6 +693,14 @@
                             <option value="required">Required (AprilTags visible)</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label for="annotationMode">Annotation Mode</label>
+                        <select id="annotationMode" class="form-control">
+                            <option value="drawing">Drawing (rectangles/polygons)</option>
+                            <option value="audio_only">Audio Only (no drawing tools)</option>
+                        </select>
+                        <small class="form-hint">Audio Only: specialists only record audio and eye-tracking, without drawing annotations</small>
+                    </div>
                 </form>
                 <div class="wizard-actions">
                     <a href="/admin" class="btn btn-secondary">Cancel</a>
@@ -504,6 +715,31 @@
                 <div class="card-header">
                     <h3 class="card-title">Select Samples</h3>
                 </div>
+
+                <!-- Load from PAD Project -->
+                <div class="pad-import-section">
+                    <h4>Load from PAD Project</h4>
+                    <div class="pad-import-controls">
+                        <select id="padProjectSelect" class="form-control">
+                            <option value="">Select a project...</option>
+                        </select>
+                        <div class="samples-per-drug">
+                            <label for="samplesPerDrug">Samples per drug:</label>
+                            <input type="number" id="samplesPerDrug" class="form-control" value="1" min="1" max="10" style="width: 70px;">
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="loadFromPAD()" id="loadPadBtn">
+                            Load Samples
+                        </button>
+                    </div>
+                    <p class="pad-import-hint">
+                        Fetches N samples per drug with different sample IDs (quantity=100%, not deleted)
+                    </p>
+                </div>
+
+                <div class="section-divider">
+                    <span>OR select from existing samples</span>
+                </div>
+
                 <div class="selection-info">
                     <span><span class="count" id="selectedSamplesCount">0</span> samples selected</span>
                     <button type="button" class="btn btn-secondary btn-sm" onclick="toggleAllSamples()">Toggle All</button>
@@ -569,6 +805,25 @@
         </div>
     </div>
 </div>
+
+<!-- Image Preview Modal -->
+<div class="image-preview-modal" id="imagePreviewModal" onclick="closeImagePreview(event)">
+    <div class="modal-header">
+        <div>
+            <div class="modal-title" id="previewTitle">Sample Name</div>
+            <div class="modal-subtitle" id="previewSubtitle">Card #12345</div>
+        </div>
+        <button class="close-btn" onclick="closeImagePreview()">&times;</button>
+    </div>
+    <div class="image-container" onclick="event.stopPropagation()">
+        <img id="previewImage" src="" alt="Sample preview">
+    </div>
+    <div class="modal-actions" onclick="event.stopPropagation()">
+        <button class="select-btn" id="previewSelectBtn" onclick="togglePreviewSample()">
+            Select for Study
+        </button>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -582,6 +837,9 @@
 
     async function loadData() {
         try {
+            // Load PAD projects
+            loadPADProjects();
+
             // Load samples
             samples = await apiCall('/api/admin/samples');
             renderSamples();
@@ -594,12 +852,74 @@
         }
     }
 
+    // Load PAD projects for the dropdown
+    async function loadPADProjects() {
+        try {
+            const projects = await apiCall('/api/admin/pad-projects');
+            const select = document.getElementById('padProjectSelect');
+            select.innerHTML = '<option value="">Select a project...</option>' +
+                projects.map(p => `<option value="${p.id}" data-name="${p.name}">${p.name}</option>`).join('');
+        } catch (error) {
+            console.error('Failed to load PAD projects:', error);
+            // Don't show error to user - PAD import is optional
+            const select = document.getElementById('padProjectSelect');
+            select.innerHTML = '<option value="">PAD projects unavailable</option>';
+            select.disabled = true;
+            document.getElementById('loadPadBtn').disabled = true;
+        }
+    }
+
+    // Load samples from selected PAD project
+    async function loadFromPAD() {
+        const select = document.getElementById('padProjectSelect');
+        const projectId = select.value;
+        const projectName = select.options[select.selectedIndex].dataset.name || select.options[select.selectedIndex].text;
+        const samplesPerDrug = parseInt(document.getElementById('samplesPerDrug').value) || 1;
+
+        if (!projectId) {
+            showError('Please select a project');
+            return;
+        }
+
+        const btn = document.getElementById('loadPadBtn');
+        btn.disabled = true;
+        btn.textContent = 'Loading...';
+
+        try {
+            const result = await apiCall('/api/admin/pad-import', {
+                method: 'POST',
+                body: JSON.stringify({
+                    project_id: parseInt(projectId),
+                    project_name: projectName,
+                    samples_per_drug: samplesPerDrug
+                })
+            });
+
+            const tagsMsg = result.tags_allocated ? ` (${result.tags_allocated} AprilTags allocated)` : '';
+            showSuccess(`Imported ${result.imported} samples from ${projectName}${tagsMsg}`);
+
+            // Clear current selection and reload samples
+            selectedSamples.clear();
+            samples = await apiCall('/api/admin/samples');
+            renderSamples();
+
+        } catch (error) {
+            showError(error.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Load Samples';
+        }
+    }
+
     function renderSamples() {
         const grid = document.getElementById('sampleGrid');
         grid.innerHTML = samples.map(s => `
             <div class="sample-card ${selectedSamples.has(s.id) ? 'selected' : ''}"
                  onclick="toggleSample(${s.id})">
-                <img src="/${s.image_path}" alt="${s.drug_name_display}">
+                <div class="image-container">
+                    <img src="/${s.image_path}" alt="${s.drug_name_display}">
+                    <button class="zoom-btn" onclick="event.stopPropagation(); openImagePreview(${s.id})" title="View full image">🔍</button>
+                </div>
                 <div class="name">${s.drug_name_display}</div>
                 <div class="card-id">Card #${s.card_id}</div>
             </div>
@@ -658,6 +978,62 @@
         renderSamples();
     }
 
+    // Image Preview Modal functions
+    let currentPreviewSampleId = null;
+
+    function openImagePreview(sampleId) {
+        const sample = samples.find(s => s.id === sampleId);
+        if (!sample) return;
+
+        currentPreviewSampleId = sampleId;
+
+        document.getElementById('previewTitle').textContent = sample.drug_name_display;
+        document.getElementById('previewSubtitle').textContent = `Card #${sample.card_id}`;
+        document.getElementById('previewImage').src = '/' + sample.image_path;
+
+        updatePreviewSelectButton();
+
+        document.getElementById('imagePreviewModal').classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeImagePreview(event) {
+        // If called from backdrop click, only close if clicking the backdrop itself
+        if (event && event.target !== event.currentTarget) return;
+
+        document.getElementById('imagePreviewModal').classList.remove('active');
+        document.body.style.overflow = '';
+        currentPreviewSampleId = null;
+    }
+
+    function togglePreviewSample() {
+        if (currentPreviewSampleId === null) return;
+
+        if (selectedSamples.has(currentPreviewSampleId)) {
+            selectedSamples.delete(currentPreviewSampleId);
+        } else {
+            selectedSamples.add(currentPreviewSampleId);
+        }
+
+        updatePreviewSelectButton();
+        renderSamples();
+    }
+
+    function updatePreviewSelectButton() {
+        const btn = document.getElementById('previewSelectBtn');
+        const isSelected = selectedSamples.has(currentPreviewSampleId);
+
+        btn.className = 'select-btn ' + (isSelected ? 'selected' : 'not-selected');
+        btn.textContent = isSelected ? '✓ Selected' : 'Select for Study';
+    }
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeImagePreview();
+        }
+    });
+
     function updateSelectedCounts() {
         document.getElementById('selectedSamplesCount').textContent = selectedSamples.size;
         document.getElementById('selectedSpecialistsCount').textContent = selectedSpecialists.size;
@@ -714,7 +1090,8 @@
                 name: document.getElementById('name').value.trim(),
                 description: document.getElementById('description').value.trim() || null,
                 instructions: document.getElementById('instructions').value.trim() || null,
-                eyetracking_mode: document.getElementById('eyetrackingMode').value
+                eyetracking_mode: document.getElementById('eyetrackingMode').value,
+                annotation_mode: document.getElementById('annotationMode').value
             };
             const study = await apiCall('/api/admin/studies', {
                 method: 'POST',
