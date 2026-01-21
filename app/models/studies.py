@@ -11,6 +11,8 @@ class StudyCreate(BaseModel):
     instructions: Optional[str] = None
     eyetracking_mode: Optional[str] = "disabled"  # 'disabled' or 'required'
     annotation_mode: Optional[str] = "drawing"  # 'drawing' or 'audio_only'
+    default_image_width: Optional[int] = None
+    default_image_height: Optional[int] = None
 
 
 class StudyUpdate(BaseModel):
@@ -21,6 +23,8 @@ class StudyUpdate(BaseModel):
     status: Optional[str] = None
     eyetracking_mode: Optional[str] = None  # 'disabled' or 'required'
     annotation_mode: Optional[str] = None  # 'drawing' or 'audio_only'
+    default_image_width: Optional[int] = None
+    default_image_height: Optional[int] = None
 
 
 class StudyResponse(BaseModel):
@@ -32,6 +36,8 @@ class StudyResponse(BaseModel):
     status: str
     eyetracking_mode: Optional[str] = "disabled"  # 'disabled' or 'required'
     annotation_mode: Optional[str] = "drawing"  # 'drawing' or 'audio_only'
+    default_image_width: Optional[int] = None
+    default_image_height: Optional[int] = None
     created_by: int
     created_at: Optional[str] = None
     updated_at: Optional[str] = None

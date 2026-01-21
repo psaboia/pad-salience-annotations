@@ -486,6 +486,12 @@
                         Users
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="/admin/settings" class="nav-link">
+                        <span class="icon">⚙️</span>
+                        Settings
+                    </a>
+                </li>
             </ul>
         </nav>
     </aside>
@@ -515,6 +521,33 @@
                     <div class="spinner"></div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Dimensions Modal -->
+<div class="modal-overlay" id="editDimensionsModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Edit Default Image Dimensions</h3>
+            <button class="modal-close" onclick="closeEditDimensions()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+                Default dimensions are used as fallback when exporting metadata if no sessions exist yet.
+            </p>
+            <div class="form-group">
+                <label for="editImageWidth">Width (px)</label>
+                <input type="number" id="editImageWidth" placeholder="e.g., 800" min="100" max="4096">
+            </div>
+            <div class="form-group">
+                <label for="editImageHeight">Height (px)</label>
+                <input type="number" id="editImageHeight" placeholder="e.g., 600" min="100" max="4096">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeEditDimensions()">Cancel</button>
+            <button class="btn-save" onclick="saveDimensions()">Save</button>
         </div>
     </div>
 </div>
@@ -612,6 +645,15 @@
                     <div class="info-section">
                         <h4>Eye-tracking</h4>
                         <p>${study.eyetracking_mode === 'required' ? '🔴 Required (AprilTags visible)' : 'Disabled'}</p>
+                    </div>
+                    <div class="info-section">
+                        <h4>Default Image Dimensions</h4>
+                        <p>${study.default_image_width && study.default_image_height ?
+                            `${study.default_image_width} × ${study.default_image_height} px` :
+                            'Not set (will use dimensions from first completed session)'}</p>
+                        ${study.status === 'draft' ? `
+                            <button class="btn btn-secondary btn-sm" onclick="openEditDimensions()" style="margin-top: 8px;">Edit Dimensions</button>
+                        ` : ''}
                     </div>
                     ${study.status === 'draft' ? `
                         <div class="status-actions">
@@ -860,6 +902,43 @@
             showError(error.message);
         }
     }
+
+    // Edit Dimensions Modal
+    function openEditDimensions() {
+        document.getElementById('editImageWidth').value = currentStudy.default_image_width || '';
+        document.getElementById('editImageHeight').value = currentStudy.default_image_height || '';
+        document.getElementById('editDimensionsModal').classList.add('open');
+    }
+
+    function closeEditDimensions() {
+        document.getElementById('editDimensionsModal').classList.remove('open');
+    }
+
+    async function saveDimensions() {
+        const width = document.getElementById('editImageWidth').value;
+        const height = document.getElementById('editImageHeight').value;
+
+        try {
+            await apiCall(`/api/admin/studies/${studyId}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    default_image_width: width ? parseInt(width) : null,
+                    default_image_height: height ? parseInt(height) : null
+                })
+            });
+            closeEditDimensions();
+            loadStudy();
+        } catch (error) {
+            showError(error.message);
+        }
+    }
+
+    // Close modal when clicking overlay
+    document.getElementById('editDimensionsModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeEditDimensions();
+        }
+    });
 
     function toggleUserMenu() {
         document.getElementById('userMenu').classList.toggle('open');

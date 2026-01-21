@@ -10,6 +10,7 @@ class SampleResponse(BaseModel):
     drug_name: str
     drug_name_display: str
     card_id: int
+    pad_sample_id: Optional[int] = None
     filename: str
     image_path: str
     quantity: Optional[int] = None

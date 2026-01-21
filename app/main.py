@@ -276,6 +276,16 @@ async def admin_users(request: Request):
     return templates.TemplateResponse("admin/users.html", {"request": request, "user": user})
 
 
+@app.get("/admin/settings")
+async def admin_settings(request: Request):
+    """Render admin settings page."""
+    user = await get_current_user_optional(request)
+    if not user or user.get("active_role") not in ("admin", "super_admin"):
+        return RedirectResponse(url="/login", status_code=302)
+
+    return templates.TemplateResponse("admin/settings.html", {"request": request, "user": user})
+
+
 @app.get("/specialist")
 async def specialist_dashboard(request: Request):
     """Render specialist dashboard."""

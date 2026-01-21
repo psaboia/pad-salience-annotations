@@ -373,15 +373,19 @@ async def create_study(
     description: Optional[str] = None,
     instructions: Optional[str] = None,
     eyetracking_mode: str = "disabled",
-    annotation_mode: str = "drawing"
+    annotation_mode: str = "drawing",
+    default_image_width: Optional[int] = None,
+    default_image_height: Optional[int] = None
 ) -> int:
     """Create a new study."""
     cursor = await db.execute(
         """
-        INSERT INTO studies (name, description, instructions, created_by, eyetracking_mode, annotation_mode)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO studies (name, description, instructions, created_by, eyetracking_mode, annotation_mode,
+                            default_image_width, default_image_height)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (name, description, instructions, created_by, eyetracking_mode, annotation_mode)
+        (name, description, instructions, created_by, eyetracking_mode, annotation_mode,
+         default_image_width, default_image_height)
     )
     await db.commit()
     return cursor.lastrowid

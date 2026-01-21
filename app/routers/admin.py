@@ -1,8 +1,22 @@
 """Admin API router."""
 
+import csv
+import io
+import json
+import sys
+import zipfile
+from datetime import datetime
+from pathlib import Path
+
 from fastapi import APIRouter, HTTPException, status, Depends, Query
+from fastapi.responses import StreamingResponse
 from typing import List
 from pydantic import BaseModel
+from PIL import Image
+
+# Import AprilTag generator
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))
+from generate_apriltags import generate_tag_image
 
 from ..database import (
     get_db_context,
@@ -74,7 +88,9 @@ async def create_new_study(data: StudyCreate, admin: dict = Depends(require_admi
             instructions=data.instructions,
             created_by=admin["id"],
             eyetracking_mode=data.eyetracking_mode or "disabled",
-            annotation_mode=data.annotation_mode or "drawing"
+            annotation_mode=data.annotation_mode or "drawing",
+            default_image_width=data.default_image_width,
+            default_image_height=data.default_image_height
         )
         study = await get_study_by_id(db, study_id)
         return StudyResponse(**study)
@@ -126,6 +142,16 @@ async def update_study(study_id: int, data: StudyUpdate, _: dict = Depends(requi
             await db.execute(
                 "UPDATE studies SET eyetracking_mode = ?, updated_at = datetime('now') WHERE id = ?",
                 (data.eyetracking_mode, study_id)
+            )
+        if data.default_image_width is not None:
+            await db.execute(
+                "UPDATE studies SET default_image_width = ?, updated_at = datetime('now') WHERE id = ?",
+                (data.default_image_width, study_id)
+            )
+        if data.default_image_height is not None:
+            await db.execute(
+                "UPDATE studies SET default_image_height = ?, updated_at = datetime('now') WHERE id = ?",
+                (data.default_image_height, study_id)
             )
         if data.status is not None:
             await update_study_status(db, study_id, data.status)
@@ -1043,6 +1069,7 @@ async def import_pad_samples(
                     "drug_name": drug_name,
                     "drug_name_display": card['sample_name'].title(),
                     "card_id": int(card['id']),
+                    "pad_sample_id": int(card['sample_id']),
                     "quantity": int(card['quantity']),
                     "filename": filename,
                     "path": f"sample_images/{filename}",
@@ -1076,12 +1103,13 @@ async def import_pad_samples(
         for sample in imported_samples:
             await db.execute("""
                 INSERT INTO samples
-                (drug_name, drug_name_display, card_id, quantity, filename, image_path, image_type)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (drug_name, drug_name_display, card_id, pad_sample_id, quantity, filename, image_path, image_type)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 sample['drug_name'],
                 sample['drug_name_display'],
                 sample['card_id'],
+                sample['pad_sample_id'],
                 sample['quantity'],
                 sample['filename'],
                 sample['path'],
@@ -1098,3 +1126,498 @@ async def import_pad_samples(
         "project_name": data.project_name,
         "samples": imported_samples
     }
+
+
+@router.post("/pad-backfill-sample-ids")
+async def backfill_pad_sample_ids(
+    data: PADImportRequest,
+    _: dict = Depends(require_admin)
+):
+    """Backfill pad_sample_id for existing samples by querying PAD Analytics using card_id."""
+    try:
+        import pad_analytics as pad
+    except ImportError:
+        raise HTTPException(
+            status_code=503,
+            detail="pad-analytics library is not installed"
+        )
+
+    # Get cards from project
+    try:
+        cards = pad.get_project_cards(data.project_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch project cards: {str(e)}"
+        )
+
+    # Create a mapping from card_id to sample_id
+    card_to_sample = {}
+    for _, card in cards.iterrows():
+        card_to_sample[int(card['id'])] = int(card['sample_id'])
+
+    # Update samples in database
+    updated_count = 0
+    async with get_db_context() as db:
+        # Get all samples that have a card_id but no pad_sample_id
+        cursor = await db.execute(
+            "SELECT id, card_id FROM samples WHERE card_id IS NOT NULL AND (pad_sample_id IS NULL OR pad_sample_id = 0)"
+        )
+        rows = await cursor.fetchall()
+
+        for row in rows:
+            card_id = row["card_id"]
+            if card_id in card_to_sample:
+                pad_sample_id = card_to_sample[card_id]
+                await db.execute(
+                    "UPDATE samples SET pad_sample_id = ? WHERE id = ?",
+                    (pad_sample_id, row["id"])
+                )
+                updated_count += 1
+
+        await db.commit()
+
+    return {
+        "updated": updated_count,
+        "project_name": data.project_name,
+        "message": f"Updated {updated_count} samples with pad_sample_id from PAD Analytics"
+    }
+
+
+# Study metadata export (for replication)
+@router.get("/studies/{study_id}/export-metadata")
+async def export_study_metadata(study_id: int, _: dict = Depends(require_admin)):
+    """Export study metadata as ZIP containing metadata.csv and resized images."""
+    async with get_db_context() as db:
+        study = await get_study_by_id(db, study_id)
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
+
+        # Get default dimensions from study for fallback
+        study_default_width = study.get("default_image_width")
+        study_default_height = study.get("default_image_height")
+
+        # Query samples with image dimensions from first completed session
+        # Uses subquery to get only the first completed session per sample
+        cursor = await db.execute(
+            """
+            SELECT
+                s.id as sample_id,
+                s.pad_sample_id,
+                s.card_id,
+                s.drug_name,
+                s.drug_name_display,
+                s.image_path,
+                s.filename,
+                first_session.image_dimensions_json
+            FROM study_samples ss
+            JOIN samples s ON ss.sample_id = s.id
+            LEFT JOIN (
+                SELECT
+                    ans.study_sample_id,
+                    ans.image_dimensions_json
+                FROM annotation_sessions ans
+                WHERE ans.status = 'completed'
+                  AND ans.id = (
+                      SELECT MIN(ans2.id)
+                      FROM annotation_sessions ans2
+                      WHERE ans2.study_sample_id = ans.study_sample_id
+                        AND ans2.status = 'completed'
+                  )
+            ) first_session ON first_session.study_sample_id = ss.id
+            WHERE ss.study_id = ?
+            ORDER BY s.drug_name_display
+            """,
+            (study_id,)
+        )
+        rows = await cursor.fetchall()
+
+        if not rows:
+            raise HTTPException(status_code=400, detail="No samples found in study")
+
+        # Prepare CSV data
+        csv_rows = []
+        images_to_process = []
+
+        for row in rows:
+            sample_id = row["sample_id"]
+            image_path = row["image_path"]
+            filename = row["filename"]
+
+            # Parse image dimensions with fallback to study defaults
+            width = None
+            height = None
+            if row["image_dimensions_json"]:
+                try:
+                    dims = json.loads(row["image_dimensions_json"])
+                    width = dims.get("width")
+                    height = dims.get("height")
+                except (json.JSONDecodeError, TypeError):
+                    pass
+
+            # Fallback to study default dimensions if no session dimensions
+            if not width and study_default_width:
+                width = study_default_width
+            if not height and study_default_height:
+                height = study_default_height
+
+            # Get AprilTags for this sample
+            tags = await get_sample_tags_by_position(db, sample_id)
+
+            # Use pad_sample_id if available, otherwise use internal sample_id
+            export_sample_id = row["pad_sample_id"] if row["pad_sample_id"] else sample_id
+            csv_row = {
+                "sample_id": export_sample_id,
+                "card_id": row["card_id"],
+                "drug_name": row["drug_name"],
+                "image_width": width or "",
+                "image_height": height or "",
+                "tag_top_left": tags.get("top-left", ""),
+                "tag_top_right": tags.get("top-right", ""),
+                "tag_bottom_left": tags.get("bottom-left", ""),
+                "tag_bottom_right": tags.get("bottom-right", ""),
+                "image_filename": f"images/{filename}" if filename else ""
+            }
+            csv_rows.append(csv_row)
+
+            # Add to images to process if we have dimensions and path
+            if width and height and image_path:
+                images_to_process.append({
+                    "source_path": image_path,
+                    "filename": filename,
+                    "width": width,
+                    "height": height
+                })
+
+    # Collect all unique tag IDs
+    tag_ids = set()
+    for row in csv_rows:
+        for tag_col in ["tag_top_left", "tag_top_right", "tag_bottom_left", "tag_bottom_right"]:
+            if row[tag_col] != "":
+                tag_ids.add(int(row[tag_col]))
+
+    # Create ZIP in memory
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+        # Generate metadata.csv
+        csv_buffer = io.StringIO()
+        fieldnames = [
+            "sample_id", "card_id", "drug_name",
+            "image_width", "image_height",
+            "tag_top_left", "tag_top_right", "tag_bottom_left", "tag_bottom_right",
+            "image_filename"
+        ]
+        writer = csv.DictWriter(csv_buffer, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(csv_rows)
+        zf.writestr("metadata.csv", csv_buffer.getvalue())
+
+        # Process and add sample images
+        for img_info in images_to_process:
+            source_path = Path(img_info["source_path"])
+            if not source_path.exists():
+                continue
+
+            try:
+                with Image.open(source_path) as img:
+                    # Resize to annotation dimensions
+                    resized = img.resize(
+                        (img_info["width"], img_info["height"]),
+                        Image.Resampling.LANCZOS
+                    )
+
+                    # Save to bytes
+                    img_buffer = io.BytesIO()
+                    resized.save(img_buffer, format="PNG")
+                    img_buffer.seek(0)
+
+                    # Add to ZIP
+                    zf.writestr(f"images/{img_info['filename']}", img_buffer.read())
+            except Exception:
+                # Skip images that fail to process
+                continue
+
+        # Generate and add AprilTag images
+        for tag_id in sorted(tag_ids):
+            try:
+                tag_img = generate_tag_image(tag_id, size=100)
+                tag_buffer = io.BytesIO()
+                tag_img.save(tag_buffer, format="PNG")
+                tag_buffer.seek(0)
+                zf.writestr(f"tags/tag36h11_{tag_id}.png", tag_buffer.read())
+            except Exception:
+                # Skip tags that fail to generate
+                continue
+
+    zip_buffer.seek(0)
+
+    # Generate filename
+    study_name_clean = "".join(c if c.isalnum() or c in "-_" else "_" for c in study["name"])
+    date_str = datetime.now().strftime("%Y%m%d")
+    zip_filename = f"{study_name_clean}_metadata_{date_str}.zip"
+
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{zip_filename}"'}
+    )
+
+
+# Study data export (for analysis)
+@router.get("/studies/{study_id}/export-data")
+async def export_study_data(study_id: int, _: dict = Depends(require_admin)):
+    """Export complete study data as ZIP containing study_info.json, specialists.csv, sessions.csv, annotations.csv, and audio files."""
+    async with get_db_context() as db:
+        study = await get_study_by_id(db, study_id)
+        if not study:
+            raise HTTPException(status_code=404, detail="Study not found")
+
+        # Get all specialists assigned to the study
+        cursor = await db.execute(
+            """
+            SELECT DISTINCT
+                u.id as specialist_id,
+                u.name,
+                u.email,
+                a.expertise_level_snapshot as expertise_level,
+                a.years_experience_snapshot as years_experience
+            FROM assignments a
+            JOIN users u ON a.specialist_id = u.id
+            WHERE a.study_id = ?
+            ORDER BY u.name
+            """,
+            (study_id,)
+        )
+        specialists_rows = await cursor.fetchall()
+
+        # Get all sessions for the study
+        cursor = await db.execute(
+            """
+            SELECT
+                ans.id as session_id,
+                ans.session_uuid,
+                a.specialist_id,
+                u.name as specialist_name,
+                s.id as sample_id,
+                s.pad_sample_id,
+                s.drug_name,
+                s.card_id,
+                ans.status,
+                ans.started_at,
+                ans.completed_at,
+                ans.audio_filename,
+                ans.audio_duration_ms,
+                ans.image_dimensions_json
+            FROM annotation_sessions ans
+            JOIN assignments a ON ans.assignment_id = a.id
+            JOIN users u ON a.specialist_id = u.id
+            JOIN study_samples ss ON ans.study_sample_id = ss.id
+            JOIN samples s ON ss.sample_id = s.id
+            WHERE a.study_id = ?
+            ORDER BY ans.completed_at, ans.id
+            """,
+            (study_id,)
+        )
+        sessions_rows = await cursor.fetchall()
+
+        # Get all annotations for the study
+        cursor = await db.execute(
+            """
+            SELECT
+                ann.id as annotation_id,
+                ans.id as session_id,
+                ans.session_uuid,
+                u.name as specialist_name,
+                s.drug_name,
+                ann.annotation_type,
+                ann.color,
+                ann.lanes_json,
+                ann.bbox_normalized_json,
+                ann.points_normalized_json,
+                ann.timestamp_start_ms,
+                ann.timestamp_end_ms
+            FROM annotations ann
+            JOIN annotation_sessions ans ON ann.session_id = ans.id
+            JOIN assignments a ON ans.assignment_id = a.id
+            JOIN users u ON a.specialist_id = u.id
+            JOIN study_samples ss ON ans.study_sample_id = ss.id
+            JOIN samples s ON ss.sample_id = s.id
+            WHERE a.study_id = ?
+            ORDER BY ans.id, ann.timestamp_start_ms, ann.id
+            """,
+            (study_id,)
+        )
+        annotations_rows = await cursor.fetchall()
+
+        # Prepare specialists CSV data
+        specialists_csv = []
+        for row in specialists_rows:
+            specialists_csv.append({
+                "specialist_id": row["specialist_id"],
+                "name": row["name"],
+                "email": row["email"],
+                "expertise_level": row["expertise_level"] or "",
+                "years_experience": row["years_experience"] or ""
+            })
+
+        # Prepare sessions CSV data
+        sessions_csv = []
+        audio_files = []
+        for row in sessions_rows:
+            # Parse image dimensions
+            width = ""
+            height = ""
+            if row["image_dimensions_json"]:
+                try:
+                    dims = json.loads(row["image_dimensions_json"])
+                    width = dims.get("width", "")
+                    height = dims.get("height", "")
+                except (json.JSONDecodeError, TypeError):
+                    pass
+
+            # Use pad_sample_id if available
+            export_sample_id = row["pad_sample_id"] if row["pad_sample_id"] else row["sample_id"]
+
+            audio_filename = ""
+            if row["audio_filename"]:
+                audio_filename = f"audio/{row['audio_filename']}"
+                audio_files.append(row["audio_filename"])
+
+            sessions_csv.append({
+                "session_id": row["session_id"],
+                "session_uuid": row["session_uuid"],
+                "specialist_id": row["specialist_id"],
+                "specialist_name": row["specialist_name"],
+                "sample_id": export_sample_id,
+                "drug_name": row["drug_name"],
+                "card_id": row["card_id"],
+                "status": row["status"],
+                "started_at": row["started_at"] or "",
+                "completed_at": row["completed_at"] or "",
+                "audio_filename": audio_filename,
+                "audio_duration_ms": row["audio_duration_ms"] or "",
+                "image_width": width,
+                "image_height": height
+            })
+
+        # Prepare annotations CSV data
+        annotations_csv = []
+        for row in annotations_rows:
+            # Parse bbox
+            bbox_x1, bbox_y1, bbox_x2, bbox_y2 = "", "", "", ""
+            if row["bbox_normalized_json"]:
+                try:
+                    bbox = json.loads(row["bbox_normalized_json"])
+                    bbox_x1 = bbox.get("x1", "")
+                    bbox_y1 = bbox.get("y1", "")
+                    bbox_x2 = bbox.get("x2", "")
+                    bbox_y2 = bbox.get("y2", "")
+                except (json.JSONDecodeError, TypeError):
+                    pass
+
+            # Parse lanes
+            lanes = ""
+            if row["lanes_json"]:
+                try:
+                    lanes_list = json.loads(row["lanes_json"])
+                    lanes = ",".join(str(l) for l in lanes_list) if lanes_list else ""
+                except (json.JSONDecodeError, TypeError):
+                    pass
+
+            # Keep points as JSON string for flexibility
+            points_json = row["points_normalized_json"] or ""
+
+            annotations_csv.append({
+                "annotation_id": row["annotation_id"],
+                "session_id": row["session_id"],
+                "session_uuid": row["session_uuid"],
+                "specialist_name": row["specialist_name"],
+                "drug_name": row["drug_name"],
+                "annotation_type": row["annotation_type"],
+                "color": row["color"] or "",
+                "lanes": lanes,
+                "bbox_x1": bbox_x1,
+                "bbox_y1": bbox_y1,
+                "bbox_x2": bbox_x2,
+                "bbox_y2": bbox_y2,
+                "points_json": points_json,
+                "timestamp_start_ms": row["timestamp_start_ms"] or "",
+                "timestamp_end_ms": row["timestamp_end_ms"] or ""
+            })
+
+    # Prepare study info JSON
+    study_info = {
+        "id": study["id"],
+        "name": study["name"],
+        "description": study.get("description"),
+        "instructions": study.get("instructions"),
+        "eyetracking_mode": study.get("eyetracking_mode"),
+        "annotation_mode": study.get("annotation_mode"),
+        "default_image_width": study.get("default_image_width"),
+        "default_image_height": study.get("default_image_height"),
+        "created_at": study.get("created_at"),
+        "exported_at": datetime.now().isoformat()
+    }
+
+    # Create ZIP in memory
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+        # Add study_info.json
+        zf.writestr("study_info.json", json.dumps(study_info, indent=2))
+
+        # Add specialists.csv
+        if specialists_csv:
+            csv_buffer = io.StringIO()
+            fieldnames = ["specialist_id", "name", "email", "expertise_level", "years_experience"]
+            writer = csv.DictWriter(csv_buffer, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(specialists_csv)
+            zf.writestr("specialists.csv", csv_buffer.getvalue())
+
+        # Add sessions.csv
+        if sessions_csv:
+            csv_buffer = io.StringIO()
+            fieldnames = [
+                "session_id", "session_uuid", "specialist_id", "specialist_name",
+                "sample_id", "drug_name", "card_id", "status",
+                "started_at", "completed_at", "audio_filename", "audio_duration_ms",
+                "image_width", "image_height"
+            ]
+            writer = csv.DictWriter(csv_buffer, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(sessions_csv)
+            zf.writestr("sessions.csv", csv_buffer.getvalue())
+
+        # Add annotations.csv
+        if annotations_csv:
+            csv_buffer = io.StringIO()
+            fieldnames = [
+                "annotation_id", "session_id", "session_uuid", "specialist_name",
+                "drug_name", "annotation_type", "color", "lanes",
+                "bbox_x1", "bbox_y1", "bbox_x2", "bbox_y2",
+                "points_json", "timestamp_start_ms", "timestamp_end_ms"
+            ]
+            writer = csv.DictWriter(csv_buffer, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(annotations_csv)
+            zf.writestr("annotations.csv", csv_buffer.getvalue())
+
+        # Add audio files
+        audio_dir = Path("data/audio")
+        for audio_filename in audio_files:
+            audio_path = audio_dir / audio_filename
+            if audio_path.exists():
+                zf.write(audio_path, f"audio/{audio_filename}")
+
+    zip_buffer.seek(0)
+
+    # Generate filename
+    study_name_clean = "".join(c if c.isalnum() or c in "-_" else "_" for c in study["name"])
+    date_str = datetime.now().strftime("%Y%m%d")
+    zip_filename = f"{study_name_clean}_data_{date_str}.zip"
+
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{zip_filename}"'}
+    )

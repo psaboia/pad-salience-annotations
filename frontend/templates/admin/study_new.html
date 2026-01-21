@@ -652,6 +652,12 @@
                         Users
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="/admin/settings" class="nav-link">
+                        <span class="icon">⚙️</span>
+                        Settings
+                    </a>
+                </li>
             </ul>
         </nav>
     </aside>
@@ -701,6 +707,18 @@
                         </select>
                         <small class="form-hint">Audio Only: specialists only record audio and eye-tracking, without drawing annotations</small>
                     </div>
+                    <div class="form-group">
+                        <label>Default Image Dimensions (for metadata export)</label>
+                        <div style="display: flex; gap: 12px;">
+                            <div style="flex: 1;">
+                                <input type="number" id="defaultImageWidth" class="form-control" placeholder="Width (e.g., 800)" min="100" max="4096">
+                            </div>
+                            <div style="flex: 1;">
+                                <input type="number" id="defaultImageHeight" class="form-control" placeholder="Height (e.g., 600)" min="100" max="4096">
+                            </div>
+                        </div>
+                        <small class="form-hint">Optional: used as fallback when exporting metadata if no sessions exist</small>
+                    </div>
                 </form>
                 <div class="wizard-actions">
                     <a href="/admin" class="btn btn-secondary">Cancel</a>
@@ -730,9 +748,13 @@
                         <button type="button" class="btn btn-primary" onclick="loadFromPAD()" id="loadPadBtn">
                             Load Samples
                         </button>
+                        <button type="button" class="btn btn-secondary" onclick="backfillSampleIds()" id="backfillBtn" title="Update existing samples with PAD sample_id">
+                            Backfill IDs
+                        </button>
                     </div>
                     <p class="pad-import-hint">
-                        Fetches N samples per drug with different sample IDs (quantity=100%, not deleted)
+                        Fetches N samples per drug with different sample IDs (quantity=100%, not deleted).
+                        Use "Backfill IDs" to update existing samples with correct PAD sample_id.
                     </p>
                 </div>
 
@@ -911,6 +933,40 @@
         }
     }
 
+    // Backfill pad_sample_id for existing samples
+    async function backfillSampleIds() {
+        const select = document.getElementById('padProjectSelect');
+        const projectId = select.value;
+        const projectName = select.options[select.selectedIndex].dataset.name || select.options[select.selectedIndex].text;
+
+        if (!projectId) {
+            showError('Please select a project first');
+            return;
+        }
+
+        const btn = document.getElementById('backfillBtn');
+        btn.disabled = true;
+        btn.textContent = 'Updating...';
+
+        try {
+            const result = await apiCall('/api/admin/pad-backfill-sample-ids', {
+                method: 'POST',
+                body: JSON.stringify({
+                    project_id: parseInt(projectId),
+                    project_name: projectName,
+                    samples_per_drug: 1  // Not used for backfill, but required by model
+                })
+            });
+
+            showSuccess(`Updated ${result.updated} samples with PAD sample_id`);
+        } catch (error) {
+            showError(error.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Backfill IDs';
+        }
+    }
+
     function renderSamples() {
         const grid = document.getElementById('sampleGrid');
         grid.innerHTML = samples.map(s => `
@@ -1086,12 +1142,16 @@
 
         try {
             // Step 1: Create study
+            const defaultWidth = document.getElementById('defaultImageWidth').value;
+            const defaultHeight = document.getElementById('defaultImageHeight').value;
             const expData = {
                 name: document.getElementById('name').value.trim(),
                 description: document.getElementById('description').value.trim() || null,
                 instructions: document.getElementById('instructions').value.trim() || null,
                 eyetracking_mode: document.getElementById('eyetrackingMode').value,
-                annotation_mode: document.getElementById('annotationMode').value
+                annotation_mode: document.getElementById('annotationMode').value,
+                default_image_width: defaultWidth ? parseInt(defaultWidth) : null,
+                default_image_height: defaultHeight ? parseInt(defaultHeight) : null
             };
             const study = await apiCall('/api/admin/studies', {
                 method: 'POST',

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Studies - PAD Annotation System{% endblock %}
+{% block title %}Settings - PAD Annotation System{% endblock %}
 
 {% block head %}
 <style>
@@ -73,9 +73,6 @@
     }
 
     .page-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
         margin-bottom: 30px;
     }
 
@@ -83,145 +80,9 @@
         font-size: 1.5rem;
     }
 
-    .filters {
-        display: flex;
-        gap: 15px;
-        margin-bottom: 20px;
-        align-items: center;
-        flex-wrap: wrap;
-    }
-
-    .segmented-control {
-        display: flex;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 8px;
-        padding: 3px;
-        gap: 2px;
-    }
-
-    .segmented-control button {
-        padding: 8px 12px;
-        border: none;
-        background: transparent;
+    .page-header p {
         color: var(--text-muted);
-        font-size: 0.8rem;
-        border-radius: 6px;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .segmented-control button:hover {
-        color: var(--text-color);
-    }
-
-    .segmented-control button.active {
-        background: var(--primary-color);
-        color: #000;
-    }
-
-    .sort-select {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid var(--border-color);
-        border-radius: 6px;
-        padding: 8px 12px;
-        color: var(--text-color);
-        font-size: 0.85rem;
-        cursor: pointer;
-    }
-
-    .sort-select:focus {
-        outline: none;
-        border-color: var(--primary-color);
-    }
-
-    .study-list {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    .study-item {
-        background: var(--card-color);
-        border-radius: 12px;
-        padding: 16px 20px;
-        border: 1px solid var(--border-color);
-        display: grid;
-        grid-template-columns: 1fr auto auto;
-        gap: 20px;
-        align-items: center;
-        transition: all 0.2s;
-    }
-
-    .study-item:hover {
-        border-color: var(--primary-color);
-    }
-
-    .study-info h3 {
-        font-size: 1rem;
-        margin-bottom: 4px;
-    }
-
-    .study-info p {
-        font-size: 0.8rem;
-        color: var(--text-muted);
-    }
-
-    .study-progress {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        min-width: 200px;
-    }
-
-    .study-progress .progress-bar {
-        flex: 1;
-        height: 8px;
-        min-width: 80px;
-    }
-
-    .study-progress .progress-text {
-        font-size: 0.8rem;
-        color: var(--text-muted);
-        white-space: nowrap;
-    }
-
-    .study-progress .progress-text strong {
-        color: var(--primary-color);
-    }
-
-    .study-meta {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .eyetracking-badge {
-        font-size: 0.9rem;
-        opacity: 0.7;
-        margin-left: 6px;
-    }
-
-    .settings-btn {
-        background: #333;
-        border: 1px solid #555;
-        color: #ccc;
-        width: 32px;
-        height: 32px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 1.2rem;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        text-decoration: none;
-    }
-
-    .settings-btn:hover {
-        background: #444;
-        color: #fff;
-        border-color: #666;
-        text-decoration: none;
+        margin-top: 4px;
     }
 
     /* User Menu */
@@ -381,6 +242,51 @@
     .user-menu-item.danger {
         color: #f87171;
     }
+
+    /* Settings Sections */
+    .settings-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .settings-section {
+        background: var(--card-color);
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid var(--border-color);
+    }
+
+    .settings-section h3 {
+        font-size: 1rem;
+        margin-bottom: 4px;
+    }
+
+    .settings-section .section-desc {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-bottom: 16px;
+    }
+
+    .settings-section .tool-row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .settings-section .tool-row select {
+        flex: 1;
+        min-width: 200px;
+        max-width: 300px;
+    }
+
+    .settings-section .tool-hint {
+        width: 100%;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-top: 8px;
+    }
 </style>
 {% endblock %}
 
@@ -436,7 +342,7 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/studies" class="nav-link active">
+                    <a href="/admin/studies" class="nav-link">
                         <span class="icon">📋</span>
                         Studies
                     </a>
@@ -454,7 +360,7 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/settings" class="nav-link">
+                    <a href="/admin/settings" class="nav-link active">
                         <span class="icon">⚙️</span>
                         Settings
                     </a>
@@ -465,36 +371,48 @@
 
     <main class="main-content">
         <div class="page-header">
-            <h2>Studies</h2>
-            <a href="/admin/studies/new" class="btn btn-primary">
-                + New Study
-            </a>
+            <h2>Settings</h2>
+            <p>System configuration and maintenance tools</p>
         </div>
 
-        <div class="filters">
-            <div class="segmented-control" id="statusFilter">
-                <button class="active" data-filter="all" onclick="setStatusFilter('all')">All</button>
-                <button data-filter="draft" onclick="setStatusFilter('draft')">Draft</button>
-                <button data-filter="active" onclick="setStatusFilter('active')">Active</button>
-                <button data-filter="paused" onclick="setStatusFilter('paused')">Paused</button>
-                <button data-filter="completed" onclick="setStatusFilter('completed')">Completed</button>
-            </div>
-            <select class="sort-select" id="sortSelect" onchange="setSort(this.value)">
-                <option value="newest">Newest first</option>
-                <option value="oldest">Oldest first</option>
-                <option value="name">Name A-Z</option>
-                <option value="name-desc">Name Z-A</option>
-            </select>
-        </div>
+        <div class="settings-grid">
+            <!-- PAD Analytics Tools -->
+            <div class="settings-section">
+                <h3>PAD Analytics Integration</h3>
+                <p class="section-desc">Tools for managing integration with PAD Analytics system</p>
 
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Studies</h3>
-                <span id="studyCount" class="text-muted"></span>
+                <div class="tool-row">
+                    <select id="padProjectSelect" class="form-control">
+                        <option value="">Select a PAD project...</option>
+                    </select>
+                    <button type="button" class="btn btn-primary" onclick="backfillSampleIds()" id="backfillBtn">
+                        Backfill Sample IDs
+                    </button>
+                </div>
+                <p class="tool-hint">
+                    Updates existing samples with correct PAD sample_id values based on card_id.
+                    Use this if samples were imported before the pad_sample_id feature was added.
+                </p>
             </div>
-            <div id="studiesList" class="study-list">
-                <div class="loading">
-                    <div class="spinner"></div>
+
+            <!-- Database Info -->
+            <div class="settings-section">
+                <h3>Database Information</h3>
+                <p class="section-desc">Current database statistics</p>
+
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                    <div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">Total Samples</div>
+                        <div style="font-size: 1.5rem; font-weight: 600;" id="totalSamples">-</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">With PAD Sample ID</div>
+                        <div style="font-size: 1.5rem; font-weight: 600; color: var(--success-color);" id="samplesWithPadId">-</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">Missing PAD Sample ID</div>
+                        <div style="font-size: 1.5rem; font-weight: 600; color: var(--warning-color);" id="samplesMissingPadId">-</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -531,147 +449,76 @@
 
 {% block scripts %}
 <script>
-    let allStudies = [];
-    let progressMap = {};
-    let statusFilter = 'all';
-    let sortOrder = 'newest';
-
-    function setStatusFilter(filter) {
-        statusFilter = filter;
-        document.querySelectorAll('#statusFilter button').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.filter === filter);
-        });
-        renderStudies();
+    async function loadSettings() {
+        await Promise.all([
+            loadPADProjects(),
+            loadDatabaseStats()
+        ]);
     }
 
-    function setSort(sort) {
-        sortOrder = sort;
-        renderStudies();
-    }
-
-    async function loadStudies() {
+    async function loadPADProjects() {
         try {
-            allStudies = await apiCall('/api/admin/studies');
-
-            // Load progress for active/paused/completed studies
-            progressMap = {};
-            const studiesWithProgress = allStudies.filter(s =>
-                s.status === 'active' || s.status === 'paused' || s.status === 'completed'
-            );
-
-            await Promise.all(studiesWithProgress.map(async study => {
-                try {
-                    const progress = await apiCall(`/api/admin/studies/${study.id}/progress`);
-                    progressMap[study.id] = progress;
-                } catch (e) {
-                    // Ignore errors for individual progress loads
-                }
-            }));
-
-            renderStudies();
+            const projects = await apiCall('/api/admin/pad-projects');
+            const select = document.getElementById('padProjectSelect');
+            select.innerHTML = '<option value="">Select a PAD project...</option>' +
+                projects.map(p => `<option value="${p.id}" data-name="${p.name}">${p.name}</option>`).join('');
         } catch (error) {
-            showError(error.message);
+            console.error('Failed to load PAD projects:', error);
+            const select = document.getElementById('padProjectSelect');
+            select.innerHTML = '<option value="">PAD projects unavailable</option>';
+            select.disabled = true;
+            document.getElementById('backfillBtn').disabled = true;
         }
     }
 
-    function renderStudies() {
-        const list = document.getElementById('studiesList');
+    async function loadDatabaseStats() {
+        try {
+            const samples = await apiCall('/api/admin/samples');
+            const total = samples.length;
+            const withPadId = samples.filter(s => s.pad_sample_id).length;
+            const missingPadId = total - withPadId;
 
-        // Apply filter
-        let filtered = allStudies;
-        if (statusFilter !== 'all') {
-            filtered = allStudies.filter(s => s.status === statusFilter);
+            document.getElementById('totalSamples').textContent = total;
+            document.getElementById('samplesWithPadId').textContent = withPadId;
+            document.getElementById('samplesMissingPadId').textContent = missingPadId;
+        } catch (error) {
+            console.error('Failed to load database stats:', error);
         }
+    }
 
-        // Apply sort
-        filtered = [...filtered].sort((a, b) => {
-            switch (sortOrder) {
-                case 'newest':
-                    return new Date(b.created_at) - new Date(a.created_at);
-                case 'oldest':
-                    return new Date(a.created_at) - new Date(b.created_at);
-                case 'name':
-                    return a.name.localeCompare(b.name);
-                case 'name-desc':
-                    return b.name.localeCompare(a.name);
-                default:
-                    return 0;
-            }
-        });
+    async function backfillSampleIds() {
+        const select = document.getElementById('padProjectSelect');
+        const projectId = select.value;
+        const projectName = select.options[select.selectedIndex].dataset.name || select.options[select.selectedIndex].text;
 
-        // Update count
-        document.getElementById('studyCount').textContent = `(${filtered.length})`;
-
-        if (filtered.length === 0) {
-            list.innerHTML = `
-                <div class="empty-state">
-                    <h3>No studies found</h3>
-                    <p>${statusFilter === 'all' ? 'Create your first study to get started' : 'No ' + statusFilter + ' studies'}</p>
-                </div>
-            `;
+        if (!projectId) {
+            showError('Please select a PAD project first');
             return;
         }
 
-        list.innerHTML = filtered.map(study => {
-            const progress = progressMap[study.id];
-            const hasProgress = progress && progress.specialists.length > 0;
-
-            return `
-                <div class="study-item">
-                    <div class="study-info">
-                        <h3>${study.name} ${study.eyetracking_mode === 'required' ? '<span class="eyetracking-badge">👁️</span>' : ''}</h3>
-                        <p>${study.description || 'No description'}</p>
-                    </div>
-                    ${hasProgress ? `
-                        <div class="study-progress">
-                            <div class="progress-bar">
-                                <div class="progress-bar-fill" style="width: ${progress.overall_percentage}%"></div>
-                            </div>
-                            <div class="progress-text">
-                                <strong>${progress.overall_percentage}%</strong> · ${progress.specialists.length} specialist${progress.specialists.length !== 1 ? 's' : ''}
-                            </div>
-                        </div>
-                    ` : `
-                        <div class="study-progress">
-                            <div class="progress-text" style="color: var(--text-muted);">
-                                ${study.status === 'draft' ? 'Draft' : 'No specialists'}
-                            </div>
-                        </div>
-                    `}
-                    <div class="study-meta">
-                        <span class="badge badge-${getStatusBadge(study.status)}" title="Status: ${study.status}">${study.status}</span>
-                        ${study.status === 'active' || study.status === 'paused' ?
-                            `<a href="/admin/studies/${study.id}/progress" class="btn btn-primary btn-sm" title="Track progress">Track</a>` : ''
-                        }
-                        <a href="/admin/studies/${study.id}" class="settings-btn" title="Study settings">⚙</a>
-                        ${study.status === 'draft' ?
-                            `<button class="settings-btn" onclick="deleteStudy(${study.id}, '${study.name.replace(/'/g, "\\'")}')" title="Delete study">🗑</button>` : ''
-                        }
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    function getStatusBadge(status) {
-        const badges = {
-            'draft': 'secondary',
-            'active': 'success',
-            'paused': 'warning',
-            'completed': 'primary',
-            'archived': 'secondary'
-        };
-        return badges[status] || 'secondary';
-    }
-
-    async function deleteStudy(studyId, studyName) {
-        if (!confirm(`Delete study "${studyName}"?\n\nThis action cannot be undone.`)) return;
+        const btn = document.getElementById('backfillBtn');
+        btn.disabled = true;
+        btn.textContent = 'Updating...';
 
         try {
-            await apiCall(`/api/admin/studies/${studyId}`, { method: 'DELETE' });
-            loadStudies();
+            const result = await apiCall('/api/admin/pad-backfill-sample-ids', {
+                method: 'POST',
+                body: JSON.stringify({
+                    project_id: parseInt(projectId),
+                    project_name: projectName,
+                    samples_per_drug: 1
+                })
+            });
+
+            showSuccess(`Updated ${result.updated} samples with PAD sample_id`);
+
+            // Reload stats
+            await loadDatabaseStats();
         } catch (error) {
             showError(error.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Backfill Sample IDs';
         }
     }
 
@@ -743,6 +590,6 @@
     });
 
     // Load on page load
-    loadStudies();
+    loadSettings();
 </script>
 {% endblock %}

@@ -570,6 +570,12 @@
                         Users
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="/admin/settings" class="nav-link">
+                        <span class="icon">⚙️</span>
+                        Settings
+                    </a>
+                </li>
             </ul>
         </nav>
     </aside>
@@ -695,6 +701,10 @@
                     <span style="color: var(--text-muted);">·</span>
                     <a href="/admin/studies/${studyId}">✏️ Edit Study</a>
                     <span style="color: var(--text-muted);">·</span>
+                    <a href="#" onclick="exportMetadata(); return false;">📋 Export Metadata</a>
+                    <span style="color: var(--text-muted);">·</span>
+                    <a href="#" onclick="exportStudyData(); return false;">📊 Export Study Data</a>
+                    <span style="color: var(--text-muted);">·</span>
                     <span class="refresh-icon" onclick="refreshWithAnimation()" title="Refresh">↻</span>
                 </div>
             </div>
@@ -816,6 +826,22 @@
             'paused': 'warning'
         };
         return badges[status] || 'secondary';
+    }
+
+    function exportMetadata() {
+        const link = document.createElement('a');
+        link.href = `/api/admin/studies/${studyId}/export-metadata`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function exportStudyData() {
+        const link = document.createElement('a');
+        link.href = `/api/admin/studies/${studyId}/export-data`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
     function toggleUserMenu() {
