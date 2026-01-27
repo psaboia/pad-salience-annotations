@@ -5,7 +5,7 @@ import uuid
 import time
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, BackgroundTasks, HTTPException, status, Depends
 
 from ..database import (
     get_db_context,
@@ -30,6 +30,7 @@ from ..models import (
 )
 from ..models.annotations import SampleInfo, SampleTags
 from ..services.auth import require_specialist
+from ..services.transcription import is_transcription_available, transcribe_session
 
 router = APIRouter(prefix="/api/specialist", tags=["specialist"])
 
@@ -214,6 +215,7 @@ async def get_current_sample(study_id: int, user: dict = Depends(require_special
 async def complete_annotation_session(
     session_uuid: str,
     data: AnnotationSessionComplete,
+    background_tasks: BackgroundTasks,
     user: dict = Depends(require_specialist)
 ):
     """Complete an annotation session and save data."""
@@ -281,6 +283,10 @@ async def complete_annotation_session(
                 (row["assignment_id"],)
             )
             await db.commit()
+
+        # Trigger auto-transcription if audio was saved and API key is configured
+        if audio_filename and is_transcription_available():
+            background_tasks.add_task(transcribe_session, session["id"])
 
         return {
             "status": "success",

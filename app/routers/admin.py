@@ -8,7 +8,7 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, status, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, status, Depends, Query
 from fastapi.responses import StreamingResponse
 from typing import List
 from pydantic import BaseModel
@@ -55,6 +55,11 @@ from ..models import (
 from ..models.auth import UserCreate, UserUpdate, UserResponse
 from ..models.studies import SampleInStudy, AssignmentProgress
 from ..services.auth import require_admin, require_super_admin, hash_password
+from ..services.transcription import (
+    is_transcription_available,
+    transcribe_session,
+    get_transcription_for_session,
+)
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -873,6 +878,18 @@ async def get_session_replay_data(session_id: int, _: dict = Depends(require_adm
         # Get sample tags for AprilTag display in replay
         sample_tags = await get_sample_tags_by_position(db, session['sample_id'])
 
+        # Get transcription data if available
+        transcription = await get_transcription_for_session(session_id)
+        transcription_data = None
+        if transcription:
+            transcription_data = {
+                "status": transcription["status"],
+                "language": transcription.get("language"),
+                "full_text": transcription.get("full_text"),
+                "error": transcription.get("transcription_error"),
+                "words": transcription.get("words", []),
+            }
+
         return {
             "session": {
                 "id": session['session_id'],
@@ -902,6 +919,8 @@ async def get_session_replay_data(session_id: int, _: dict = Depends(require_adm
             },
             "annotations": annotations,
             "audio_url": audio_url,
+            "transcription": transcription_data,
+            "transcription_available": is_transcription_available(),
             "navigation": {
                 "current_index": current_index + 1,
                 "total_sessions": total_sessions,
@@ -909,6 +928,67 @@ async def get_session_replay_data(session_id: int, _: dict = Depends(require_adm
                 "next_session_id": next_session_id
             }
         }
+
+
+# Transcription endpoints
+@router.get("/sessions/{session_id}/transcription")
+async def get_session_transcription(session_id: int, _: dict = Depends(require_admin)):
+    """Get transcription data for a session."""
+    transcription = await get_transcription_for_session(session_id)
+    return {
+        "transcription": transcription,
+        "transcription_available": is_transcription_available(),
+    }
+
+
+@router.post("/sessions/{session_id}/transcribe")
+async def transcribe_session_audio(
+    session_id: int,
+    background_tasks: BackgroundTasks,
+    _: dict = Depends(require_admin)
+):
+    """Trigger transcription for a session (manual or re-transcribe)."""
+    if not is_transcription_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Transcription not available: OPENAI_API_KEY not configured"
+        )
+
+    async with get_db_context() as db:
+        cursor = await db.execute(
+            "SELECT id, audio_filename FROM annotation_sessions WHERE id = ?",
+            (session_id,)
+        )
+        session = await cursor.fetchone()
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        if not session["audio_filename"]:
+            raise HTTPException(status_code=400, detail="Session has no audio recording")
+
+        # Reset transcription status if re-transcribing
+        cursor = await db.execute(
+            "SELECT id FROM transcriptions WHERE session_id = ?",
+            (session_id,)
+        )
+        existing = await cursor.fetchone()
+        if existing:
+            await db.execute(
+                """
+                UPDATE transcriptions
+                SET status = 'pending', transcription_error = NULL, completed_at = NULL
+                WHERE session_id = ?
+                """,
+                (session_id,)
+            )
+        else:
+            await db.execute(
+                "INSERT INTO transcriptions (session_id, status, model) VALUES (?, 'pending', 'whisper-1')",
+                (session_id,)
+            )
+        await db.commit()
+
+    background_tasks.add_task(transcribe_session, session_id)
+    return {"status": "transcription_started", "session_id": session_id}
 
 
 # Dashboard endpoints
@@ -1545,6 +1625,50 @@ async def export_study_data(study_id: int, _: dict = Depends(require_admin)):
                 "timestamp_end_ms": row["timestamp_end_ms"] or ""
             })
 
+        # Get transcriptions for the study
+        cursor = await db.execute(
+            """
+            SELECT
+                t.session_id,
+                ans.session_uuid,
+                u.name as specialist_name,
+                s.drug_name,
+                t.status as transcription_status,
+                t.language,
+                t.duration_seconds,
+                t.full_text,
+                t.model,
+                t.created_at as transcription_created_at,
+                t.completed_at as transcription_completed_at
+            FROM transcriptions t
+            JOIN annotation_sessions ans ON t.session_id = ans.id
+            JOIN assignments a ON ans.assignment_id = a.id
+            JOIN users u ON a.specialist_id = u.id
+            JOIN study_samples ss ON ans.study_sample_id = ss.id
+            JOIN samples s ON ss.sample_id = s.id
+            WHERE a.study_id = ?
+            ORDER BY ans.id
+            """,
+            (study_id,)
+        )
+        transcription_rows = await cursor.fetchall()
+
+        transcriptions_csv = []
+        for row in transcription_rows:
+            transcriptions_csv.append({
+                "session_id": row["session_id"],
+                "session_uuid": row["session_uuid"],
+                "specialist_name": row["specialist_name"],
+                "drug_name": row["drug_name"],
+                "transcription_status": row["transcription_status"],
+                "language": row["language"] or "",
+                "duration_seconds": row["duration_seconds"] or "",
+                "full_text": row["full_text"] or "",
+                "model": row["model"] or "",
+                "transcription_created_at": row["transcription_created_at"] or "",
+                "transcription_completed_at": row["transcription_completed_at"] or "",
+            })
+
     # Prepare study info JSON
     study_info = {
         "id": study["id"],
@@ -1601,6 +1725,20 @@ async def export_study_data(study_id: int, _: dict = Depends(require_admin)):
             writer.writeheader()
             writer.writerows(annotations_csv)
             zf.writestr("annotations.csv", csv_buffer.getvalue())
+
+        # Add transcriptions.csv
+        if transcriptions_csv:
+            csv_buffer = io.StringIO()
+            fieldnames = [
+                "session_id", "session_uuid", "specialist_name", "drug_name",
+                "transcription_status", "language", "duration_seconds",
+                "full_text", "model",
+                "transcription_created_at", "transcription_completed_at"
+            ]
+            writer = csv.DictWriter(csv_buffer, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(transcriptions_csv)
+            zf.writestr("transcriptions.csv", csv_buffer.getvalue())
 
         # Add audio files
         audio_dir = Path("data/audio")

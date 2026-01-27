@@ -695,6 +695,138 @@
         color: var(--primary-color);
         font-weight: 600;
     }
+
+    /* Caption bar */
+    .caption-bar {
+        padding: 8px 20px;
+        background: rgba(0, 0, 0, 0.85);
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 38px;
+    }
+
+    .caption-bar.hidden {
+        display: none;
+    }
+
+    .caption-text {
+        flex: 1;
+        text-align: center;
+        font-size: 0.95rem;
+        color: #fff;
+        line-height: 1.4;
+        min-height: 1.4em;
+    }
+
+    .caption-text .caption-word {
+        display: inline;
+        transition: color 0.1s;
+    }
+
+    .caption-text .caption-word.active {
+        color: var(--primary-color);
+        font-weight: 600;
+    }
+
+    .cc-toggle {
+        padding: 4px 8px;
+        background: transparent;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 0.75rem;
+        font-weight: 600;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+
+    .cc-toggle:hover {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+    }
+
+    .cc-toggle.active {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+        color: #000;
+    }
+
+    /* Transcription sidebar section */
+    .transcription-info {
+        padding: 12px 15px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .transcription-info .section-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        margin-bottom: 8px;
+        font-weight: 600;
+    }
+
+    .transcription-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .transcription-status .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .transcription-status .status-dot.completed { background: var(--success-color); }
+    .transcription-status .status-dot.in_progress { background: var(--warning-color); }
+    .transcription-status .status-dot.pending { background: var(--warning-color); }
+    .transcription-status .status-dot.failed { background: #f87171; }
+    .transcription-status .status-dot.none { background: var(--text-muted); }
+
+    .transcription-status .status-text {
+        font-size: 0.8rem;
+        color: var(--text-color);
+    }
+
+    .transcribe-btn {
+        width: 100%;
+        padding: 6px 12px;
+        background: var(--primary-color);
+        color: #000;
+        border: none;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .transcribe-btn:hover:not(:disabled) {
+        background: #00b8e6;
+    }
+
+    .transcribe-btn:disabled {
+        background: #333;
+        color: #666;
+        cursor: not-allowed;
+    }
+
+    .transcription-error {
+        font-size: 0.75rem;
+        color: #f87171;
+        margin-top: 6px;
+    }
+
+    .transcription-language {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
 </style>
 {% endblock %}
 
@@ -818,6 +950,11 @@
             </div>
         </div>
 
+        <div class="caption-bar hidden" id="captionBar">
+            <div class="caption-text" id="captionText"></div>
+            <button class="cc-toggle" id="ccToggle" onclick="toggleCaptions()" title="Toggle closed captions">CC</button>
+        </div>
+
         <div class="playback-controls">
             <div class="timeline-container">
                 <div class="timeline" id="timeline" onclick="seekTimeline(event)" onmousemove="showTimelineTooltip(event)" onmouseleave="hideTimelineTooltip()">
@@ -900,6 +1037,18 @@
         <div id="noAudioNotice" class="no-audio-notice" style="display: none;">
             No audio recorded for this session. Playback uses timestamps only.
         </div>
+        <div class="transcription-info" id="transcriptionInfo" style="display: none;">
+            <div class="section-label">Transcription</div>
+            <div class="transcription-status" id="transcriptionStatus">
+                <span class="status-dot none"></span>
+                <span class="status-text">Not available</span>
+            </div>
+            <div class="transcription-language" id="transcriptionLanguage" style="display: none;"></div>
+            <div class="transcription-error" id="transcriptionError" style="display: none;"></div>
+            <button class="transcribe-btn" id="transcribeBtn" onclick="triggerTranscription()" style="display: none;">
+                Transcribe Audio
+            </button>
+        </div>
         <div class="panel-header">
             <h3>Annotations</h3>
         </div>
@@ -953,6 +1102,11 @@
     let animationFrameId = null;
     let lastFrameTime = null;
     let audio = null;
+
+    // Transcription state
+    let captionsEnabled = true;
+    let transcriptionWords = [];
+    let transcriptionPollingId = null;
 
     // Canvas
     const canvas = document.getElementById('replayCanvas');
@@ -1027,6 +1181,9 @@
         };
         sampleImage.src = `/${replayData.sample.image_path}`;
 
+        // Setup transcription UI
+        setupTranscription();
+
         // Setup audio if available
         if (replayData.audio_url) {
             console.log('Loading audio from:', replayData.audio_url);
@@ -1047,6 +1204,7 @@
                     updatePlaybackUI();
                     renderAnnotations();
                     updateActiveAnnotation();
+                    updateCaptions();
                 }
             });
 
@@ -1232,6 +1390,7 @@
         updatePlaybackUI();
         renderAnnotations();
         updateActiveAnnotation();
+        updateCaptions();
 
         if (isPlaying) {
             animationFrameId = requestAnimationFrame(timerPlayback);
@@ -1270,6 +1429,7 @@
         updatePlaybackUI();
         renderAnnotations();
         updateActiveAnnotation();
+        updateCaptions();
     }
 
     function showTimelineTooltip(event) {
@@ -1321,6 +1481,7 @@
             updatePlaybackUI();
             renderAnnotations();
             updateActiveAnnotation();
+            updateCaptions();
         }
     }
 
@@ -1407,6 +1568,217 @@
         if (nav && nav.next_session_id) {
             window.location.href = `/admin/studies/${studyId}/sessions/${nav.next_session_id}/replay`;
         }
+    }
+
+    // --- Transcription & Captions ---
+
+    function setupTranscription() {
+        const transcription = replayData.transcription;
+        const available = replayData.transcription_available;
+        const hasAudio = !!replayData.audio_url;
+
+        // Always show the transcription section if there's audio
+        if (!hasAudio) return;
+
+        const infoEl = document.getElementById('transcriptionInfo');
+        infoEl.style.display = '';
+
+        if (!transcription && !available) {
+            // No transcription and no API key
+            updateTranscriptionUI('none', null);
+            return;
+        }
+
+        if (!transcription && available) {
+            // API key available but not yet transcribed
+            updateTranscriptionUI('none', null);
+            showTranscribeButton('Transcribe Audio');
+            return;
+        }
+
+        // We have a transcription record
+        updateTranscriptionUI(transcription.status, transcription);
+
+        if (transcription.status === 'completed') {
+            transcriptionWords = transcription.words || [];
+            setupCaptionBar();
+        } else if (transcription.status === 'in_progress' || transcription.status === 'pending') {
+            startTranscriptionPolling();
+        }
+    }
+
+    function updateTranscriptionUI(status, transcription) {
+        const statusEl = document.getElementById('transcriptionStatus');
+        const langEl = document.getElementById('transcriptionLanguage');
+        const errorEl = document.getElementById('transcriptionError');
+
+        const labels = {
+            'completed': 'Completed',
+            'in_progress': 'In progress...',
+            'pending': 'Pending...',
+            'failed': 'Failed',
+            'none': 'Not transcribed'
+        };
+
+        statusEl.innerHTML = `
+            <span class="status-dot ${status}"></span>
+            <span class="status-text">${labels[status] || status}</span>
+        `;
+
+        // Show language if completed
+        if (transcription && transcription.language && status === 'completed') {
+            langEl.textContent = `Language: ${transcription.language}`;
+            langEl.style.display = '';
+        } else {
+            langEl.style.display = 'none';
+        }
+
+        // Show error if failed
+        if (transcription && transcription.error && status === 'failed') {
+            errorEl.textContent = transcription.error;
+            errorEl.style.display = '';
+        } else {
+            errorEl.style.display = 'none';
+        }
+
+        // Show transcribe button for appropriate states
+        if (replayData.transcription_available) {
+            if (status === 'none' || status === 'failed') {
+                showTranscribeButton(status === 'failed' ? 'Re-transcribe' : 'Transcribe Audio');
+            } else if (status === 'completed') {
+                showTranscribeButton('Re-transcribe');
+            } else {
+                // in_progress or pending - hide button
+                document.getElementById('transcribeBtn').style.display = 'none';
+            }
+        }
+    }
+
+    function showTranscribeButton(label) {
+        const btn = document.getElementById('transcribeBtn');
+        btn.textContent = label;
+        btn.disabled = false;
+        btn.style.display = '';
+    }
+
+    async function triggerTranscription() {
+        const btn = document.getElementById('transcribeBtn');
+        btn.disabled = true;
+        btn.textContent = 'Starting...';
+
+        try {
+            await apiCall(`/api/admin/sessions/${sessionId}/transcribe`, { method: 'POST' });
+            updateTranscriptionUI('pending', null);
+            startTranscriptionPolling();
+        } catch (error) {
+            showError('Failed to start transcription: ' + error.message);
+            btn.disabled = false;
+            btn.textContent = 'Retry';
+        }
+    }
+
+    function startTranscriptionPolling() {
+        if (transcriptionPollingId) return;
+
+        transcriptionPollingId = setInterval(async () => {
+            try {
+                const result = await apiCall(`/api/admin/sessions/${sessionId}/transcription`);
+                const t = result.transcription;
+                if (!t) return;
+
+                if (t.status === 'completed') {
+                    stopTranscriptionPolling();
+                    transcriptionWords = t.words || [];
+                    replayData.transcription = t;
+                    updateTranscriptionUI('completed', t);
+                    setupCaptionBar();
+                    updateCaptions();
+                } else if (t.status === 'failed') {
+                    stopTranscriptionPolling();
+                    replayData.transcription = t;
+                    updateTranscriptionUI('failed', t);
+                }
+                // else keep polling
+            } catch (e) {
+                console.error('Polling error:', e);
+            }
+        }, 3000);
+    }
+
+    function stopTranscriptionPolling() {
+        if (transcriptionPollingId) {
+            clearInterval(transcriptionPollingId);
+            transcriptionPollingId = null;
+        }
+    }
+
+    function setupCaptionBar() {
+        if (transcriptionWords.length === 0) return;
+
+        const captionBar = document.getElementById('captionBar');
+        captionBar.classList.remove('hidden');
+
+        const ccToggle = document.getElementById('ccToggle');
+        ccToggle.classList.toggle('active', captionsEnabled);
+    }
+
+    function toggleCaptions() {
+        captionsEnabled = !captionsEnabled;
+        document.getElementById('ccToggle').classList.toggle('active', captionsEnabled);
+
+        if (captionsEnabled) {
+            updateCaptions();
+        } else {
+            document.getElementById('captionText').innerHTML = '';
+        }
+    }
+
+    function updateCaptions() {
+        if (!captionsEnabled || transcriptionWords.length === 0) return;
+
+        const captionText = document.getElementById('captionText');
+        const windowSize = 8;
+
+        // Find the current word index
+        let currentWordIdx = -1;
+        for (let i = 0; i < transcriptionWords.length; i++) {
+            if (transcriptionWords[i].start_ms <= currentTime && transcriptionWords[i].end_ms >= currentTime) {
+                currentWordIdx = i;
+                break;
+            }
+        }
+
+        // If no exact match, find the last word that started before currentTime
+        if (currentWordIdx === -1) {
+            for (let i = transcriptionWords.length - 1; i >= 0; i--) {
+                if (transcriptionWords[i].start_ms <= currentTime) {
+                    currentWordIdx = i;
+                    break;
+                }
+            }
+        }
+
+        if (currentWordIdx === -1) {
+            captionText.innerHTML = '';
+            return;
+        }
+
+        // Calculate window centered on current word
+        const halfWindow = Math.floor(windowSize / 2);
+        let startIdx = Math.max(0, currentWordIdx - halfWindow);
+        let endIdx = Math.min(transcriptionWords.length, startIdx + windowSize);
+        // Adjust start if we're near the end
+        if (endIdx - startIdx < windowSize) {
+            startIdx = Math.max(0, endIdx - windowSize);
+        }
+
+        const windowWords = transcriptionWords.slice(startIdx, endIdx);
+
+        captionText.innerHTML = windowWords.map((w, i) => {
+            const idx = startIdx + i;
+            const isActive = idx === currentWordIdx;
+            return `<span class="caption-word${isActive ? ' active' : ''}">${w.word} </span>`;
+        }).join('');
     }
 
     // Keyboard shortcuts
@@ -1500,6 +1872,11 @@
         if (e.target === this) {
             closeChangePassword();
         }
+    });
+
+    // Cleanup polling on page unload
+    window.addEventListener('beforeunload', () => {
+        stopTranscriptionPolling();
     });
 
     // Initialize
