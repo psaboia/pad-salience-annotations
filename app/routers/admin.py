@@ -59,6 +59,7 @@ from ..services.transcription import (
     is_transcription_available,
     transcribe_session,
     get_transcription_for_session,
+    update_transcription_word,
 )
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -939,6 +940,24 @@ async def get_session_transcription(session_id: int, _: dict = Depends(require_a
         "transcription": transcription,
         "transcription_available": is_transcription_available(),
     }
+
+
+class WordUpdateRequest(BaseModel):
+    word: str
+
+
+@router.patch("/sessions/{session_id}/transcription/words/{word_index}")
+async def update_word(
+    session_id: int,
+    word_index: int,
+    body: WordUpdateRequest,
+    _: dict = Depends(require_admin),
+):
+    """Update a single transcription word."""
+    result = await update_transcription_word(session_id, word_index, body.word)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Word not found")
+    return {"word_index": result["word_index"], "word": result["word"]}
 
 
 @router.post("/sessions/{session_id}/transcribe")

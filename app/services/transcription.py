@@ -207,6 +207,54 @@ async def transcribe_session(session_id: int) -> None:
         await db.commit()
 
 
+async def update_transcription_word(session_id: int, word_index: int, new_word: str) -> dict | None:
+    """Update a single transcription word by session_id and word_index.
+
+    Returns dict with updated word data, or None if not found.
+    """
+    async with get_db_context() as db:
+        # Get transcription_id for this session
+        cursor = await db.execute(
+            "SELECT id FROM transcriptions WHERE session_id = ? AND status = 'completed'",
+            (session_id,)
+        )
+        row = await cursor.fetchone()
+        if not row:
+            return None
+
+        transcription_id = row["id"]
+
+        # Update the word
+        cursor = await db.execute(
+            """
+            UPDATE transcription_words
+            SET word = ?
+            WHERE transcription_id = ? AND word_index = ?
+            """,
+            (new_word, transcription_id, word_index)
+        )
+
+        if cursor.rowcount == 0:
+            return None
+
+        await db.commit()
+
+        # Return updated word data
+        cursor = await db.execute(
+            """
+            SELECT word_index, word, start_ms, end_ms
+            FROM transcription_words
+            WHERE transcription_id = ? AND word_index = ?
+            """,
+            (transcription_id, word_index)
+        )
+        updated = await cursor.fetchone()
+        if not updated:
+            return None
+
+        return dict(updated)
+
+
 async def get_transcription_for_session(session_id: int) -> dict | None:
     """Get transcription data for a session, including words."""
     async with get_db_context() as db:
