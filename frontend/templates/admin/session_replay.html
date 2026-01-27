@@ -1483,8 +1483,9 @@
 
         // Setup audio if available
         if (replayData.audio_url) {
-            console.log('Loading audio from:', replayData.audio_url);
-            audio = new Audio(replayData.audio_url);
+            const audioSrc = BASE_URL + replayData.audio_url;
+            console.log('Loading audio from:', audioSrc);
+            audio = new Audio(audioSrc);
 
             audio.addEventListener('loadedmetadata', () => {
                 console.log('Audio loaded, duration:', audio.duration);
