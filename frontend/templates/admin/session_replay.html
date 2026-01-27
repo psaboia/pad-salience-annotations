@@ -695,6 +695,405 @@
         color: var(--primary-color);
         font-weight: 600;
     }
+
+    /* Caption bar */
+    .caption-bar {
+        padding: 8px 20px;
+        background: rgba(0, 0, 0, 0.85);
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 38px;
+    }
+
+    .caption-bar.hidden {
+        display: none;
+    }
+
+    .caption-text {
+        flex: 1;
+        text-align: center;
+        font-size: 0.95rem;
+        color: #fff;
+        line-height: 1.4;
+        min-height: 1.4em;
+    }
+
+    .caption-text .caption-word {
+        display: inline;
+        transition: color 0.1s;
+    }
+
+    .caption-text .caption-word.active {
+        color: var(--primary-color);
+        font-weight: 600;
+    }
+
+    .cc-toggle {
+        padding: 4px 8px;
+        background: transparent;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 0.75rem;
+        font-weight: 600;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+
+    .cc-toggle:hover {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+    }
+
+    .cc-toggle.active {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+        color: #000;
+    }
+
+    /* Transcription sidebar section */
+    .transcription-info {
+        padding: 12px 15px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .transcription-info .section-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        margin-bottom: 8px;
+        font-weight: 600;
+    }
+
+    .transcription-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .transcription-status .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .transcription-status .status-dot.completed { background: var(--success-color); }
+    .transcription-status .status-dot.in_progress { background: var(--warning-color); }
+    .transcription-status .status-dot.pending { background: var(--warning-color); }
+    .transcription-status .status-dot.failed { background: #f87171; }
+    .transcription-status .status-dot.none { background: var(--text-muted); }
+
+    .transcription-status .status-text {
+        font-size: 0.8rem;
+        color: var(--text-color);
+    }
+
+    .transcribe-btn {
+        width: 100%;
+        padding: 6px 12px;
+        background: var(--primary-color);
+        color: #000;
+        border: none;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .transcribe-btn:hover:not(:disabled) {
+        background: #00b8e6;
+    }
+
+    .transcribe-btn:disabled {
+        background: #333;
+        color: #666;
+        cursor: not-allowed;
+    }
+
+    .transcription-error {
+        font-size: 0.75rem;
+        color: #f87171;
+        margin-top: 6px;
+    }
+
+    .transcription-language {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+
+    .edit-transcript-btn {
+        width: 100%;
+        padding: 6px 12px;
+        background: transparent;
+        color: var(--primary-color);
+        border: 1px solid var(--primary-color);
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-top: 6px;
+    }
+
+    .edit-transcript-btn:hover {
+        background: rgba(0, 212, 255, 0.1);
+    }
+
+    /* Caption bar editable words */
+    .caption-text .caption-word {
+        cursor: pointer;
+        border-radius: 3px;
+        padding: 1px 2px;
+    }
+
+    .caption-text .caption-word:hover {
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    .caption-text .caption-word-input {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid var(--primary-color);
+        border-radius: 3px;
+        color: #fff;
+        font-size: 0.95rem;
+        font-family: inherit;
+        padding: 1px 4px;
+        outline: none;
+        width: auto;
+        min-width: 30px;
+    }
+
+    .caption-word.saved-flash {
+        background: rgba(46, 213, 115, 0.3);
+        transition: background 0.3s;
+    }
+
+    /* Edit Transcript Modal */
+    .transcript-modal-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s, visibility 0.2s;
+    }
+
+    .transcript-modal-overlay.open {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .transcript-modal {
+        background: var(--card-color);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        width: 800px;
+        max-width: 90vw;
+        max-height: 80vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .transcript-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .transcript-modal-header h3 {
+        font-size: 1rem;
+        color: var(--primary-color);
+    }
+
+    .transcript-modal-close {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        font-size: 1.2rem;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+    }
+
+    .transcript-modal-close:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-color);
+    }
+
+    .transcript-search-bar {
+        padding: 12px 20px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .transcript-search-bar input {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 8px 12px;
+        color: var(--text-color);
+        font-size: 0.85rem;
+        outline: none;
+    }
+
+    .transcript-search-bar input:focus {
+        border-color: var(--primary-color);
+    }
+
+    .transcript-search-bar input::placeholder {
+        color: var(--text-muted);
+    }
+
+    .search-nav {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .search-nav-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 4px 8px;
+        font-size: 0.8rem;
+    }
+
+    .search-nav-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-color);
+    }
+
+    .search-match-count {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        white-space: nowrap;
+        min-width: 50px;
+        text-align: center;
+    }
+
+    .transcript-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+    }
+
+    .transcript-line {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 4px;
+        line-height: 1.8;
+    }
+
+    .transcript-timestamp {
+        flex-shrink: 0;
+        width: 42px;
+        font-family: monospace;
+        font-size: 0.75rem;
+        color: var(--primary-color);
+        cursor: pointer;
+        padding: 2px 4px;
+        border-radius: 4px;
+        user-select: none;
+        text-align: right;
+        line-height: 1.8;
+    }
+
+    .transcript-timestamp:hover {
+        background: rgba(0, 212, 255, 0.15);
+    }
+
+    .transcript-words {
+        flex: 1;
+        display: flex;
+        flex-wrap: wrap;
+        align-content: flex-start;
+    }
+
+    .transcript-word {
+        display: inline-block;
+        padding: 2px 4px;
+        margin: 0 1px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        color: var(--text-color);
+        transition: background 0.15s;
+        line-height: 1.6;
+    }
+
+    .transcript-word:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .transcript-word.search-match {
+        background: rgba(0, 212, 255, 0.2);
+    }
+
+    .transcript-word.search-match-active {
+        background: rgba(0, 212, 255, 0.4);
+        outline: 1px solid var(--primary-color);
+    }
+
+    .transcript-word.saved-flash {
+        background: rgba(46, 213, 115, 0.3);
+    }
+
+    .transcript-word.save-error {
+        border: 1px solid #f87171;
+    }
+
+    .transcript-word-input {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid var(--primary-color);
+        border-radius: 3px;
+        color: var(--text-color);
+        font-size: 0.9rem;
+        font-family: inherit;
+        padding: 2px 4px;
+        outline: none;
+        min-width: 30px;
+    }
+
+    .transcript-modal-footer {
+        padding: 12px 20px;
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .transcript-modal-footer button {
+        padding: 8px 20px;
+        background: var(--primary-color);
+        color: #000;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        cursor: pointer;
+    }
+
+    .transcript-modal-footer button:hover {
+        background: #00b8e6;
+    }
 </style>
 {% endblock %}
 
@@ -818,6 +1217,11 @@
             </div>
         </div>
 
+        <div class="caption-bar hidden" id="captionBar">
+            <div class="caption-text" id="captionText"></div>
+            <button class="cc-toggle" id="ccToggle" onclick="toggleCaptions()" title="Toggle closed captions">CC</button>
+        </div>
+
         <div class="playback-controls">
             <div class="timeline-container">
                 <div class="timeline" id="timeline" onclick="seekTimeline(event)" onmousemove="showTimelineTooltip(event)" onmouseleave="hideTimelineTooltip()">
@@ -900,6 +1304,21 @@
         <div id="noAudioNotice" class="no-audio-notice" style="display: none;">
             No audio recorded for this session. Playback uses timestamps only.
         </div>
+        <div class="transcription-info" id="transcriptionInfo" style="display: none;">
+            <div class="section-label">Transcription</div>
+            <div class="transcription-status" id="transcriptionStatus">
+                <span class="status-dot none"></span>
+                <span class="status-text">Not available</span>
+            </div>
+            <div class="transcription-language" id="transcriptionLanguage" style="display: none;"></div>
+            <div class="transcription-error" id="transcriptionError" style="display: none;"></div>
+            <button class="transcribe-btn" id="transcribeBtn" onclick="triggerTranscription()" style="display: none;">
+                Transcribe Audio
+            </button>
+            <button class="edit-transcript-btn" id="editTranscriptBtn" onclick="openTranscriptModal()" style="display: none;">
+                Edit Transcript
+            </button>
+        </div>
         <div class="panel-header">
             <h3>Annotations</h3>
         </div>
@@ -937,6 +1356,28 @@
         </div>
     </div>
 </div>
+<!-- Edit Transcript Modal -->
+<div class="transcript-modal-overlay" id="transcriptModal">
+    <div class="transcript-modal">
+        <div class="transcript-modal-header">
+            <h3>Edit Transcript</h3>
+            <button class="transcript-modal-close" onclick="closeTranscriptModal()">&times;</button>
+        </div>
+        <div class="transcript-search-bar">
+            <input type="text" id="transcriptSearchInput" placeholder="Search words..." oninput="onTranscriptSearch()" onkeydown="onTranscriptSearchKeydown(event)">
+            <div class="search-nav">
+                <span class="search-match-count" id="searchMatchCount"></span>
+                <button class="search-nav-btn" onclick="navigateSearchMatch(-1)" title="Previous match">&uarr;</button>
+                <button class="search-nav-btn" onclick="navigateSearchMatch(1)" title="Next match">&darr;</button>
+            </div>
+        </div>
+        <div class="transcript-body" id="transcriptBody"></div>
+        <div class="transcript-modal-footer">
+            <button onclick="closeTranscriptModal()">Close</button>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -953,6 +1394,16 @@
     let animationFrameId = null;
     let lastFrameTime = null;
     let audio = null;
+
+    // Transcription state
+    let captionsEnabled = true;
+    let transcriptionWords = [];
+    let transcriptionPollingId = null;
+    let captionEditing = false; // prevents updateCaptions() from overwriting input
+
+    // Modal search state
+    let searchMatches = [];
+    let searchMatchIndex = -1;
 
     // Canvas
     const canvas = document.getElementById('replayCanvas');
@@ -1027,6 +1478,9 @@
         };
         sampleImage.src = `/${replayData.sample.image_path}`;
 
+        // Setup transcription UI
+        setupTranscription();
+
         // Setup audio if available
         if (replayData.audio_url) {
             console.log('Loading audio from:', replayData.audio_url);
@@ -1047,6 +1501,7 @@
                     updatePlaybackUI();
                     renderAnnotations();
                     updateActiveAnnotation();
+                    updateCaptions();
                 }
             });
 
@@ -1232,6 +1687,7 @@
         updatePlaybackUI();
         renderAnnotations();
         updateActiveAnnotation();
+        updateCaptions();
 
         if (isPlaying) {
             animationFrameId = requestAnimationFrame(timerPlayback);
@@ -1270,6 +1726,7 @@
         updatePlaybackUI();
         renderAnnotations();
         updateActiveAnnotation();
+        updateCaptions();
     }
 
     function showTimelineTooltip(event) {
@@ -1321,6 +1778,7 @@
             updatePlaybackUI();
             renderAnnotations();
             updateActiveAnnotation();
+            updateCaptions();
         }
     }
 
@@ -1409,8 +1867,566 @@
         }
     }
 
+    // --- Transcription & Captions ---
+
+    function setupTranscription() {
+        const transcription = replayData.transcription;
+        const available = replayData.transcription_available;
+        const hasAudio = !!replayData.audio_url;
+
+        // Always show the transcription section if there's audio
+        if (!hasAudio) return;
+
+        const infoEl = document.getElementById('transcriptionInfo');
+        infoEl.style.display = '';
+
+        if (!transcription && !available) {
+            // No transcription and no API key
+            updateTranscriptionUI('none', null);
+            return;
+        }
+
+        if (!transcription && available) {
+            // API key available but not yet transcribed
+            updateTranscriptionUI('none', null);
+            showTranscribeButton('Transcribe Audio');
+            return;
+        }
+
+        // We have a transcription record
+        updateTranscriptionUI(transcription.status, transcription);
+
+        if (transcription.status === 'completed') {
+            transcriptionWords = transcription.words || [];
+            setupCaptionBar();
+        } else if (transcription.status === 'in_progress' || transcription.status === 'pending') {
+            startTranscriptionPolling();
+        }
+    }
+
+    function updateTranscriptionUI(status, transcription) {
+        const statusEl = document.getElementById('transcriptionStatus');
+        const langEl = document.getElementById('transcriptionLanguage');
+        const errorEl = document.getElementById('transcriptionError');
+
+        const labels = {
+            'completed': 'Completed',
+            'in_progress': 'In progress...',
+            'pending': 'Pending...',
+            'failed': 'Failed',
+            'none': 'Not transcribed'
+        };
+
+        statusEl.innerHTML = `
+            <span class="status-dot ${status}"></span>
+            <span class="status-text">${labels[status] || status}</span>
+        `;
+
+        // Show language if completed
+        if (transcription && transcription.language && status === 'completed') {
+            langEl.textContent = `Language: ${transcription.language}`;
+            langEl.style.display = '';
+        } else {
+            langEl.style.display = 'none';
+        }
+
+        // Show error if failed
+        if (transcription && transcription.error && status === 'failed') {
+            errorEl.textContent = transcription.error;
+            errorEl.style.display = '';
+        } else {
+            errorEl.style.display = 'none';
+        }
+
+        // Show transcribe button for appropriate states
+        if (replayData.transcription_available) {
+            if (status === 'none' || status === 'failed') {
+                showTranscribeButton(status === 'failed' ? 'Re-transcribe' : 'Transcribe Audio');
+            } else if (status === 'completed') {
+                showTranscribeButton('Re-transcribe');
+            } else {
+                // in_progress or pending - hide button
+                document.getElementById('transcribeBtn').style.display = 'none';
+            }
+        }
+    }
+
+    function showTranscribeButton(label) {
+        const btn = document.getElementById('transcribeBtn');
+        btn.textContent = label;
+        btn.disabled = false;
+        btn.style.display = '';
+    }
+
+    async function triggerTranscription() {
+        const btn = document.getElementById('transcribeBtn');
+        btn.disabled = true;
+        btn.textContent = 'Starting...';
+
+        try {
+            await apiCall(`/api/admin/sessions/${sessionId}/transcribe`, { method: 'POST' });
+            updateTranscriptionUI('pending', null);
+            startTranscriptionPolling();
+        } catch (error) {
+            showError('Failed to start transcription: ' + error.message);
+            btn.disabled = false;
+            btn.textContent = 'Retry';
+        }
+    }
+
+    function startTranscriptionPolling() {
+        if (transcriptionPollingId) return;
+
+        transcriptionPollingId = setInterval(async () => {
+            try {
+                const result = await apiCall(`/api/admin/sessions/${sessionId}/transcription`);
+                const t = result.transcription;
+                if (!t) return;
+
+                if (t.status === 'completed') {
+                    stopTranscriptionPolling();
+                    transcriptionWords = t.words || [];
+                    replayData.transcription = t;
+                    updateTranscriptionUI('completed', t);
+                    setupCaptionBar();
+                    updateCaptions();
+                } else if (t.status === 'failed') {
+                    stopTranscriptionPolling();
+                    replayData.transcription = t;
+                    updateTranscriptionUI('failed', t);
+                }
+                // else keep polling
+            } catch (e) {
+                console.error('Polling error:', e);
+            }
+        }, 3000);
+    }
+
+    function stopTranscriptionPolling() {
+        if (transcriptionPollingId) {
+            clearInterval(transcriptionPollingId);
+            transcriptionPollingId = null;
+        }
+    }
+
+    function setupCaptionBar() {
+        if (transcriptionWords.length === 0) return;
+
+        const captionBar = document.getElementById('captionBar');
+        captionBar.classList.remove('hidden');
+
+        const ccToggle = document.getElementById('ccToggle');
+        ccToggle.classList.toggle('active', captionsEnabled);
+
+        // Show edit transcript button
+        document.getElementById('editTranscriptBtn').style.display = '';
+    }
+
+    function toggleCaptions() {
+        captionsEnabled = !captionsEnabled;
+        document.getElementById('ccToggle').classList.toggle('active', captionsEnabled);
+
+        if (captionsEnabled) {
+            updateCaptions();
+        } else {
+            document.getElementById('captionText').innerHTML = '';
+        }
+    }
+
+    function updateCaptions() {
+        if (!captionsEnabled || transcriptionWords.length === 0) return;
+        if (captionEditing) return; // don't overwrite while user is editing
+
+        const captionText = document.getElementById('captionText');
+        const windowSize = 8;
+
+        // Find the current word index
+        let currentWordIdx = -1;
+        for (let i = 0; i < transcriptionWords.length; i++) {
+            if (transcriptionWords[i].start_ms <= currentTime && transcriptionWords[i].end_ms >= currentTime) {
+                currentWordIdx = i;
+                break;
+            }
+        }
+
+        // If no exact match, find the last word that started before currentTime
+        if (currentWordIdx === -1) {
+            for (let i = transcriptionWords.length - 1; i >= 0; i--) {
+                if (transcriptionWords[i].start_ms <= currentTime) {
+                    currentWordIdx = i;
+                    break;
+                }
+            }
+        }
+
+        if (currentWordIdx === -1) {
+            captionText.innerHTML = '';
+            return;
+        }
+
+        // Calculate window centered on current word
+        const halfWindow = Math.floor(windowSize / 2);
+        let startIdx = Math.max(0, currentWordIdx - halfWindow);
+        let endIdx = Math.min(transcriptionWords.length, startIdx + windowSize);
+        // Adjust start if we're near the end
+        if (endIdx - startIdx < windowSize) {
+            startIdx = Math.max(0, endIdx - windowSize);
+        }
+
+        const windowWords = transcriptionWords.slice(startIdx, endIdx);
+
+        captionText.innerHTML = windowWords.map((w, i) => {
+            const idx = startIdx + i;
+            const isActive = idx === currentWordIdx;
+            return `<span class="caption-word${isActive ? ' active' : ''}" data-word-index="${idx}" onclick="startCaptionEdit(this, ${idx})">${w.word} </span>`;
+        }).join('');
+    }
+
+    // --- Caption Bar Quick-Edit ---
+
+    function startCaptionEdit(span, wordIndex) {
+        // Pause playback
+        if (isPlaying) {
+            stopPlayback();
+        }
+        captionEditing = true;
+
+        const word = transcriptionWords[wordIndex];
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'caption-word-input';
+        input.value = word.word;
+        input.style.width = Math.max(30, word.word.length * 9 + 10) + 'px';
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                input.blur();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                captionEditing = false;
+                updateCaptions();
+            } else if (e.key === 'Tab') {
+                e.preventDefault();
+                // Save current then move to next/prev word
+                saveCaptionWord(input, wordIndex).then(() => {
+                    const nextIdx = e.shiftKey ? wordIndex - 1 : wordIndex + 1;
+                    if (nextIdx >= 0 && nextIdx < transcriptionWords.length) {
+                        captionEditing = false;
+                        updateCaptions();
+                        // After re-render, find the next word span and edit it
+                        setTimeout(() => {
+                            const nextSpan = document.querySelector(`[data-word-index="${nextIdx}"]`);
+                            if (nextSpan) startCaptionEdit(nextSpan, nextIdx);
+                        }, 50);
+                    }
+                });
+            }
+        });
+
+        input.addEventListener('blur', () => {
+            saveCaptionWord(input, wordIndex);
+        });
+
+        span.replaceWith(input);
+        input.focus();
+        input.select();
+    }
+
+    async function saveCaptionWord(input, wordIndex) {
+        const newWord = input.value.trim();
+        const oldWord = transcriptionWords[wordIndex].word;
+
+        captionEditing = false;
+
+        if (!newWord || newWord === oldWord) {
+            updateCaptions();
+            return;
+        }
+
+        try {
+            await apiCall(`/api/admin/sessions/${sessionId}/transcription/words/${wordIndex}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ word: newWord })
+            });
+            transcriptionWords[wordIndex].word = newWord;
+            updateCaptions();
+
+            // Flash saved
+            setTimeout(() => {
+                const span = document.querySelector(`[data-word-index="${wordIndex}"]`);
+                if (span) {
+                    span.classList.add('saved-flash');
+                    setTimeout(() => span.classList.remove('saved-flash'), 600);
+                }
+            }, 50);
+        } catch (error) {
+            console.error('Failed to save word:', error);
+            updateCaptions();
+        }
+    }
+
+    // --- Edit Transcript Modal ---
+
+    function openTranscriptModal() {
+        renderTranscriptModal();
+        document.getElementById('transcriptModal').classList.add('open');
+        document.getElementById('transcriptSearchInput').value = '';
+        searchMatches = [];
+        searchMatchIndex = -1;
+        document.getElementById('searchMatchCount').textContent = '';
+    }
+
+    function closeTranscriptModal() {
+        document.getElementById('transcriptModal').classList.remove('open');
+    }
+
+    function renderTranscriptModal() {
+        const body = document.getElementById('transcriptBody');
+        if (transcriptionWords.length === 0) {
+            body.innerHTML = '<p style="color: var(--text-muted);">No transcription words available.</p>';
+            return;
+        }
+
+        // Group words into lines by timestamp intervals (~4 seconds)
+        const lineInterval = 4000;
+        let lines = [];
+        let currentLine = { startMs: transcriptionWords[0].start_ms, words: [] };
+
+        for (let i = 0; i < transcriptionWords.length; i++) {
+            const w = transcriptionWords[i];
+            if (w.start_ms - currentLine.startMs >= lineInterval && currentLine.words.length > 0) {
+                lines.push(currentLine);
+                currentLine = { startMs: w.start_ms, words: [] };
+            }
+            currentLine.words.push({ ...w, globalIndex: i });
+        }
+        if (currentLine.words.length > 0) {
+            lines.push(currentLine);
+        }
+
+        body.innerHTML = lines.map(line => {
+            const timestamp = formatTime(line.startMs);
+            const wordsHtml = line.words.map(w =>
+                `<span class="transcript-word" data-modal-word-index="${w.globalIndex}" onclick="startModalWordEdit(this, ${w.globalIndex})">${escapeHtml(w.word)}</span>`
+            ).join(' ');
+
+            return `<div class="transcript-line">
+                <span class="transcript-timestamp" onclick="seekToTimestamp(${line.startMs})" title="Click to play from ${timestamp}">${timestamp}</span>
+                <div class="transcript-words">${wordsHtml}</div>
+            </div>`;
+        }).join('');
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function startModalWordEdit(span, wordIndex) {
+        const word = transcriptionWords[wordIndex];
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'transcript-word-input';
+        input.value = word.word;
+        input.style.width = Math.max(30, word.word.length * 8 + 16) + 'px';
+
+        input.addEventListener('input', () => {
+            input.style.width = Math.max(30, input.value.length * 8 + 16) + 'px';
+        });
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                input.blur();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                // Cancel: restore span
+                const newSpan = document.createElement('span');
+                newSpan.className = 'transcript-word';
+                newSpan.dataset.modalWordIndex = wordIndex;
+                newSpan.textContent = word.word;
+                newSpan.onclick = () => startModalWordEdit(newSpan, wordIndex);
+                input.replaceWith(newSpan);
+            } else if (e.key === 'Tab') {
+                e.preventDefault();
+                saveModalWord(input, wordIndex).then(() => {
+                    const nextIdx = e.shiftKey ? wordIndex - 1 : wordIndex + 1;
+                    if (nextIdx >= 0 && nextIdx < transcriptionWords.length) {
+                        const nextSpan = document.querySelector(`[data-modal-word-index="${nextIdx}"]`);
+                        if (nextSpan && nextSpan.tagName !== 'INPUT') {
+                            startModalWordEdit(nextSpan, nextIdx);
+                        }
+                    }
+                });
+            }
+        });
+
+        input.addEventListener('blur', () => {
+            saveModalWord(input, wordIndex);
+        });
+
+        span.replaceWith(input);
+        input.focus();
+        input.select();
+    }
+
+    async function saveModalWord(input, wordIndex) {
+        const newWord = input.value.trim();
+        const oldWord = transcriptionWords[wordIndex].word;
+
+        // Create span to replace input
+        const span = document.createElement('span');
+        span.className = 'transcript-word';
+        span.dataset.modalWordIndex = wordIndex;
+        span.onclick = () => startModalWordEdit(span, wordIndex);
+
+        if (!newWord || newWord === oldWord) {
+            span.textContent = oldWord;
+            input.replaceWith(span);
+            return;
+        }
+
+        try {
+            await apiCall(`/api/admin/sessions/${sessionId}/transcription/words/${wordIndex}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ word: newWord })
+            });
+            transcriptionWords[wordIndex].word = newWord;
+            span.textContent = newWord;
+            input.replaceWith(span);
+
+            // Flash saved
+            span.classList.add('saved-flash');
+            setTimeout(() => span.classList.remove('saved-flash'), 600);
+
+            // Re-apply search highlighting if active
+            const searchInput = document.getElementById('transcriptSearchInput');
+            if (searchInput.value.trim()) {
+                onTranscriptSearch();
+            }
+        } catch (error) {
+            console.error('Failed to save word:', error);
+            span.textContent = oldWord;
+            span.classList.add('save-error');
+            input.replaceWith(span);
+            setTimeout(() => span.classList.remove('save-error'), 2000);
+        }
+    }
+
+    function seekToTimestamp(ms) {
+        currentTime = ms;
+        if (audio) {
+            audio.currentTime = ms / 1000;
+            // Play a short snippet (~2s)
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    setTimeout(() => {
+                        if (audio && !isPlaying) {
+                            audio.pause();
+                        }
+                    }, 2000);
+                }).catch(() => {});
+            }
+        }
+        updatePlaybackUI();
+        renderAnnotations();
+        updateActiveAnnotation();
+        updateCaptions();
+    }
+
+    // --- Modal Search ---
+
+    function onTranscriptSearch() {
+        const query = document.getElementById('transcriptSearchInput').value.trim().toLowerCase();
+
+        // Clear previous highlights
+        document.querySelectorAll('.transcript-word.search-match, .transcript-word.search-match-active').forEach(el => {
+            el.classList.remove('search-match', 'search-match-active');
+        });
+
+        searchMatches = [];
+        searchMatchIndex = -1;
+
+        if (!query) {
+            document.getElementById('searchMatchCount').textContent = '';
+            return;
+        }
+
+        // Find all matching word spans
+        document.querySelectorAll('.transcript-word').forEach(span => {
+            if (span.textContent.toLowerCase().includes(query)) {
+                span.classList.add('search-match');
+                searchMatches.push(span);
+            }
+        });
+
+        if (searchMatches.length > 0) {
+            searchMatchIndex = 0;
+            highlightCurrentSearchMatch();
+        }
+
+        document.getElementById('searchMatchCount').textContent =
+            searchMatches.length > 0 ? `${searchMatchIndex + 1}/${searchMatches.length}` : '0 matches';
+    }
+
+    function onTranscriptSearchKeydown(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            navigateSearchMatch(e.shiftKey ? -1 : 1);
+        }
+    }
+
+    function navigateSearchMatch(direction) {
+        if (searchMatches.length === 0) return;
+
+        // Remove active from current
+        if (searchMatchIndex >= 0 && searchMatchIndex < searchMatches.length) {
+            searchMatches[searchMatchIndex].classList.remove('search-match-active');
+            searchMatches[searchMatchIndex].classList.add('search-match');
+        }
+
+        searchMatchIndex += direction;
+        if (searchMatchIndex >= searchMatches.length) searchMatchIndex = 0;
+        if (searchMatchIndex < 0) searchMatchIndex = searchMatches.length - 1;
+
+        highlightCurrentSearchMatch();
+    }
+
+    function highlightCurrentSearchMatch() {
+        if (searchMatchIndex < 0 || searchMatchIndex >= searchMatches.length) return;
+
+        const match = searchMatches[searchMatchIndex];
+        match.classList.remove('search-match');
+        match.classList.add('search-match-active');
+
+        // Scroll into view
+        match.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        document.getElementById('searchMatchCount').textContent =
+            `${searchMatchIndex + 1}/${searchMatches.length}`;
+    }
+
+    // Close transcript modal on overlay click
+    document.getElementById('transcriptModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeTranscriptModal();
+        }
+    });
+
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
+        // Escape closes transcript modal
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('transcriptModal');
+            if (modal.classList.contains('open')) {
+                closeTranscriptModal();
+                return;
+            }
+        }
+
         // Ignore if typing in an input
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
@@ -1500,6 +2516,11 @@
         if (e.target === this) {
             closeChangePassword();
         }
+    });
+
+    // Cleanup polling on page unload
+    window.addEventListener('beforeunload', () => {
+        stopTranscriptionPolling();
     });
 
     // Initialize
