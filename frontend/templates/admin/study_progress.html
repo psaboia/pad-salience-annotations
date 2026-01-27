@@ -547,31 +547,31 @@
         <nav>
             <ul class="nav-menu">
                 <li class="nav-item">
-                    <a href="/admin" class="nav-link">
+                    <a href="{{ base_url }}/admin" class="nav-link">
                         <span class="icon">📊</span>
                         Dashboard
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/studies" class="nav-link">
+                    <a href="{{ base_url }}/admin/studies" class="nav-link">
                         <span class="icon">📋</span>
                         Studies
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/users?role=specialist" class="nav-link">
+                    <a href="{{ base_url }}/admin/users?role=specialist" class="nav-link">
                         <span class="icon">🔬</span>
                         Specialists
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/users" class="nav-link">
+                    <a href="{{ base_url }}/admin/users" class="nav-link">
                         <span class="icon">👥</span>
                         Users
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/settings" class="nav-link">
+                    <a href="{{ base_url }}/admin/settings" class="nav-link">
                         <span class="icon">⚙️</span>
                         Settings
                     </a>
@@ -626,8 +626,8 @@
     async function loadProgress() {
         try {
             const [progress, sessions] = await Promise.all([
-                apiCall(`/api/admin/studies/${studyId}/progress`),
-                apiCall(`/api/admin/studies/${studyId}/completed-sessions`)
+                apiCall(`${BASE_URL}/api/admin/studies/${studyId}/progress`),
+                apiCall(`${BASE_URL}/api/admin/studies/${studyId}/completed-sessions`)
             ]);
             completedSessions = sessions;
             renderProgress(progress);
@@ -681,11 +681,11 @@
 
         content.innerHTML = `
             <div class="breadcrumb">
-                <a href="/admin">Dashboard</a>
+                <a href="${BASE_URL}/admin">Dashboard</a>
                 <span class="separator">›</span>
-                <a href="/admin/studies">Studies</a>
+                <a href="${BASE_URL}/admin/studies">Studies</a>
                 <span class="separator">›</span>
-                <a href="/admin/studies/${studyId}">${exp.name}</a>
+                <a href="${BASE_URL}/admin/studies/${studyId}">${exp.name}</a>
                 <span class="separator">›</span>
                 <span class="current">Progress</span>
             </div>
@@ -699,7 +699,7 @@
                         <span class="eyetracking-indicator">👁️ Eye-tracking</span>
                     ` : ''}
                     <span style="color: var(--text-muted);">·</span>
-                    <a href="/admin/studies/${studyId}">✏️ Edit Study</a>
+                    <a href="${BASE_URL}/admin/studies/${studyId}">✏️ Edit Study</a>
                     <span style="color: var(--text-muted);">·</span>
                     <a href="#" onclick="exportMetadata(); return false;">📋 Export Metadata</a>
                     <span style="color: var(--text-muted);">·</span>
@@ -795,7 +795,7 @@
                                         </span>
                                     </div>
                                     <div>
-                                        <a href="/admin/studies/${studyId}/sessions/${sess.session_id}/replay" class="replay-btn">
+                                        <a href="${BASE_URL}/admin/studies/${studyId}/sessions/${sess.session_id}/replay" class="replay-btn">
                                             ▶ Replay
                                         </a>
                                     </div>
@@ -830,7 +830,7 @@
 
     function exportMetadata() {
         const link = document.createElement('a');
-        link.href = `/api/admin/studies/${studyId}/export-metadata`;
+        link.href = `${BASE_URL}/api/admin/studies/${studyId}/export-metadata`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -838,7 +838,7 @@
 
     function exportStudyData() {
         const link = document.createElement('a');
-        link.href = `/api/admin/studies/${studyId}/export-data`;
+        link.href = `${BASE_URL}/api/admin/studies/${studyId}/export-data`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -890,7 +890,7 @@
         }
 
         try {
-            await apiCall('/api/auth/change-password', {
+            await apiCall(BASE_URL + '/api/auth/change-password', {
                 method: 'POST',
                 body: JSON.stringify({
                     current_password: currentPassword,

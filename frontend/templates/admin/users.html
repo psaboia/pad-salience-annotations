@@ -420,31 +420,31 @@
         <nav>
             <ul class="nav-menu">
                 <li class="nav-item">
-                    <a href="/admin" class="nav-link">
+                    <a href="{{ base_url }}/admin" class="nav-link">
                         <span class="icon">📊</span>
                         Dashboard
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/studies" class="nav-link">
+                    <a href="{{ base_url }}/admin/studies" class="nav-link">
                         <span class="icon">📋</span>
                         Studies
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/users?role=specialist" class="nav-link">
+                    <a href="{{ base_url }}/admin/users?role=specialist" class="nav-link">
                         <span class="icon">🔬</span>
                         Specialists
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/users" class="nav-link active">
+                    <a href="{{ base_url }}/admin/users" class="nav-link active">
                         <span class="icon">👥</span>
                         Users
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/settings" class="nav-link">
+                    <a href="{{ base_url }}/admin/settings" class="nav-link">
                         <span class="icon">⚙️</span>
                         Settings
                     </a>
@@ -693,7 +693,7 @@
 
         try {
             // Always fetch all users, filter client-side
-            users = await apiCall('/api/admin/users?include_inactive=true');
+            users = await apiCall(BASE_URL + '/api/admin/users?include_inactive=true');
             renderUsers();
         } catch (error) {
             showError(error.message);
@@ -961,12 +961,12 @@
 
         try {
             if (isEdit) {
-                await apiCall(`/api/admin/users/${id}`, {
+                await apiCall(`${BASE_URL}/api/admin/users/${id}`, {
                     method: 'PUT',
                     body: JSON.stringify(data)
                 });
             } else {
-                await apiCall('/api/admin/users', {
+                await apiCall(BASE_URL + '/api/admin/users', {
                     method: 'POST',
                     body: JSON.stringify(data)
                 });
@@ -996,7 +996,7 @@
         if (!userToDeactivate) return;
 
         try {
-            await apiCall(`/api/admin/users/${userToDeactivate}`, {
+            await apiCall(`${BASE_URL}/api/admin/users/${userToDeactivate}`, {
                 method: 'DELETE'
             });
             closeConfirmModal();
@@ -1008,7 +1008,7 @@
 
     async function activateUser(id) {
         try {
-            await apiCall(`/api/admin/users/${id}`, {
+            await apiCall(`${BASE_URL}/api/admin/users/${id}`, {
                 method: 'PUT',
                 body: JSON.stringify({ is_active: true })
             });
@@ -1064,7 +1064,7 @@
         }
 
         try {
-            await apiCall('/api/auth/change-password', {
+            await apiCall(BASE_URL + '/api/auth/change-password', {
                 method: 'POST',
                 body: JSON.stringify({
                     current_password: currentPassword,

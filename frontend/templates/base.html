@@ -374,6 +374,9 @@
     {% block body %}{% endblock %}
 
     <script>
+        // Base URL for subpath deployment
+        const BASE_URL = '{{ base_url }}';
+
         // Global utilities
         async function apiCall(url, options = {}) {
             const response = await fetch(url, {
@@ -414,22 +417,22 @@
         }
 
         async function logout() {
-            await fetch('/api/auth/logout', { method: 'POST' });
-            window.location.href = '/login';
+            await fetch(BASE_URL + '/api/auth/logout', { method: 'POST' });
+            window.location.href = BASE_URL + '/login';
         }
 
         async function switchRole(role) {
             try {
-                const response = await apiCall('/api/auth/switch-role', {
+                const response = await apiCall(BASE_URL + '/api/auth/switch-role', {
                     method: 'POST',
                     body: JSON.stringify({ role })
                 });
 
                 // Redirect based on the new role
                 if (role === 'super_admin' || role === 'admin') {
-                    window.location.href = '/admin';
+                    window.location.href = BASE_URL + '/admin';
                 } else {
-                    window.location.href = '/specialist';
+                    window.location.href = BASE_URL + '/specialist';
                 }
             } catch (error) {
                 showError(error.message);

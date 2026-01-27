@@ -84,7 +84,7 @@
         loginBtn.textContent = 'Signing in...';
 
         try {
-            const response = await fetch('/api/auth/login', {
+            const response = await fetch(BASE_URL + '/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
@@ -98,9 +98,9 @@
 
             // Redirect based on active role
             if (data.user.active_role === 'super_admin' || data.user.active_role === 'admin') {
-                window.location.href = '/admin';
+                window.location.href = BASE_URL + '/admin';
             } else {
-                window.location.href = '/specialist';
+                window.location.href = BASE_URL + '/specialist';
             }
         } catch (error) {
             errorAlert.textContent = error.message;

@@ -430,31 +430,31 @@
         <nav>
             <ul class="nav-menu">
                 <li class="nav-item">
-                    <a href="/admin" class="nav-link">
+                    <a href="{{ base_url }}/admin" class="nav-link">
                         <span class="icon">📊</span>
                         Dashboard
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/studies" class="nav-link active">
+                    <a href="{{ base_url }}/admin/studies" class="nav-link active">
                         <span class="icon">📋</span>
                         Studies
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/users?role=specialist" class="nav-link">
+                    <a href="{{ base_url }}/admin/users?role=specialist" class="nav-link">
                         <span class="icon">🔬</span>
                         Specialists
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/users" class="nav-link">
+                    <a href="{{ base_url }}/admin/users" class="nav-link">
                         <span class="icon">👥</span>
                         Users
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/settings" class="nav-link">
+                    <a href="{{ base_url }}/admin/settings" class="nav-link">
                         <span class="icon">⚙️</span>
                         Settings
                     </a>
@@ -466,7 +466,7 @@
     <main class="main-content">
         <div class="page-header">
             <h2>Studies</h2>
-            <a href="/admin/studies/new" class="btn btn-primary">
+            <a href="{{ base_url }}/admin/studies/new" class="btn btn-primary">
                 + New Study
             </a>
         </div>
@@ -551,7 +551,7 @@
 
     async function loadStudies() {
         try {
-            allStudies = await apiCall('/api/admin/studies');
+            allStudies = await apiCall(BASE_URL + '/api/admin/studies');
 
             // Load progress for active/paused/completed studies
             progressMap = {};
@@ -561,7 +561,7 @@
 
             await Promise.all(studiesWithProgress.map(async study => {
                 try {
-                    const progress = await apiCall(`/api/admin/studies/${study.id}/progress`);
+                    const progress = await apiCall(`${BASE_URL}/api/admin/studies/${study.id}/progress`);
                     progressMap[study.id] = progress;
                 } catch (e) {
                     // Ignore errors for individual progress loads
@@ -641,9 +641,9 @@
                     <div class="study-meta">
                         <span class="badge badge-${getStatusBadge(study.status)}" title="Status: ${study.status}">${study.status}</span>
                         ${study.status === 'active' || study.status === 'paused' ?
-                            `<a href="/admin/studies/${study.id}/progress" class="btn btn-primary btn-sm" title="Track progress">Track</a>` : ''
+                            `<a href="${BASE_URL}/admin/studies/${study.id}/progress" class="btn btn-primary btn-sm" title="Track progress">Track</a>` : ''
                         }
-                        <a href="/admin/studies/${study.id}" class="settings-btn" title="Study settings">⚙</a>
+                        <a href="${BASE_URL}/admin/studies/${study.id}" class="settings-btn" title="Study settings">⚙</a>
                         ${study.status === 'draft' ?
                             `<button class="settings-btn" onclick="deleteStudy(${study.id}, '${study.name.replace(/'/g, "\\'")}')" title="Delete study">🗑</button>` : ''
                         }
@@ -668,7 +668,7 @@
         if (!confirm(`Delete study "${studyName}"?\n\nThis action cannot be undone.`)) return;
 
         try {
-            await apiCall(`/api/admin/studies/${studyId}`, { method: 'DELETE' });
+            await apiCall(`${BASE_URL}/api/admin/studies/${studyId}`, { method: 'DELETE' });
             loadStudies();
         } catch (error) {
             showError(error.message);
@@ -721,7 +721,7 @@
         }
 
         try {
-            await apiCall('/api/auth/change-password', {
+            await apiCall(BASE_URL + '/api/auth/change-password', {
                 method: 'POST',
                 body: JSON.stringify({
                     current_password: currentPassword,

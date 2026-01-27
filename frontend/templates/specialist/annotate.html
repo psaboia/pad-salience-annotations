@@ -881,16 +881,16 @@
         <div class="tracked-area">
             <div class="apriltag-container" id="apriltagContainer">
                 <div class="apriltag top-left" id="tagTopLeft">
-                    <img src="/assets/apriltags/tag36h11_0.png" alt="AprilTag">
+                    <img src="{{ base_url }}/assets/apriltags/tag36h11_0.png" alt="AprilTag">
                 </div>
                 <div class="apriltag top-right" id="tagTopRight">
-                    <img src="/assets/apriltags/tag36h11_0.png" alt="AprilTag">
+                    <img src="{{ base_url }}/assets/apriltags/tag36h11_0.png" alt="AprilTag">
                 </div>
                 <div class="apriltag bottom-left" id="tagBottomLeft">
-                    <img src="/assets/apriltags/tag36h11_0.png" alt="AprilTag">
+                    <img src="{{ base_url }}/assets/apriltags/tag36h11_0.png" alt="AprilTag">
                 </div>
                 <div class="apriltag bottom-right" id="tagBottomRight">
-                    <img src="/assets/apriltags/tag36h11_0.png" alt="AprilTag">
+                    <img src="{{ base_url }}/assets/apriltags/tag36h11_0.png" alt="AprilTag">
                 </div>
 
                 <div class="canvas-wrapper" id="canvasWrapper">
@@ -1148,7 +1148,7 @@
         // Load configuration from server
         async function loadConfig() {
             try {
-                const response = await fetch('/api/config');
+                const response = await fetch(BASE_URL + '/api/config');
                 const config = await response.json();
 
                 const root = document.documentElement;
@@ -1270,7 +1270,7 @@
         // Load current session data from API
         async function loadCurrentSession() {
             try {
-                const response = await fetch(`/api/specialist/studies/${studyId}/current`);
+                const response = await fetch(`${BASE_URL}/api/specialist/studies/${studyId}/current`);
                 if (!response.ok) {
                     const error = await response.json();
                     throw new Error(error.detail || 'Failed to load session');
@@ -1321,7 +1321,7 @@
                 startAutoRecording();
             };
 
-            padImage.src = `/${currentSample.image_path}`;
+            padImage.src = `${BASE_URL}/${currentSample.image_path}`;
 
             // Reset state
             annotations = [];
@@ -1356,7 +1356,7 @@
             for (const [position, tagId] of Object.entries(tagMapping)) {
                 const imgElement = tagElements[position];
                 if (imgElement && tagId !== null && tagId !== undefined) {
-                    imgElement.src = `/assets/apriltags/tag36h11_${tagId}.png`;
+                    imgElement.src = `${BASE_URL}/assets/apriltags/tag36h11_${tagId}.png`;
                     imgElement.alt = `AprilTag ${tagId}`;
                 }
             }
@@ -1779,7 +1779,7 @@
                     };
                 }
 
-                const response = await fetch(`/api/specialist/sessions/${sessionData.session_uuid}/complete`, {
+                const response = await fetch(`${BASE_URL}/api/specialist/sessions/${sessionData.session_uuid}/complete`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -1862,7 +1862,7 @@
             if (annotations.length > 0 && !confirm('You have unsaved annotations. Leave anyway?')) {
                 return;
             }
-            window.location.href = '/specialist';
+            window.location.href = BASE_URL + '/specialist';
         }
 
         // Settings modal

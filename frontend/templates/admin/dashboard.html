@@ -421,31 +421,31 @@
         <nav>
             <ul class="nav-menu">
                 <li class="nav-item">
-                    <a href="/admin" class="nav-link active">
+                    <a href="{{ base_url }}/admin" class="nav-link active">
                         <span class="icon">📊</span>
                         Dashboard
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/studies" class="nav-link">
+                    <a href="{{ base_url }}/admin/studies" class="nav-link">
                         <span class="icon">📋</span>
                         Studies
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/users?role=specialist" class="nav-link">
+                    <a href="{{ base_url }}/admin/users?role=specialist" class="nav-link">
                         <span class="icon">🔬</span>
                         Specialists
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/users" class="nav-link">
+                    <a href="{{ base_url }}/admin/users" class="nav-link">
                         <span class="icon">👥</span>
                         Users
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/settings" class="nav-link">
+                    <a href="{{ base_url }}/admin/settings" class="nav-link">
                         <span class="icon">⚙️</span>
                         Settings
                     </a>
@@ -558,9 +558,9 @@
         try {
             // Load all data in parallel
             const [studies, specialists, activity] = await Promise.all([
-                apiCall('/api/admin/studies'),
-                apiCall('/api/admin/specialists'),
-                apiCall('/api/admin/dashboard/activity').catch(() => [])
+                apiCall(BASE_URL + '/api/admin/studies'),
+                apiCall(BASE_URL + '/api/admin/specialists'),
+                apiCall(BASE_URL + '/api/admin/dashboard/activity').catch(() => [])
             ]);
 
             // Update stats
@@ -596,7 +596,7 @@
 
         await Promise.all(studies.map(async study => {
             try {
-                const progress = await apiCall(`/api/admin/studies/${study.id}/progress`);
+                const progress = await apiCall(`${BASE_URL}/api/admin/studies/${study.id}/progress`);
                 progressMap[study.id] = progress;
                 totalAnnotations += progress.completed_annotations || 0;
                 totalSamples += progress.total_annotations || 0;
@@ -637,7 +637,7 @@
 
             return `
                 <div class="progress-item">
-                    <a href="/admin/studies/${study.id}/progress" class="study-name">${study.name}</a>
+                    <a href="${BASE_URL}/admin/studies/${study.id}/progress" class="study-name">${study.name}</a>
                     <span class="study-icons">
                         ${hasEyetracking ? '<span title="Eye-tracking enabled">👁️</span>' : ''}
                         ${hasDrawings ? '<span title="Has drawings/annotations">📐</span>' : ''}
@@ -665,7 +665,7 @@
         }
 
         container.innerHTML = activity.map(item => `
-            <a href="/admin/studies/${item.study_id}/sessions/${item.session_id}/replay" class="activity-item">
+            <a href="${BASE_URL}/admin/studies/${item.study_id}/sessions/${item.session_id}/replay" class="activity-item">
                 <span class="activity-icon">✏️</span>
                 <span class="activity-text">
                     <strong>${item.specialist_name}</strong> annotated sample in <strong>${item.study_name}</strong>
@@ -736,7 +736,7 @@
         }
 
         try {
-            await apiCall('/api/auth/change-password', {
+            await apiCall(BASE_URL + '/api/auth/change-password', {
                 method: 'POST',
                 body: JSON.stringify({
                     current_password: currentPassword,

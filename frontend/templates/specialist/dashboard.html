@@ -509,7 +509,7 @@
         }
 
         try {
-            await apiCall('/api/auth/change-password', {
+            await apiCall(BASE_URL + '/api/auth/change-password', {
                 method: 'POST',
                 body: JSON.stringify({
                     current_password: currentPassword,
@@ -532,7 +532,7 @@
 
     async function loadStudys() {
         try {
-            const studies = await apiCall('/api/specialist/studies');
+            const studies = await apiCall(BASE_URL + '/api/specialist/studies');
             renderStudys(studies);
         } catch (error) {
             showError(error.message);
@@ -601,7 +601,7 @@
                         ` : a.study_status === 'paused' ? `
                             <span class="badge badge-warning">Study Paused</span>
                         ` : isStarted ? `
-                            <a href="/annotate/${a.study_id}" class="btn btn-primary">Continue Annotating</a>
+                            <a href="{{ base_url }}/annotate/${a.study_id}" class="btn btn-primary">Continue Annotating</a>
                         ` : `
                             <button class="btn btn-success" onclick="startStudy(${a.study_id})">Start Study</button>
                         `}
@@ -622,16 +622,16 @@
 
     async function startStudy(studyId) {
         try {
-            await apiCall(`/api/specialist/studies/${studyId}/start`, { method: 'POST' });
-            window.location.href = `/annotate/${studyId}`;
+            await apiCall(`${BASE_URL}/api/specialist/studies/${studyId}/start`, { method: 'POST' });
+            window.location.href = `${BASE_URL}/annotate/${studyId}`;
         } catch (error) {
             showError(error.message);
         }
     }
 
     async function logout() {
-        await fetch('/api/auth/logout', { method: 'POST' });
-        window.location.href = '/login';
+        await fetch(BASE_URL + '/api/auth/logout', { method: 'POST' });
+        window.location.href = BASE_URL + '/login';
     }
 
     loadStudys();

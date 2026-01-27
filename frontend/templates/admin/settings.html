@@ -336,31 +336,31 @@
         <nav>
             <ul class="nav-menu">
                 <li class="nav-item">
-                    <a href="/admin" class="nav-link">
+                    <a href="{{ base_url }}/admin" class="nav-link">
                         <span class="icon">📊</span>
                         Dashboard
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/studies" class="nav-link">
+                    <a href="{{ base_url }}/admin/studies" class="nav-link">
                         <span class="icon">📋</span>
                         Studies
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/users?role=specialist" class="nav-link">
+                    <a href="{{ base_url }}/admin/users?role=specialist" class="nav-link">
                         <span class="icon">🔬</span>
                         Specialists
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/users" class="nav-link">
+                    <a href="{{ base_url }}/admin/users" class="nav-link">
                         <span class="icon">👥</span>
                         Users
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/settings" class="nav-link active">
+                    <a href="{{ base_url }}/admin/settings" class="nav-link active">
                         <span class="icon">⚙️</span>
                         Settings
                     </a>
@@ -458,7 +458,7 @@
 
     async function loadPADProjects() {
         try {
-            const projects = await apiCall('/api/admin/pad-projects');
+            const projects = await apiCall(BASE_URL + '/api/admin/pad-projects');
             const select = document.getElementById('padProjectSelect');
             select.innerHTML = '<option value="">Select a PAD project...</option>' +
                 projects.map(p => `<option value="${p.id}" data-name="${p.name}">${p.name}</option>`).join('');
@@ -473,7 +473,7 @@
 
     async function loadDatabaseStats() {
         try {
-            const samples = await apiCall('/api/admin/samples');
+            const samples = await apiCall(BASE_URL + '/api/admin/samples');
             const total = samples.length;
             const withPadId = samples.filter(s => s.pad_sample_id).length;
             const missingPadId = total - withPadId;
@@ -501,7 +501,7 @@
         btn.textContent = 'Updating...';
 
         try {
-            const result = await apiCall('/api/admin/pad-backfill-sample-ids', {
+            const result = await apiCall(BASE_URL + '/api/admin/pad-backfill-sample-ids', {
                 method: 'POST',
                 body: JSON.stringify({
                     project_id: parseInt(projectId),
@@ -568,7 +568,7 @@
         }
 
         try {
-            await apiCall('/api/auth/change-password', {
+            await apiCall(BASE_URL + '/api/auth/change-password', {
                 method: 'POST',
                 body: JSON.stringify({
                     current_password: currentPassword,

@@ -90,6 +90,17 @@ app = FastAPI(
 # Templates
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
+# Inject base_url into all template contexts for subpath deployment
+_original_TemplateResponse = templates.TemplateResponse
+
+def _template_response_with_base_url(name, context, **kwargs):
+    request = context.get("request")
+    if request:
+        context.setdefault("base_url", request.scope.get("root_path", ""))
+    return _original_TemplateResponse(name, context, **kwargs)
+
+templates.TemplateResponse = _template_response_with_base_url
+
 # Include routers
 app.include_router(auth_router)
 app.include_router(admin_router)
@@ -181,6 +192,12 @@ async def get_stats():
     return stats
 
 
+def _redirect(request: Request, path: str):
+    """Build redirect URL respecting root_path for subpath deployment."""
+    base = request.scope.get("root_path", "")
+    return RedirectResponse(url=base + path, status_code=302)
+
+
 # Page routes
 @app.get("/login")
 async def login_page(request: Request):
@@ -189,8 +206,8 @@ async def login_page(request: Request):
     if user:
         # Already logged in, redirect based on active role
         if user.get("active_role") in ("admin", "super_admin"):
-            return RedirectResponse(url="/admin", status_code=302)
-        return RedirectResponse(url="/specialist", status_code=302)
+            return _redirect(request, "/admin")
+        return _redirect(request, "/specialist")
 
     return templates.TemplateResponse("login.html", {"request": request})
 
@@ -200,9 +217,9 @@ async def admin_dashboard(request: Request):
     """Render admin dashboard."""
     user = await get_current_user_optional(request)
     if not user:
-        return RedirectResponse(url="/login", status_code=302)
+        return _redirect(request, "/login")
     if user.get("active_role") not in ("admin", "super_admin"):
-        return RedirectResponse(url="/specialist", status_code=302)
+        return _redirect(request, "/specialist")
 
     return templates.TemplateResponse("admin/dashboard.html", {"request": request, "user": user})
 
@@ -212,7 +229,7 @@ async def admin_studies(request: Request):
     """Render studies list page."""
     user = await get_current_user_optional(request)
     if not user or user.get("active_role") not in ("admin", "super_admin"):
-        return RedirectResponse(url="/login", status_code=302)
+        return _redirect(request, "/login")
 
     return templates.TemplateResponse("admin/studies.html", {"request": request, "user": user})
 
@@ -222,7 +239,7 @@ async def admin_new_study(request: Request):
     """Render new study page."""
     user = await get_current_user_optional(request)
     if not user or user.get("active_role") not in ("admin", "super_admin"):
-        return RedirectResponse(url="/login", status_code=302)
+        return _redirect(request, "/login")
 
     return templates.TemplateResponse("admin/study_new.html", {"request": request, "user": user})
 
@@ -232,7 +249,7 @@ async def admin_study_detail(request: Request, study_id: int):
     """Render study detail page."""
     user = await get_current_user_optional(request)
     if not user or user.get("active_role") not in ("admin", "super_admin"):
-        return RedirectResponse(url="/login", status_code=302)
+        return _redirect(request, "/login")
 
     return templates.TemplateResponse(
         "admin/study_detail.html",
@@ -245,7 +262,7 @@ async def admin_study_progress(request: Request, study_id: int):
     """Render study progress page."""
     user = await get_current_user_optional(request)
     if not user or user.get("active_role") not in ("admin", "super_admin"):
-        return RedirectResponse(url="/login", status_code=302)
+        return _redirect(request, "/login")
 
     return templates.TemplateResponse(
         "admin/study_progress.html",
@@ -258,7 +275,7 @@ async def admin_session_replay(request: Request, study_id: int, session_id: int)
     """Render session replay page."""
     user = await get_current_user_optional(request)
     if not user or user.get("active_role") not in ("admin", "super_admin"):
-        return RedirectResponse(url="/login", status_code=302)
+        return _redirect(request, "/login")
 
     return templates.TemplateResponse(
         "admin/session_replay.html",
@@ -271,7 +288,7 @@ async def admin_users(request: Request):
     """Render users management page."""
     user = await get_current_user_optional(request)
     if not user or user.get("active_role") not in ("admin", "super_admin"):
-        return RedirectResponse(url="/login", status_code=302)
+        return _redirect(request, "/login")
 
     return templates.TemplateResponse("admin/users.html", {"request": request, "user": user})
 
@@ -281,7 +298,7 @@ async def admin_settings(request: Request):
     """Render admin settings page."""
     user = await get_current_user_optional(request)
     if not user or user.get("active_role") not in ("admin", "super_admin"):
-        return RedirectResponse(url="/login", status_code=302)
+        return _redirect(request, "/login")
 
     return templates.TemplateResponse("admin/settings.html", {"request": request, "user": user})
 
@@ -291,7 +308,7 @@ async def specialist_dashboard(request: Request):
     """Render specialist dashboard."""
     user = await get_current_user_optional(request)
     if not user:
-        return RedirectResponse(url="/login", status_code=302)
+        return _redirect(request, "/login")
 
     return templates.TemplateResponse("specialist/dashboard.html", {"request": request, "user": user})
 
@@ -301,7 +318,7 @@ async def annotate_page(request: Request, study_id: int):
     """Render annotation interface for a study."""
     user = await get_current_user_optional(request)
     if not user:
-        return RedirectResponse(url="/login", status_code=302)
+        return _redirect(request, "/login")
 
     return templates.TemplateResponse(
         "specialist/annotate.html",
@@ -322,10 +339,10 @@ async def root(request: Request):
     """Root redirect to appropriate dashboard or login."""
     user = await get_current_user_optional(request)
     if not user:
-        return RedirectResponse(url="/login", status_code=302)
+        return _redirect(request, "/login")
     if user.get("active_role") in ("admin", "super_admin"):
-        return RedirectResponse(url="/admin", status_code=302)
-    return RedirectResponse(url="/specialist", status_code=302)
+        return _redirect(request, "/admin")
+    return _redirect(request, "/specialist")
 
 
 if __name__ == "__main__":

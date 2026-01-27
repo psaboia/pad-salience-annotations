@@ -463,31 +463,31 @@
         <nav>
             <ul class="nav-menu">
                 <li class="nav-item">
-                    <a href="/admin" class="nav-link">
+                    <a href="{{ base_url }}/admin" class="nav-link">
                         <span class="icon">📊</span>
                         Dashboard
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/studies" class="nav-link">
+                    <a href="{{ base_url }}/admin/studies" class="nav-link">
                         <span class="icon">📋</span>
                         Studies
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/users?role=specialist" class="nav-link">
+                    <a href="{{ base_url }}/admin/users?role=specialist" class="nav-link">
                         <span class="icon">🔬</span>
                         Specialists
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/users" class="nav-link">
+                    <a href="{{ base_url }}/admin/users" class="nav-link">
                         <span class="icon">👥</span>
                         Users
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/settings" class="nav-link">
+                    <a href="{{ base_url }}/admin/settings" class="nav-link">
                         <span class="icon">⚙️</span>
                         Settings
                     </a>
@@ -589,8 +589,8 @@
 
     async function loadStudy() {
         try {
-            const study = await apiCall(`/api/admin/studies/${studyId}`);
-            const assignments = await apiCall(`/api/admin/studies/${studyId}/assignments`);
+            const study = await apiCall(`${BASE_URL}/api/admin/studies/${studyId}`);
+            const assignments = await apiCall(`${BASE_URL}/api/admin/studies/${studyId}/assignments`);
 
             currentStudy = study;
             currentAssignments = assignments;
@@ -610,9 +610,9 @@
 
         content.innerHTML = `
             <div class="breadcrumb">
-                <a href="/admin">Dashboard</a>
+                <a href="${BASE_URL}/admin">Dashboard</a>
                 <span class="separator">›</span>
-                <a href="/admin/studies">Studies</a>
+                <a href="${BASE_URL}/admin/studies">Studies</a>
                 <span class="separator">›</span>
                 <span class="current">${study.name}</span>
             </div>
@@ -624,7 +624,7 @@
                     <span class="badge badge-${getStatusBadge(study.status)}">${study.status.toUpperCase()}</span>
                     ${study.status === 'active' || study.status === 'paused' ? `
                         <span style="color: var(--text-muted);">·</span>
-                        <a href="/admin/studies/${study.id}/progress">📊 View Progress</a>
+                        <a href="${BASE_URL}/admin/studies/${study.id}/progress">📊 View Progress</a>
                     ` : ''}
                 </div>
             </div>
@@ -736,7 +736,7 @@
 
         // Load all specialists
         try {
-            allSpecialists = await apiCall('/api/admin/specialists');
+            allSpecialists = await apiCall(BASE_URL + '/api/admin/specialists');
             renderAvailableSpecialists();
         } catch (error) {
             showError(error.message);
@@ -802,13 +802,13 @@
 
     async function addSpecialist(specialistId) {
         try {
-            await apiCall(`/api/admin/studies/${studyId}/assignments`, {
+            await apiCall(`${BASE_URL}/api/admin/studies/${studyId}/assignments`, {
                 method: 'POST',
                 body: JSON.stringify({ specialist_id: specialistId })
             });
 
             // Reload assignments and re-render
-            currentAssignments = await apiCall(`/api/admin/studies/${studyId}/assignments`);
+            currentAssignments = await apiCall(`${BASE_URL}/api/admin/studies/${studyId}/assignments`);
             renderStudy(currentStudy, currentAssignments);
             renderAvailableSpecialists();
         } catch (error) {
@@ -819,7 +819,7 @@
     async function removeSpecialist(specialistId, specialistName) {
         try {
             // First, check if there are annotations that will be lost
-            const stats = await apiCall(`/api/admin/studies/${studyId}/assignments/${specialistId}/stats`);
+            const stats = await apiCall(`${BASE_URL}/api/admin/studies/${studyId}/assignments/${specialistId}/stats`);
 
             let confirmMessage = `Remove ${specialistName} from this study?`;
 
@@ -833,7 +833,7 @@
 
             if (!confirm(confirmMessage)) return;
 
-            await apiCall(`/api/admin/studies/${studyId}/assignments/${specialistId}`, {
+            await apiCall(`${BASE_URL}/api/admin/studies/${studyId}/assignments/${specialistId}`, {
                 method: 'DELETE'
             });
 
@@ -867,7 +867,7 @@
     async function activateStudy() {
         if (!confirm('Activate this study? Specialists will be able to start annotating.')) return;
         try {
-            await apiCall(`/api/admin/studies/${studyId}/activate`, { method: 'POST' });
+            await apiCall(`${BASE_URL}/api/admin/studies/${studyId}/activate`, { method: 'POST' });
             loadStudy();
         } catch (error) {
             showError(error.message);
@@ -877,7 +877,7 @@
     async function pauseStudy() {
         if (!confirm('Pause this study? Specialists will not be able to continue until resumed.')) return;
         try {
-            await apiCall(`/api/admin/studies/${studyId}/pause`, { method: 'POST' });
+            await apiCall(`${BASE_URL}/api/admin/studies/${studyId}/pause`, { method: 'POST' });
             loadStudy();
         } catch (error) {
             showError(error.message);
@@ -886,7 +886,7 @@
 
     async function resumeStudy() {
         try {
-            await apiCall(`/api/admin/studies/${studyId}/resume`, { method: 'POST' });
+            await apiCall(`${BASE_URL}/api/admin/studies/${studyId}/resume`, { method: 'POST' });
             loadStudy();
         } catch (error) {
             showError(error.message);
@@ -896,8 +896,8 @@
     async function deleteStudy() {
         if (!confirm('Delete this study? This action cannot be undone.')) return;
         try {
-            await apiCall(`/api/admin/studies/${studyId}`, { method: 'DELETE' });
-            window.location.href = '/admin';
+            await apiCall(`${BASE_URL}/api/admin/studies/${studyId}`, { method: 'DELETE' });
+            window.location.href = BASE_URL + '/admin';
         } catch (error) {
             showError(error.message);
         }
@@ -919,7 +919,7 @@
         const height = document.getElementById('editImageHeight').value;
 
         try {
-            await apiCall(`/api/admin/studies/${studyId}`, {
+            await apiCall(`${BASE_URL}/api/admin/studies/${studyId}`, {
                 method: 'PUT',
                 body: JSON.stringify({
                     default_image_width: width ? parseInt(width) : null,
@@ -986,7 +986,7 @@
         }
 
         try {
-            await apiCall('/api/auth/change-password', {
+            await apiCall(BASE_URL + '/api/auth/change-password', {
                 method: 'POST',
                 body: JSON.stringify({
                     current_password: currentPassword,

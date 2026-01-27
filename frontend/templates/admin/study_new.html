@@ -629,31 +629,31 @@
         <nav>
             <ul class="nav-menu">
                 <li class="nav-item">
-                    <a href="/admin" class="nav-link">
+                    <a href="{{ base_url }}/admin" class="nav-link">
                         <span class="icon">📊</span>
                         Dashboard
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/studies" class="nav-link active">
+                    <a href="{{ base_url }}/admin/studies" class="nav-link active">
                         <span class="icon">📋</span>
                         Studies
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/users?role=specialist" class="nav-link">
+                    <a href="{{ base_url }}/admin/users?role=specialist" class="nav-link">
                         <span class="icon">🔬</span>
                         Specialists
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/users" class="nav-link">
+                    <a href="{{ base_url }}/admin/users" class="nav-link">
                         <span class="icon">👥</span>
                         Users
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/settings" class="nav-link">
+                    <a href="{{ base_url }}/admin/settings" class="nav-link">
                         <span class="icon">⚙️</span>
                         Settings
                     </a>
@@ -721,7 +721,7 @@
                     </div>
                 </form>
                 <div class="wizard-actions">
-                    <a href="/admin" class="btn btn-secondary">Cancel</a>
+                    <a href="{{ base_url }}/admin" class="btn btn-secondary">Cancel</a>
                     <button type="button" class="btn btn-primary" onclick="goToStep(2)">Next: Select Samples</button>
                 </div>
             </div>
@@ -863,11 +863,11 @@
             loadPADProjects();
 
             // Load samples
-            samples = await apiCall('/api/admin/samples');
+            samples = await apiCall(BASE_URL + '/api/admin/samples');
             renderSamples();
 
             // Load specialists
-            specialists = await apiCall('/api/admin/specialists');
+            specialists = await apiCall(BASE_URL + '/api/admin/specialists');
             renderSpecialists();
         } catch (error) {
             showError(error.message);
@@ -877,7 +877,7 @@
     // Load PAD projects for the dropdown
     async function loadPADProjects() {
         try {
-            const projects = await apiCall('/api/admin/pad-projects');
+            const projects = await apiCall(BASE_URL + '/api/admin/pad-projects');
             const select = document.getElementById('padProjectSelect');
             select.innerHTML = '<option value="">Select a project...</option>' +
                 projects.map(p => `<option value="${p.id}" data-name="${p.name}">${p.name}</option>`).join('');
@@ -908,7 +908,7 @@
         btn.textContent = 'Loading...';
 
         try {
-            const result = await apiCall('/api/admin/pad-import', {
+            const result = await apiCall(BASE_URL + '/api/admin/pad-import', {
                 method: 'POST',
                 body: JSON.stringify({
                     project_id: parseInt(projectId),
@@ -922,7 +922,7 @@
 
             // Clear current selection and reload samples
             selectedSamples.clear();
-            samples = await apiCall('/api/admin/samples');
+            samples = await apiCall(BASE_URL + '/api/admin/samples');
             renderSamples();
 
         } catch (error) {
@@ -949,7 +949,7 @@
         btn.textContent = 'Updating...';
 
         try {
-            const result = await apiCall('/api/admin/pad-backfill-sample-ids', {
+            const result = await apiCall(BASE_URL + '/api/admin/pad-backfill-sample-ids', {
                 method: 'POST',
                 body: JSON.stringify({
                     project_id: parseInt(projectId),
@@ -973,7 +973,7 @@
             <div class="sample-card ${selectedSamples.has(s.id) ? 'selected' : ''}"
                  onclick="toggleSample(${s.id})">
                 <div class="image-container">
-                    <img src="/${s.image_path}" alt="${s.drug_name_display}">
+                    <img src="${BASE_URL}/${s.image_path}" alt="${s.drug_name_display}">
                     <button class="zoom-btn" onclick="event.stopPropagation(); openImagePreview(${s.id})" title="View full image">🔍</button>
                 </div>
                 <div class="name">${s.drug_name_display}</div>
@@ -1045,7 +1045,7 @@
 
         document.getElementById('previewTitle').textContent = sample.drug_name_display;
         document.getElementById('previewSubtitle').textContent = `Card #${sample.card_id}`;
-        document.getElementById('previewImage').src = '/' + sample.image_path;
+        document.getElementById('previewImage').src = BASE_URL + '/' + sample.image_path;
 
         updatePreviewSelectButton();
 
@@ -1153,28 +1153,28 @@
                 default_image_width: defaultWidth ? parseInt(defaultWidth) : null,
                 default_image_height: defaultHeight ? parseInt(defaultHeight) : null
             };
-            const study = await apiCall('/api/admin/studies', {
+            const study = await apiCall(BASE_URL + '/api/admin/studies', {
                 method: 'POST',
                 body: JSON.stringify(expData)
             });
             studyId = study.id;
 
             // Step 2: Add samples
-            await apiCall(`/api/admin/studies/${studyId}/samples`, {
+            await apiCall(`${BASE_URL}/api/admin/studies/${studyId}/samples`, {
                 method: 'POST',
                 body: JSON.stringify({ sample_ids: Array.from(selectedSamples) })
             });
 
             // Step 3: Assign specialists
             for (const specialistId of selectedSpecialists) {
-                await apiCall(`/api/admin/studies/${studyId}/assignments`, {
+                await apiCall(`${BASE_URL}/api/admin/studies/${studyId}/assignments`, {
                     method: 'POST',
                     body: JSON.stringify({ specialist_id: specialistId })
                 });
             }
 
             // Success - redirect to study detail
-            window.location.href = `/admin/studies/${studyId}`;
+            window.location.href = `${BASE_URL}/admin/studies/${studyId}`;
 
         } catch (error) {
             showError(error.message);
@@ -1229,7 +1229,7 @@
         }
 
         try {
-            await apiCall('/api/auth/change-password', {
+            await apiCall(BASE_URL + '/api/auth/change-password', {
                 method: 'POST',
                 body: JSON.stringify({
                     current_password: currentPassword,

@@ -1143,31 +1143,31 @@
         <nav>
             <ul class="nav-menu">
                 <li class="nav-item">
-                    <a href="/admin" class="nav-link">
+                    <a href="{{ base_url }}/admin" class="nav-link">
                         <span class="icon">📊</span>
                         Dashboard
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/studies" class="nav-link">
+                    <a href="{{ base_url }}/admin/studies" class="nav-link">
                         <span class="icon">📋</span>
                         Studies
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/users?role=specialist" class="nav-link">
+                    <a href="{{ base_url }}/admin/users?role=specialist" class="nav-link">
                         <span class="icon">🔬</span>
                         Specialists
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/users" class="nav-link">
+                    <a href="{{ base_url }}/admin/users" class="nav-link">
                         <span class="icon">👥</span>
                         Users
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/admin/settings" class="nav-link">
+                    <a href="{{ base_url }}/admin/settings" class="nav-link">
                         <span class="icon">⚙️</span>
                         Settings
                     </a>
@@ -1182,7 +1182,7 @@
                 <h2><span class="replay-label">▶ Replay</span> <span class="drug-name" id="drugName">-</span></h2>
                 <span class="badge badge-secondary" id="sampleBadge">Loading...</span>
             </div>
-            <a href="/admin/studies/{{ study_id }}/progress" class="back-link">← Back to Study Progress</a>
+            <a href="{{ base_url }}/admin/studies/{{ study_id }}/progress" class="back-link">← Back to Study Progress</a>
         </div>
 
         <div class="session-navigation" id="sessionNavigation">
@@ -1412,7 +1412,7 @@
 
     async function loadReplayData() {
         try {
-            replayData = await apiCall(`/api/admin/sessions/${sessionId}/replay-data`);
+            replayData = await apiCall(`${BASE_URL}/api/admin/sessions/${sessionId}/replay-data`);
             setupReplay();
         } catch (error) {
             showError('Failed to load session data: ' + error.message);
@@ -1441,7 +1441,7 @@
 
         for (const pos of Object.keys(sidebarElements)) {
             if (tags[pos] !== undefined) {
-                sidebarElements[pos].img.src = `/assets/apriltags/tag36h11_${tags[pos]}.png`;
+                sidebarElements[pos].img.src = `${BASE_URL}/assets/apriltags/tag36h11_${tags[pos]}.png`;
                 sidebarElements[pos].id.textContent = tags[pos];
             }
         }
@@ -1476,7 +1476,7 @@
             renderTimelineMarkers();
             setupNavigation();
         };
-        sampleImage.src = `/${replayData.sample.image_path}`;
+        sampleImage.src = `${BASE_URL}/${replayData.sample.image_path}`;
 
         // Setup transcription UI
         setupTranscription();
@@ -1856,14 +1856,14 @@
     function navigateToPrevious() {
         const nav = replayData.navigation;
         if (nav && nav.previous_session_id) {
-            window.location.href = `/admin/studies/${studyId}/sessions/${nav.previous_session_id}/replay`;
+            window.location.href = `${BASE_URL}/admin/studies/${studyId}/sessions/${nav.previous_session_id}/replay`;
         }
     }
 
     function navigateToNext() {
         const nav = replayData.navigation;
         if (nav && nav.next_session_id) {
-            window.location.href = `/admin/studies/${studyId}/sessions/${nav.next_session_id}/replay`;
+            window.location.href = `${BASE_URL}/admin/studies/${studyId}/sessions/${nav.next_session_id}/replay`;
         }
     }
 
@@ -1964,7 +1964,7 @@
         btn.textContent = 'Starting...';
 
         try {
-            await apiCall(`/api/admin/sessions/${sessionId}/transcribe`, { method: 'POST' });
+            await apiCall(`${BASE_URL}/api/admin/sessions/${sessionId}/transcribe`, { method: 'POST' });
             updateTranscriptionUI('pending', null);
             startTranscriptionPolling();
         } catch (error) {
@@ -1979,7 +1979,7 @@
 
         transcriptionPollingId = setInterval(async () => {
             try {
-                const result = await apiCall(`/api/admin/sessions/${sessionId}/transcription`);
+                const result = await apiCall(`${BASE_URL}/api/admin/sessions/${sessionId}/transcription`);
                 const t = result.transcription;
                 if (!t) return;
 
@@ -2145,7 +2145,7 @@
         }
 
         try {
-            await apiCall(`/api/admin/sessions/${sessionId}/transcription/words/${wordIndex}`, {
+            await apiCall(`${BASE_URL}/api/admin/sessions/${sessionId}/transcription/words/${wordIndex}`, {
                 method: 'PATCH',
                 body: JSON.stringify({ word: newWord })
             });
@@ -2289,7 +2289,7 @@
         }
 
         try {
-            await apiCall(`/api/admin/sessions/${sessionId}/transcription/words/${wordIndex}`, {
+            await apiCall(`${BASE_URL}/api/admin/sessions/${sessionId}/transcription/words/${wordIndex}`, {
                 method: 'PATCH',
                 body: JSON.stringify({ word: newWord })
             });
@@ -2497,7 +2497,7 @@
         }
 
         try {
-            await apiCall('/api/auth/change-password', {
+            await apiCall(BASE_URL + '/api/auth/change-password', {
                 method: 'POST',
                 body: JSON.stringify({
                     current_password: currentPassword,
