@@ -25,6 +25,7 @@ data/
 
 # Sample images (downloaded from PAD Analytics)
 sample_images/
+!sample_images/amoxicillin_15214_processed.png
 
 # Plan files
 *.md.plan
